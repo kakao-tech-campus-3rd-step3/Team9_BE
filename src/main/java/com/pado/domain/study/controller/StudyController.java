@@ -9,6 +9,7 @@ import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyEr
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,22 +38,21 @@ public class StudyController {
             responseCode = "200", description = "스터디 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = StudyListResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "interests", description = "필터링할 카테고리(관심 분야) 목록. 여러 개 가능.", example = "프로그래밍,취업"),
+            @Parameter(name = "location", description = "필터링할 지역", example = "서울"),
+            @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", required = true, example = "0"),
+            @Parameter(name = "size", description = "페이지 당 사이즈 (기본값 10)", example = "10")
+    })
     @GetMapping
     public ResponseEntity<StudyListResponseDto> getStudyList(
-            @Parameter(description = "필터링할 카테고리(관심 분야) 목록. 여러 개 가능.", example = "프로그래밍,취업")
-            @RequestParam(required = false) String interests,
-
-            @Parameter(description = "필터링할 지역", example = "서울")
+            @RequestParam(required = false) List<String> interests,
             @RequestParam(required = false) String location,
-
-            @Parameter(description = "페이지 번호 (0부터 시작)", required = true, example = "0")
             @RequestParam int page,
-
-            @Parameter(description = "페이지 당 사이즈 (기본값 10)")
             @RequestParam(defaultValue = "10") int size
     ) {
         // TODO: 스터디 목록 조회 로직 구현
-        List<StudySimpleResponseDto> mockStudies = List.of( // [개선 2] Arrays.asList -> List.of
+        List<StudySimpleResponseDto> mockStudies = List.of(
                 new StudySimpleResponseDto(1L, "https://pado-image.com/1", "스프링 스터디", "스프링 기초부터 심화까지"),
                 new StudySimpleResponseDto(2L, "https://pado-image.com/2", "JPA 스터디", "JPA 정복하기"),
                 new StudySimpleResponseDto(3L, "https://pado-image.com/3", "알고리즘 스터디", "코딩 테스트 완전 정복")
@@ -107,25 +107,23 @@ public class StudyController {
             responseCode = "200", description = "스터디 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = StudyListResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "keyword", description = "검색할 키워드", required = true, example = "스프링"),
+            @Parameter(name = "interests", description = "필터링할 카테고리(관심 분야) 목록. 여러 개 가능.", example = "프로그래밍,취업"),
+            @Parameter(name = "location", description = "필터링할 지역", example = "서울"),
+            @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", required = true, example = "0"),
+            @Parameter(name = "size", description = "페이지 당 사이즈 (기본값 10)", example = "10")
+    })
     @GetMapping("/search")
     public ResponseEntity<StudyListResponseDto> searchStudies(
-            @Parameter(description = "검색할 키워드", required = true, example = "스프링")
             @RequestParam String keyword,
-
-            @Parameter(description = "필터링할 카테고리(관심 분야) 목록. 여러 개 가능.", example = "프로그래밍,취업")
-            @RequestParam(required = false) String interests,
-
-            @Parameter(description = "필터링할 지역", example = "서울")
+            @RequestParam(required = false) List<String> interests,
             @RequestParam(required = false) String location,
-
-            @Parameter(description = "페이지 번호 (0부터 시작)", required = true, example = "0")
             @RequestParam int page,
-
-            @Parameter(description = "페이지 당 사이즈 (기본값 10)")
             @RequestParam(defaultValue = "10") int size
     ) {
         // TODO: 스터디 검색 로직 구현
-        List<StudySimpleResponseDto> mockStudies = List.of( // [개선 2] Arrays.asList -> List.of
+        List<StudySimpleResponseDto> mockStudies = List.of(
                 new StudySimpleResponseDto(1L, "https://pado-image.com/1", "스프링 스터디", "스프링 기초부터 심화까지"),
                 new StudySimpleResponseDto(4L, "https://pado-image.com/4", "스프링 부트 입문", "최신 스프링 부트로 웹 개발 시작하기"),
                 new StudySimpleResponseDto(5L, "https://pado-image.com/5", "스프링 시큐리티", "스프링 시큐리티로 인증/인가 구현")

@@ -12,6 +12,7 @@ import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyEr
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -110,15 +111,17 @@ public class DocumentController {
             responseCode = "200", description = "자료 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = MaterialListResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
+            @Parameter(name = "category", description = "필터링할 카테고리 목록 (쉼표로 구분)", example = "강의,코드"),
+            @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", required = true, example = "0"),
+            @Parameter(name = "size", description = "페이지 당 사이즈 (기본값 10)", example = "10")
+    })
     @GetMapping("/studies/{study_id}/materials")
     public ResponseEntity<MaterialListResponseDto> getMaterials(
-            @Parameter(description = "조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "필터링할 카테고리 목록 (쉼표로 구분)", example = "강의,코드")
-            @RequestParam(required = false) String category,
-            @Parameter(description = "페이지 번호 (0부터 시작)", required = true, example = "0")
+            @RequestParam(required = false) List<String> category,
             @RequestParam int page,
-            @Parameter(description = "페이지 당 사이즈 (기본값 10)")
             @RequestParam(defaultValue = "10") int size
     ) {
         // TODO: 자료 목록 조회 로직 구현
