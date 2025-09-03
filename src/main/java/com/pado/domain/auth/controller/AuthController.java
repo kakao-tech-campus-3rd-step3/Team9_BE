@@ -10,6 +10,7 @@ import com.pado.domain.auth.dto.response.TokenResponseDto;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -50,10 +51,13 @@ public class AuthController {
                                     value = "{\"error_code\": \"INVALID_NICKNAME_FORMAT\", \"field\": \"nickname\", \"message\": \"닉네임은 2자 이상 10자 이하로 입력해주세요.\"}"
                             )))
     })
+    @Parameters({
+            @Parameter(name = "nickname", description = "중복 확인할 닉네임", required = true, example = "파도")
+    })
     @GetMapping("/check-nickname")
     public ResponseEntity<NicknameCheckResponseDto> checkNickname(
-            @Parameter(description = "중복 확인할 닉네임", required = true, example = "파도")
-            @RequestParam String nickname) {
+            @RequestParam String nickname
+    ) {
         // TODO: 닉네임 중복 확인 로직 구현
         boolean isAvailable = !nickname.equals("중복닉네임");
         return ResponseEntity.ok(new NicknameCheckResponseDto(isAvailable));

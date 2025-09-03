@@ -11,6 +11,7 @@ import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import com.pado.global.swagger.annotation.study.Api404StudyOrMemberNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -38,9 +39,11 @@ public class StudyMemberController {
     @ApiResponse(
             responseCode = "201", description = "스터디 참여 신청 성공"
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "참여 신청할 스터디의 ID", required = true, example = "1")
+    })
     @PostMapping("/apply")
     public ResponseEntity<Void> applyToStudy(
-            @Parameter(description = "참여 신청할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody StudyApplyRequestDto request
     ) {
@@ -58,9 +61,11 @@ public class StudyMemberController {
             responseCode = "200", description = "스터디원 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = StudyMemberListResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/member")
     public ResponseEntity<StudyMemberListResponseDto> getStudyMembers(
-            @Parameter(description = "조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 스터디원 목록 조회 로직 구현
@@ -81,11 +86,13 @@ public class StudyMemberController {
     @ApiResponse(
             responseCode = "204", description = "탈퇴/거부 성공"
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
+            @Parameter(name = "member_id", description = "탈퇴시키거나 거부할 스터디원의 ID", required = true, example = "2")
+    })
     @DeleteMapping("/member/{member_id}")
     public ResponseEntity<Void> kickMember(
-            @Parameter(description = "스터디 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "탈퇴시키거나 거부할 스터디원의 ID", required = true, example = "2")
             @PathVariable("member_id") Long memberId
     ) {
         // TODO: 특정 스터디원 탈퇴/신청 거부 로직 구현
@@ -115,11 +122,13 @@ public class StudyMemberController {
                                     value = "{\"error_code\": \"INVALID_STATE_CHANGE\", \"field\": \"role\", \"message\": \"이미 스터디원인 사용자를 신청 대기 상태로 변경할 수 없습니다.\"}"
                             )))
     })
+    @Parameters({
+            @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
+            @Parameter(name = "member_id", description = "역할을 변경할 스터디원의 ID", required = true, example = "2")
+    })
     @PatchMapping("/member/{member_id}")
     public ResponseEntity<Void> updateMemberRole(
-            @Parameter(description = "스터디 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "역할을 변경할 스터디원의 ID", required = true, example = "2")
             @PathVariable("member_id") Long memberId,
             @Valid @RequestBody StudyMemberRoleChangeRequestDto request
     ) {

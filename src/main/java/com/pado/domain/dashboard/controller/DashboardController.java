@@ -7,6 +7,7 @@ import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import com.pado.global.swagger.annotation.user.Api404UserNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -38,9 +39,11 @@ public class DashboardController {
             responseCode = "200", description = "메인 대시보드 조회 성공",
             content = @Content(schema = @Schema(implementation = DashboardResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "user_id", description = "대시보드를 조회할 사용자의 ID", required = true, example = "1")
+    })
     @GetMapping("/dashboard/{user_id}")
     public ResponseEntity<DashboardResponseDto> getMainDashboard(
-            @Parameter(description = "대시보드를 조회할 사용자의 ID", required = true, example = "1")
             @PathVariable("user_id") Long userId
     ) {
         // TODO: 메인 대시보드 로직 구현
@@ -83,9 +86,11 @@ public class DashboardController {
             responseCode = "200", description = "스터디 대시보드 조회 성공",
             content = @Content(schema = @Schema(implementation = StudyDashboardResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "대시보드를 조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/studies/{study_id}/dashboard")
     public ResponseEntity<StudyDashboardResponseDto> getStudyDashboard(
-            @Parameter(description = "대시보드를 조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 스터디 대시보드 로직 구현

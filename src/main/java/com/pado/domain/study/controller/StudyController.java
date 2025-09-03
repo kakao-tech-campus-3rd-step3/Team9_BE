@@ -69,9 +69,11 @@ public class StudyController {
             responseCode = "200", description = "스터디 상세 정보 조회 성공",
             content = @Content(schema = @Schema(implementation = StudyDetailResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/{study_id}")
     public ResponseEntity<StudyDetailResponseDto> getStudyDetail(
-            @Parameter(description = "조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 스터디 상세 정보 조회 로직 구현
@@ -143,9 +145,11 @@ public class StudyController {
     @ApiResponse(
             responseCode = "200", description = "스터디 정보 수정 성공"
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "수정할 스터디의 ID", required = true, example = "1")
+    })
     @PatchMapping("/{study_id}")
     public ResponseEntity<Void> updateStudy(
-            @Parameter(description = "수정할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody StudyCreateRequestDto request
     ) {

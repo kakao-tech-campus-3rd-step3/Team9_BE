@@ -11,6 +11,7 @@ import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import com.pado.global.swagger.annotation.schedule.Api404TuningScheduleNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,9 +43,11 @@ public class ScheduleTuneController {
     @ApiResponse(
             responseCode = "201", description = "일정 조율 요청 생성 성공"
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "조율 요청을 생성할 스터디의 ID", required = true, example = "1")
+    })
     @PostMapping("/studies/{study_id}/schedule-tunes")
     public ResponseEntity<Void> createScheduleTune(
-            @Parameter(description = "조율 요청을 생성할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody ScheduleCreateRequestDto request
     ) {
@@ -62,9 +65,11 @@ public class ScheduleTuneController {
             responseCode = "200", description = "일정 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = ScheduleTuneResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "일정을 조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/studies/{study_id}/schedule-tunes")
     public ResponseEntity<List<ScheduleTuneResponseDto>> getScheduleTunes(
-            @Parameter(description = "일정을 조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 조율 중인 일정 목록 조회 로직 구현
@@ -85,11 +90,13 @@ public class ScheduleTuneController {
             responseCode = "200", description = "세부 정보 조회 성공",
             content = @Content(schema = @Schema(implementation = ScheduleTuneDetailResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
+            @Parameter(name = "tune_id", description = "조회할 조율 일정의 ID", required = true, example = "1234")
+    })
     @GetMapping("/studies/{study_id}/schedule-tunes/{tune_id}")
     public ResponseEntity<ScheduleTuneDetailResponseDto> getScheduleTuneDetail(
-            @Parameter(description = "조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "조회할 조율 일정의 ID", required = true, example = "1234")
             @PathVariable("tune_id") Long tuneId
     ) {
         // TODO: 조율 중인 일정 세부 조회 로직 구현
@@ -114,11 +121,13 @@ public class ScheduleTuneController {
             responseCode = "200", description = "참여 정보 업데이트 성공",
             content = @Content(schema = @Schema(implementation = ScheduleTuneParticipantResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "일정 조율을 할 스터디의 ID", required = true, example = "1"),
+            @Parameter(name = "tune_id", description = "참여할 조율 일정의 ID", required = true, example = "1234")
+    })
     @PostMapping("/studies/{study_id}/schedule-tunes/{tune_id}")
     public ResponseEntity<ScheduleTuneParticipantResponseDto> participateInScheduleTune(
-            @Parameter(description = "일정 조율을 할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "참여할 조율 일정의 ID", required = true, example = "1234")
             @PathVariable("tune_id") Long tuneId,
             @Valid @RequestBody ScheduleTuneParticipantRequestDto request
     ) {
@@ -137,9 +146,11 @@ public class ScheduleTuneController {
             responseCode = "200", description = "조율 완료 성공",
             content = @Content(schema = @Schema(implementation = ScheduleCompleteResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "tune_id", description = "완료할 조율 일정의 ID", required = true, example = "1234")
+    })
     @PutMapping("/schedule-tunes/{tune_id}/complete")
     public ResponseEntity<ScheduleCompleteResponseDto> completeScheduleTune(
-            @Parameter(description = "완료할 조율 일정의 ID", required = true, example = "1234")
             @PathVariable("tune_id") Long tuneId,
             @Valid @RequestBody ScheduleCreateRequestDto request
     ) {

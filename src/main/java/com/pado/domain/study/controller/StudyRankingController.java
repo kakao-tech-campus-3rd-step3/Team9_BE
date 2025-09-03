@@ -5,6 +5,7 @@ import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyEr
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -35,9 +36,11 @@ public class StudyRankingController {
             responseCode = "200", description = "랭킹 조회 성공",
             content = @Content(schema = @Schema(implementation = StudyRankingResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "랭킹을 조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/ranking")
     public ResponseEntity<StudyRankingResponseDto> getStudyRanking(
-            @Parameter(description = "랭킹을 조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 랭킹 조회 로직 구현

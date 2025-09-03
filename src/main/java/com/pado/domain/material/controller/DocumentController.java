@@ -46,12 +46,14 @@ public class DocumentController {
     @ApiResponse(
             responseCode = "201", description = "학습 자료 업로드 성공"
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "자료를 업로드할 스터디의 ID", required = true, example = "1")
+    })
     @PostMapping("/studies/{study_id}/materials")
     public ResponseEntity<Void> uploadMaterial(
-            @Parameter(description = "자료를 업로드할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody MaterialCreateRequestDto request
-    ) {
+    )  {
         // TODO: 학습 자료 업로드 기능 구현
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -66,9 +68,11 @@ public class DocumentController {
     @ApiResponse(
             responseCode = "200", description = "자료 수정 성공"
     )
+    @Parameters({
+            @Parameter(name = "material_id", description = "수정할 자료의 ID", required = true, example = "1")
+    })
     @PutMapping("/materials/{material_id}")
     public ResponseEntity<Void> updateMaterial(
-            @Parameter(description = "수정할 자료의 ID", required = true, example = "1")
             @PathVariable("material_id") Long materialId,
             @Valid @RequestBody MaterialCreateRequestDto request
     ) {

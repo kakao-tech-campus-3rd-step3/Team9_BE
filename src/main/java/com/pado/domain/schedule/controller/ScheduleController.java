@@ -10,6 +10,7 @@ import com.pado.global.swagger.annotation.schedule.Api404ScheduleNotFoundError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,9 +43,11 @@ public class ScheduleController {
             responseCode = "200", description = "일정 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = ScheduleResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "일정을 조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/studies/{study_id}/schedules")
     public ResponseEntity<List<ScheduleResponseDto>> getSchedules(
-            @Parameter(description = "일정을 조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 스터디 전체 일정 조회 로직 구현
@@ -65,9 +68,11 @@ public class ScheduleController {
             responseCode = "200", description = "일정 상세 정보 조회 성공",
             content = @Content(schema = @Schema(implementation = ScheduleDetailResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "schedule_id", description = "조회할 일정의 ID", required = true, example = "1234")
+    })
     @GetMapping("/schedules/{schedule_id}")
     public ResponseEntity<ScheduleDetailResponseDto> getScheduleDetail(
-            @Parameter(description = "조회할 일정의 ID", required = true, example = "1234")
             @PathVariable("schedule_id") Long scheduleId
     ) {
         // TODO: 개별 일정 세부 조회 로직 구현
@@ -92,9 +97,11 @@ public class ScheduleController {
     @ApiResponse(
             responseCode = "201", description = "일정 생성 성공"
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "일정을 생성할 스터디의 ID", required = true, example = "1")
+    })
     @PostMapping("/studies/{study_id}/schedules")
     public ResponseEntity<Void> createSchedule(
-            @Parameter(description = "일정을 생성할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody ScheduleCreateRequestDto request
     ) {
@@ -113,11 +120,13 @@ public class ScheduleController {
     @ApiResponse(
             responseCode = "200", description = "일정 수정 성공"
     )
-    @PutMapping("/studies/{study_id}/{schedule_id}")
+    @Parameters({
+            @Parameter(name = "study_id", description = "일정을 수정할 스터디의 ID", required = true, example = "1"),
+            @Parameter(name = "schedule_id", description = "수정할 일정의 ID", required = true, example = "1234")
+    })
+    @PutMapping("/studies/{study_id}/schedules/{schedule_id}")
     public ResponseEntity<Void> updateSchedule(
-            @Parameter(description = "일정을 수정할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "수정할 일정의 ID", required = true, example = "1234")
             @PathVariable("schedule_id") Long scheduleId,
             @Valid @RequestBody ScheduleCreateRequestDto request
     ) {
@@ -134,11 +143,13 @@ public class ScheduleController {
     @ApiResponse(
             responseCode = "204", description = "일정 삭제 성공"
     )
-    @DeleteMapping("/studies/{study_id}/{schedule_id}")
+    @Parameters({
+            @Parameter(name = "study_id", description = "일정을 삭제할 스터디의 ID", required = true, example = "1"),
+            @Parameter(name = "schedule_id", description = "삭제할 일정의 ID", required = true, example = "1")
+    })
+    @DeleteMapping("/studies/{study_id}/schedules/{schedule_id}")
     public ResponseEntity<Void> deleteSchedule(
-            @Parameter(description = "일정을 삭제할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "삭제할 일정의 ID", required = true, example = "1")
             @PathVariable("schedule_id") Long scheduleId
     ) {
         // TODO: 일정 삭제 로직 구현

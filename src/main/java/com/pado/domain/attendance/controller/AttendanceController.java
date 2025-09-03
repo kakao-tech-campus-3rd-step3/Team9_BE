@@ -10,6 +10,7 @@ import com.pado.global.swagger.annotation.schedule.Api404ScheduleNotFoundError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -42,9 +43,11 @@ public class AttendanceController {
             responseCode = "200", description = "전체 참여 현황 조회 성공",
             content = @Content(schema = @Schema(implementation = AttendanceListResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "참여 현황을 조회할 스터디의 ID", required = true, example = "1")
+    })
     @GetMapping("/studies/{study_id}/attendance")
     public ResponseEntity<AttendanceListResponseDto> getFullAttendance(
-            @Parameter(description = "참여 현황을 조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId
     ) {
         // TODO: 전체 참여 현황 조회 로직 구현
@@ -80,11 +83,13 @@ public class AttendanceController {
             responseCode = "200", description = "개별 참여 현황 조회 성공",
             content = @Content(schema = @Schema(implementation = AttendanceStatusResponseDto.class))
     )
+    @Parameters({
+            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
+            @Parameter(name = "schedule_id", description = "출석 상태를 조회할 일정의 ID", required = true, example = "1234")
+    })
     @GetMapping("/studies/{study_id}/attendance/{schedule_id}")
     public ResponseEntity<AttendanceStatusResponseDto> getIndividualAttendanceStatus(
-            @Parameter(description = "조회할 스터디의 ID", required = true, example = "1")
             @PathVariable("study_id") Long studyId,
-            @Parameter(description = "출석 상태를 조회할 일정의 ID", required = true, example = "1234")
             @PathVariable("schedule_id") Long scheduleId
     ) {
         // TODO: 개별 참여 현황 조회 로직 구현
@@ -113,9 +118,11 @@ public class AttendanceController {
                                             value = "{\"error_code\": \"ALREADY_CHECKED_IN\", \"field\": \"attendance\", \"message\": \"이미 출석 체크가 완료되었습니다.\"}"
                                     )}))
     })
+    @Parameters({
+            @Parameter(name = "schedule_id", description = "출석 체크할 일정의 ID", required = true, example = "1234")
+    })
     @PostMapping("/schedules/{schedule_id}/attendance")
     public ResponseEntity<AttendanceStatusResponseDto> checkAttendance(
-            @Parameter(description = "출석 체크할 일정의 ID", required = true, example = "1234")
             @PathVariable("schedule_id") Long scheduleId
     ) {
         // TODO: 출석 체크 로직 구현
