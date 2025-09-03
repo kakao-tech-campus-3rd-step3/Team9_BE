@@ -1,4 +1,4 @@
-package com.pado.domain.document.dto.response;
+package com.pado.domain.material.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

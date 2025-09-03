@@ -1,4 +1,4 @@
-package com.pado.domain.document.dto.request;
+package com.pado.domain.material.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;

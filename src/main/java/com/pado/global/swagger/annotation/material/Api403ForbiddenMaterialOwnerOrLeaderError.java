@@ -1,4 +1,4 @@
-package com.pado.global.swagger.annotation.document;
+package com.pado.global.swagger.annotation.material;
 
 import com.pado.global.exception.dto.ErrorResponseDto;
 import io.swagger.v3.oas.annotations.media.Content;

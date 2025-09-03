@@ -1,13 +1,13 @@
-package com.pado.domain.document.controller;
+package com.pado.domain.material.controller;
 
-import com.pado.domain.document.dto.request.MaterialCreateRequestDto;
-import com.pado.domain.document.dto.request.MaterialDeleteRequestDto;
-import com.pado.domain.document.dto.response.MaterialListResponseDto;
-import com.pado.domain.document.dto.response.MaterialSimpleResponseDto;
+import com.pado.domain.material.dto.request.MaterialCreateRequestDto;
+import com.pado.domain.material.dto.request.MaterialDeleteRequestDto;
+import com.pado.domain.material.dto.response.MaterialListResponseDto;
+import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
 import com.pado.global.exception.dto.ErrorResponseDto;
-import com.pado.global.swagger.annotation.document.Api400InvalidTitleError;
-import com.pado.global.swagger.annotation.document.Api403ForbiddenMaterialOwnerOrLeaderError;
-import com.pado.global.swagger.annotation.document.Api404MaterialNotFoundError;
+import com.pado.global.swagger.annotation.material.Api400InvalidTitleError;
+import com.pado.global.swagger.annotation.material.Api403ForbiddenMaterialOwnerOrLeaderError;
+import com.pado.global.swagger.annotation.material.Api404MaterialNotFoundError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
