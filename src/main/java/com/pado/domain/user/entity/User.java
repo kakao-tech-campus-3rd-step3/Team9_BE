@@ -34,7 +34,8 @@ public class User {
     private String profileImageUrl;
 
     @Column(length = 10)
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -43,7 +44,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String passwordHash, String nickname, String region, String profileImageUrl, String gender){
+    public User(String email, String passwordHash, String nickname, String region, String profileImageUrl, Gender gender){
         this.email = email;
         this.passwordHash = passwordHash;
         this.nickname = nickname;

@@ -5,7 +5,8 @@ CREATE TABLE user (
                        nickname VARCHAR(100) NOT NULL,
                        region VARCHAR(100),
                        profile_image_url VARCHAR(500),
+                       status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
                        gender VARCHAR(10),
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
