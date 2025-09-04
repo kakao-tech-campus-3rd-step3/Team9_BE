@@ -1,4 +1,4 @@
-package com.pado.domain.user;
+package com.pado.domain.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -33,9 +33,6 @@ public class User {
     @Column(length = 500)
     private String profileImageUrl;
 
-    @Column(nullable = false, length = 100)
-    private String status;
-
     @Column(length = 10)
     private String gender;
 
@@ -46,14 +43,13 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String passwordHash, String nickname, String region, String profileImageUrl, String gender, String status) {
+    public User(String email, String passwordHash, String nickname, String region, String profileImageUrl, String gender){
         this.email = email;
         this.passwordHash = passwordHash;
         this.nickname = nickname;
         this.region = region;
         this.profileImageUrl = profileImageUrl;
         this.gender = gender;
-        this.status = status != null ? status : "ACTIVE";
     }
 
 

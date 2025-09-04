@@ -1,4 +1,4 @@
-package com.pado.global.exception;
+package com.pado.global.exception.common;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
@@ -61,7 +61,6 @@ public class GlobalExceptionHandler {
     }
 
     private static String path(WebRequest req) {
-        // ex) "uri=/api/users"
         String desc = req.getDescription(false);
         if (desc != null && desc.startsWith("uri=")) return desc.substring(4);
         return desc;

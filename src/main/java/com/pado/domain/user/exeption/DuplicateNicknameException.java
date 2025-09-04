@@ -1,4 +1,7 @@
-package com.pado.global.exception;
+package com.pado.domain.user.exeption;
+
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
 
 public class DuplicateNicknameException extends BusinessException {
     public DuplicateNicknameException() {

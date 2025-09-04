@@ -1,4 +1,4 @@
-package com.pado.global.exception;
+package com.pado.global.exception.common;
 
 import org.springframework.http.HttpStatus;
 

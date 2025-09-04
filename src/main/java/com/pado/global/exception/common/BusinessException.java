@@ -1,6 +1,4 @@
-package com.pado.global.exception;
-
-import com.pado.global.exception.ErrorCode;
+package com.pado.global.exception.common;
 
 public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;

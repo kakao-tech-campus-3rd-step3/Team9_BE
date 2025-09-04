@@ -1,4 +1,4 @@
-package com.pado.global.exception;
+package com.pado.global.exception.common;
 
 import java.time.LocalDateTime;
 import java.util.List;
