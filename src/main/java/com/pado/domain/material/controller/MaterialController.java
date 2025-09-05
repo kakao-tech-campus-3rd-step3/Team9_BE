@@ -1,6 +1,6 @@
 package com.pado.domain.material.controller;
 
-import com.pado.domain.material.dto.request.MaterialCreateRequestDto;
+import com.pado.domain.material.dto.request.MaterialRequestDto;
 import com.pado.domain.material.dto.request.MaterialDeleteRequestDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
 import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
@@ -52,7 +52,7 @@ public class DocumentController {
     @PostMapping("/studies/{study_id}/materials")
     public ResponseEntity<Void> uploadMaterial(
             @PathVariable("study_id") Long studyId,
-            @Valid @RequestBody MaterialCreateRequestDto request
+            @Valid @RequestBody MaterialRequestDto request
     )  {
         // TODO: 학습 자료 업로드 기능 구현
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -74,7 +74,7 @@ public class DocumentController {
     @PutMapping("/materials/{material_id}")
     public ResponseEntity<Void> updateMaterial(
             @PathVariable("material_id") Long materialId,
-            @Valid @RequestBody MaterialCreateRequestDto request
+            @Valid @RequestBody MaterialRequestDto request
     ) {
         // TODO: 자료 수정 로직 구현
         return ResponseEntity.ok().build();
