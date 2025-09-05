@@ -1,5 +1,6 @@
 package com.pado.domain.material.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -16,9 +17,11 @@ public record MaterialSimpleResponseDto(
         @Schema(description = "자료 카테고리", example = "강의")
         String category,
 
-        @Schema(description = "자료 URL 리스트", example = "[\"https://pado-storage.com/data1.pdf\"]")
-        List<String> data_urls,
+        @JsonProperty("data_urls")
+        @Schema(name = "data_urls", description = "자료 URL 리스트", example = "[\"https://pado-storage.com/data1.pdf\"]")
+        List<String> dataUrls,
 
-        @Schema(description = "마지막 수정일", example = "2025-09-02T13:30:00")
-        LocalDateTime updated_at
+        @JsonProperty("updated_at")
+        @Schema(name = "updated_at", description = "마지막 수정일", example = "2025-09-02T13:30:00")
+        LocalDateTime updatedAt
 ) {}
