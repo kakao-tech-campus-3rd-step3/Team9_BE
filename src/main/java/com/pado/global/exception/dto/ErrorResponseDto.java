@@ -1,12 +1,24 @@
 package com.pado.global.exception.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.pado.global.exception.common.ErrorCode;
 
-@Schema(description = "공통 에러 응답")
-@JsonInclude(JsonInclude.Include.NON_NULL)
+import java.time.LocalDateTime;
+import java.util.List;
+
 public record ErrorResponseDto(
-        String error_code,
-        String field,
-        String message
-) {}
+        String code,
+        String message,
+        List<String> errors,
+        LocalDateTime timestamp,
+        String path
+) {
+    public static ErrorResponseDto of (ErrorCode code, String message, List<String> errors, String path) {
+        return new ErrorResponseDto(
+                code.code,
+                message != null ? message : code.message,
+                errors,
+                LocalDateTime.now(),
+                path
+        );
+    }
+}
