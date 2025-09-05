@@ -3,19 +3,48 @@ package com.pado.global.exception.common;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
-    // 공통
+    // Common
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "요청 값이 올바르지 않습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "일시적인 오류가 발생했습니다."),
     JSON_PARSE_ERROR(HttpStatus.BAD_REQUEST, "JSON_PARSE_ERROR", "요청 본문을 해석할 수 없습니다."),
 
-    // 도메인 공통
-    ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND, "ENTITY_NOT_FOUND", "대상을 찾을 수 없습니다."),
+    // Authentication and Authorization
+    AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_FAILED", "인증에 실패했습니다."),
+    UNAUTHENTICATED_USER(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED_USER", "인증되지 않은 사용자입니다."),
+    VERIFICATION_CODE_MISMATCH(HttpStatus.UNAUTHORIZED, "VERIFICATION_CODE_MISMATCH", "인증 코드가 일치하지 않습니다."),
+    FORBIDDEN_STUDY_LEADER_ONLY(HttpStatus.FORBIDDEN, "FORBIDDEN_STUDY_LEADER_ONLY", "스터디 리더만 접근할 수 있습니다."),
+    FORBIDDEN_STUDY_MEMBER_ONLY(HttpStatus.FORBIDDEN, "FORBIDDEN_STUDY_MEMBER_ONLY", "스터디 멤버만 접근할 수 있습니다."),
+    FORBIDDEN_OWNER_OR_LEADER_ONLY(HttpStatus.FORBIDDEN, "FORBIDDEN_OWNER_OR_LEADER_ONLY", "소유자 또는 스터디 리더만 접근할 수 있습니다."),
+
+    // Validation
+    INVALID_NICKNAME_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_NICKNAME_FORMAT", "닉네임 형식이 올바르지 않습니다."),
+    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_EMAIL_FORMAT", "이메일 형식이 올바르지 않습니다."),
+    INVALID_MAX_MEMBERS(HttpStatus.BAD_REQUEST, "INVALID_MAX_MEMBERS", "최대 멤버 수가 올바르지 않습니다."),
+    INVALID_ROLE(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "역할이 올바르지 않습니다."),
+    INVALID_MATERIAL_IDS(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_IDS", "자료 ID가 올바르지 않습니다."),
+    INVALID_TITLE(HttpStatus.BAD_REQUEST, "INVALID_TITLE", "제목이 올바르지 않습니다."),
+    INVALID_START_TIME(HttpStatus.BAD_REQUEST, "INVALID_START_TIME", "시작 시간이 올바르지 않습니다."),
+    INVALID_CANDIDATE_DATES(HttpStatus.BAD_REQUEST, "INVALID_CANDIDATE_DATES", "가능 날짜가 올바르지 않습니다."),
+
+    // Domain Common
+    ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND, "ENTITY_NOT_FOUND", "요청한 대상을 찾을 수 없습니다."),
     DUPLICATE_KEY(HttpStatus.CONFLICT, "DUPLICATE_KEY", "이미 존재하는 값입니다."),
 
-    // User 도메인
+    // User Domain
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다."),
-    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "DUPLICATE_NICKNAME", "이미 사용 중인 닉네임입니다.");
+    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "DUPLICATE_NICKNAME", "이미 사용 중인 닉네임입니다."),
+
+    // Study Domain
+    STUDY_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_NOT_FOUND", "스터디를 찾을 수 없습니다."),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "멤버를 찾을 수 없습니다."),
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다."),
+    PENDING_SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "PENDING_SCHEDULE_NOT_FOUND", "승인 대기 중인 일정을 찾을 수 없습니다."),
+    INVALID_STATE_CHANGE(HttpStatus.CONFLICT, "INVALID_STATE_CHANGE", "상태 변경이 유효하지 않습니다."),
+    ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "ALREADY_CHECKED_IN", "이미 출석 체크되었습니다."),
+
+    // Material Domain
+    MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다.");
 
     public final HttpStatus status;
     public final String code;
