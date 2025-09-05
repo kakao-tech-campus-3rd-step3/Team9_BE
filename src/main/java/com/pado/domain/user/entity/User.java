@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)  //JPA에서 사용
+@Table(name = "users")
 public class User {
 
     @Id
