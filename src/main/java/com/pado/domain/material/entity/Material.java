@@ -23,7 +23,7 @@ public class Material extends AuditingEntity {
     @Column(name = "material_category")
     private MaterialCategory materialCategory;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
 //    @ManyToOne(fetch = FetchType.LAZY)
