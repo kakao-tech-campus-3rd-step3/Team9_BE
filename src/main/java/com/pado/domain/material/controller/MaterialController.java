@@ -6,7 +6,6 @@ import com.pado.domain.material.dto.request.MaterialDeleteRequestDto;
 import com.pado.domain.material.dto.response.FilePresignedUrlResponseDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
-import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
 import com.pado.domain.material.service.MaterialService;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import com.pado.global.swagger.annotation.material.Api400InvalidTitleError;
@@ -29,8 +28,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Tag(name = "07. Materials", description = "학습 자료 관련 API")
@@ -39,58 +36,67 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MaterialController {
 
-    // TODO: 서비스 레이어 종속성 주입
     private final MaterialService materialService;
 
-    // 파일 업로드를 위한 Presigned URL 발급 API
-    @Operation(summary = "파일 업로드용 Presigned URL 생성", description = "S3에 파일을 직접 업로드할 수 있는 임시 URL을 발급받습니다.")
+    @Operation(
+            summary = "파일 업로드용 Presigned URL 생성",
+            description = "S3에 파일을 직접 업로드할 수 있는 임시 URL을 발급받습니다."
+    )
     @ApiResponse(responseCode = "200", description = "Presigned URL 발급 성공")
     @PostMapping("/materials/presigned-url")
     public ResponseEntity<FilePresignedUrlResponseDto> createPresignedUrl(
-            @RequestBody FilePresignedUrlRequestDto request
+            @Valid @RequestBody FilePresignedUrlRequestDto request
     ) {
-        return ResponseEntity.ok(materialService.createPresignedUrl(request));
+        FilePresignedUrlResponseDto response = materialService.createPresignedUrl(request);
+        return ResponseEntity.ok(response);
     }
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
     @Api400InvalidTitleError
-    @Operation(summary = "자료 업로드", description = "S3에 파일 업로드 후, 자료 정보를 최종적으로 DB에 업로드합니다. (스터디 멤버만 가능)")
+    @Operation(
+            summary = "자료 업로드",
+            description = "S3에 파일 업로드 후, 자료 정보를 최종적으로 DB에 업로드합니다. (스터디 멤버만 가능)"
+    )
     @ApiResponse(responseCode = "201", description = "학습 자료 업로드 성공")
     @Parameters({
             @Parameter(name = "study_id", description = "자료를 업로드할 스터디의 ID", required = true, example = "1")
     })
-    @PostMapping("/studies/{studyId}/materials")
-    public ResponseEntity<MaterialDetailResponseDto> uploadMaterial(
-            @PathVariable Long studyId,
+    @PostMapping("/studies/{study_id}/materials")
+    public ResponseEntity<MaterialDetailResponseDto> createMaterial(
+            @PathVariable("study_id") Long studyId,
             @Valid @RequestBody MaterialRequestDto request
-    )  {
-        // TODO: 학습 자료 업로드 기능 구현
-         return ResponseEntity.status(HttpStatus.CREATED).
-                 body(materialService.createMaterial(studyId, request));
+    ) {
+        MaterialDetailResponseDto response = materialService.createMaterial(studyId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Api400InvalidTitleError
     @Api403ForbiddenMaterialOwnerOrLeaderError
     @Api404MaterialNotFoundError
-    @Operation(summary = "자료 수정", description = "이미 업로드된 학습 자료의 정보를 수정합니다. (자료 작성자 또는 스터디 리더만 가능)")
+    @Operation(
+            summary = "자료 수정",
+            description = "이미 업로드된 학습 자료의 정보를 수정합니다. (자료 작성자 또는 스터디 리더만 가능)"
+    )
     @ApiResponse(responseCode = "200", description = "자료 수정 성공")
     @Parameters({
             @Parameter(name = "material_id", description = "수정할 자료의 ID", required = true, example = "1")
     })
-    @PutMapping("/materials/{materialId}")
-    public ResponseEntity<MaterialRequestDto> updateMaterial(
-            @PathVariable("materialId") Long materialId,
+    @PutMapping("/materials/{material_id}")
+    public ResponseEntity<MaterialDetailResponseDto> updateMaterial(
+            @PathVariable("material_id") Long materialId,
             @Valid @RequestBody MaterialRequestDto request
     ) {
-        // TODO: 자료 수정 로직 구현
-        materialService.updateMaterial(materialId, request);
-        return ResponseEntity.ok().build();
+        MaterialDetailResponseDto response = materialService.updateMaterial(materialId, request);
+        return ResponseEntity.ok(response);
     }
 
     @Api403ForbiddenMaterialOwnerOrLeaderError
     @Api404MaterialNotFoundError
-    @Operation(summary = "자료 삭제", description = "특정 학습 자료들을 삭제합니다. (자료 작성자 또는 스터디 리더만 가능)")
+    @Operation(
+            summary = "자료 삭제",
+            description = "특정 학습 자료들을 삭제합니다. (자료 작성자 또는 스터디 리더만 가능)"
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "자료 삭제 성공"),
             @ApiResponse(responseCode = "400", description = "입력값 유효성 검증 실패",
@@ -106,38 +112,46 @@ public class MaterialController {
     public ResponseEntity<Void> deleteMaterials(
             @Valid @RequestBody MaterialDeleteRequestDto request
     ) {
-        // TODO: 자료 삭제 로직 구현
-        materialService.deleteMaterial(ids);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        materialService.deleteMaterial(request.materialIds());
+        return ResponseEntity.noContent().build();
     }
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
-    @Operation(summary = "자료 목록 조회", description = "업로드된 학습 자료 목록을 조회합니다. (스터디 멤버만 가능)")
+    @Operation(
+            summary = "자료 목록 조회",
+            description = "업로드된 학습 자료 목록을 조회합니다. (스터디 멤버만 가능)"
+    )
     @ApiResponse(
             responseCode = "200", description = "자료 목록 조회 성공",
             content = @Content(schema = @Schema(implementation = MaterialListResponseDto.class))
     )
     @Parameters({
             @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
-            @Parameter(name = "category", description = "필터링할 카테고리 목록 (쉼표로 구분)", example = "강의,코드"),
+            @Parameter(name = "category", description = "필터링할 카테고리 목록 (쉼표로 구분)", example = "공지,학습자료"),
             @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", required = true, example = "0"),
-            @Parameter(name = "size", description = "페이지 당 사이즈 (기본값 10)", example = "10")
+            @Parameter(name = "page_size", description = "페이지 당 사이즈", example = "10")
     })
     @GetMapping("/studies/{study_id}/materials")
     public ResponseEntity<MaterialListResponseDto> getMaterials(
             @PathVariable("study_id") Long studyId,
             @RequestParam(required = false) List<String> category,
             @RequestParam int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(name = "page_size", defaultValue = "10") int pageSize
     ) {
-        // TODO: 자료 목록 조회 로직 구현
-        return ResponseEntity.ok(materialService.findAllMaterials(studyId, category, page, size));
+        MaterialListResponseDto response = materialService.findAllMaterials(studyId, category, page, pageSize);
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "자료 상세 조회", description = "특정 학습 자료의 상세 정보를 조회합니다.")
+    @Operation(
+            summary = "자료 상세 조회",
+            description = "특정 학습 자료의 상세 정보를 조회합니다."
+    )
     @ApiResponse(responseCode = "200", description = "자료 상세 조회 성공")
     @Api404MaterialNotFoundError
+    @Parameters({
+            @Parameter(name = "material_id", description = "조회할 자료의 ID", required = true, example = "1")
+    })
     @GetMapping("/materials/{material_id}")
     public ResponseEntity<MaterialDetailResponseDto> getMaterialDetail(
             @PathVariable("material_id") Long materialId
