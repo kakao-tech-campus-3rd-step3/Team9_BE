@@ -19,6 +19,21 @@ public record MaterialRequestDto(
         @NotBlank(message = "자료 내용은 필수 입력 항목입니다.")
         String content,
 
-        @Schema(description = "업로드 완료된 첨부파일 정보 목록 (필수 X), 파일 첨부 안하면 files : []")
+        @Schema(description = """
+                업로드할 파일 정보 목록 (선택사항)
+                - 자료 생성 시: id는 모두 null
+                - 자료 수정 시: 
+                  * 기존 파일 유지: id 포함
+                  * 새 파일 추가: id는 null  
+                  * 파일 삭제: 해당 파일을 목록에서 제외
+                  * 모든 파일 삭제: 빈 배열 []
+                  * 파일 변경 없음: null
+                """,
+                example = """
+                [
+                  {"id": 1, "name": "기존파일.pdf", "url": "https://..."},
+                  {"id": null, "name": "새파일.jpg", "url": "https://..."}
+                ]
+                """)
         List<FileRequestDto> files
 ) {}
