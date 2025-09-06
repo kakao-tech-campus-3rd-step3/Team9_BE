@@ -22,7 +22,11 @@ public enum ErrorCode {
     INVALID_MAX_MEMBERS(HttpStatus.BAD_REQUEST, "INVALID_MAX_MEMBERS", "최대 멤버 수가 올바르지 않습니다."),
     INVALID_ROLE(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "역할이 올바르지 않습니다."),
     INVALID_MATERIAL_IDS(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_IDS", "자료 ID가 올바르지 않습니다."),
-    INVALID_TITLE(HttpStatus.BAD_REQUEST, "INVALID_TITLE", "제목이 올바르지 않습니다."),
+    INVALID_MATERIAL_TITLE(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_TITLE", "자료 제목이 올바르지 않습니다."),
+    INVALID_MATERIAL_CATEGORY(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_CATEGORY", "자료 카테고리가 올바르지 않습니다."),
+    INVALID_MATERIAL_CONTENT(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_CONTENT", "자료 내용이 올바르지 않습니다."),
+    INVALID_MATERIAL_WRITER(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_WRITER", "자료 작성자가 올바르지 않습니다."),
+
     INVALID_START_TIME(HttpStatus.BAD_REQUEST, "INVALID_START_TIME", "시작 시간이 올바르지 않습니다."),
     INVALID_CANDIDATE_DATES(HttpStatus.BAD_REQUEST, "INVALID_CANDIDATE_DATES", "가능 날짜가 올바르지 않습니다."),
 
@@ -44,7 +48,8 @@ public enum ErrorCode {
     ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "ALREADY_CHECKED_IN", "이미 출석 체크되었습니다."),
 
     // Material Domain
-    MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다.");
+    MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다."),
+    FORBIDDEN_MATERIAL_ACCESS(HttpStatus.FORBIDDEN, "FORBIDDEN_MATERIAL_ACCESS", "자료에 접근할 권한이 없습니다.");
 
     public final HttpStatus status;
     public final String code;
