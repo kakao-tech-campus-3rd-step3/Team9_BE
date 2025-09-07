@@ -1,5 +1,6 @@
 package com.pado.global.exception.common;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -8,8 +9,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 import java.util.List;
-import com.pado.global.exception.dto.ErrorResponseDto;
+import java.util.stream.Collectors;
 
+import com.pado.global.exception.dto.ErrorResponseDto;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -28,6 +30,22 @@ public class GlobalExceptionHandler {
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(GlobalExceptionHandler::formatFieldError)
                 .toList();
+        ErrorCode code = ErrorCode.INVALID_INPUT;
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
+    // 파라미터 유효성 검증 실패 (@RequestParam, @PathVariable)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleConstraintViolation(ConstraintViolationException ex, WebRequest req) {
+        List<String> errors = ex.getConstraintViolations().stream()
+                .map(violation -> {
+                    String path = violation.getPropertyPath().toString();
+                    String paramName = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+                    return paramName + ": " + violation.getMessage();
+                })
+                .collect(Collectors.toList());
+
         ErrorCode code = ErrorCode.INVALID_INPUT;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
         return ResponseEntity.status(code.status).body(body);
