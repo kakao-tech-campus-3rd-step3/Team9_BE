@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -68,7 +69,9 @@ public class AuthController {
     })
     @GetMapping("/check-nickname")
     public ResponseEntity<NicknameCheckResponseDto> checkNickname(
-            @RequestParam String nickname
+            @RequestParam
+            @Size(min = 2, max = 10, message = "닉네임은 2자 이상 10자 이하로 입력해주세요.")
+            String nickname
     ) {
         // TODO: 닉네임 중복 확인 로직 구현
         boolean isAvailable = !nickname.equals("중복닉네임");
