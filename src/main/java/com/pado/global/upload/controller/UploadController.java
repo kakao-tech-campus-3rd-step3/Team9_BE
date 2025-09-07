@@ -1,5 +1,6 @@
 package com.pado.global.upload.controller;
 
+import com.pado.global.swagger.annotation.common.NoApi409Conflict;
 import com.pado.global.upload.dto.PreSignedUrlResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,6 +21,7 @@ public class UploadController {
 
     // TODO: 서비스 레이어 종속성 주입
 
+    @NoApi409Conflict
     @Operation(summary = "데이터 저장 임시 url 발급", description = "프로필 이미지 등 파일을 S3에 직접 업로드하기 위한 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",

@@ -8,6 +8,7 @@ import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
 import com.pado.global.exception.dto.ErrorResponseDto;
+import com.pado.global.swagger.annotation.common.NoApi409Conflict;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -114,6 +115,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @NoApi409Conflict
     @Operation(summary = "로그인", description = "사용자가 이메일과 비밀번호를 입력해 로그인을 요청합니다. 입력 정보가 맞으면 인증 토큰(예: JWT)을 반환합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그인 성공",
@@ -142,6 +144,7 @@ public class AuthController {
         return ResponseEntity.ok(new TokenResponseDto("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"));
     }
 
+    @NoApi409Conflict
     @Operation(summary = "이메일 인증(인증번호 전송)", description = "입력한 이메일로 인증번호를 전송합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "인증번호 전송 성공",
@@ -169,6 +172,7 @@ public class AuthController {
         return ResponseEntity.ok(new EmailVerificationResponseDto(true, "인증번호가 성공적으로 전송되었습니다."));
     }
 
+    @NoApi409Conflict
     @Operation(summary = "이메일 인증(인증번호 확인)", description = "사용자가 입력한 인증번호가 올바른지 확인합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "이메일 인증 성공",
