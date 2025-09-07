@@ -91,8 +91,20 @@ public class DocumentController {
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
                                     name = "자료 ID 유효성 오류",
-                                    value = "{\"error_code\": \"INVALID_MATERIAL_IDS\", \"field\": \"material_ids\", \"message\": \"자료 ID 목록은 최소 한 개 이상 포함되어야 합니다.\"}"
-                            )))
+                                    value = """
+                                        {
+                                          "code": "INVALID_MATERIAL_IDS",
+                                          "message": "자료 ID가 올바르지 않습니다.",
+                                          "errors": [
+                                            "material_ids: 자료 ID 목록은 최소 한 개 이상 포함되어야 합니다."
+                                          ],
+                                          "timestamp": "2025-09-07T08:15:30.123Z",
+                                          "path": "/api/materials/delete"
+                                        }
+                                        """
+                            )
+                    )
+            )
     })
     @DeleteMapping("/materials")
     public ResponseEntity<Void> deleteMaterials(

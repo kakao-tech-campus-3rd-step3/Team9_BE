@@ -43,13 +43,25 @@ public class AuthController {
                                     @ExampleObject(name = "사용 가능한 닉네임", value = "{\"is_available\": true}"),
                                     @ExampleObject(name = "이미 존재하는 닉네임", value = "{\"is_available\": false}")
                             })),
-            @ApiResponse(responseCode = "400", description = "유효하지 않은 닉네임 형식",
+            @ApiResponse(responseCode = "400", description = "유효하지 않은 입력 값",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
-                                    name = "유효성 검증 실패 예시",
-                                    value = "{\"error_code\": \"INVALID_NICKNAME_FORMAT\", \"field\": \"nickname\", \"message\": \"닉네임은 2자 이상 10자 이하로 입력해주세요.\"}"
-                            )))
+                                    name = "파라미터 유효성 오류",
+                                    value = """
+                                            {
+                                              "code": "INVALID_INPUT",
+                                              "message": "요청 값이 올바르지 않습니다.",
+                                              "errors": [
+                                                "nickname: 닉네임은 2자 이상 10자 이하로 입력해주세요."
+                                              ],
+                                              "timestamp": "2025-09-07T08:15:10.8668626",
+                                              "path": "/api/auth/check-nickname"
+                                            }
+                                            """
+                            )
+                    )
+            )
     })
     @Parameters({
             @Parameter(name = "nickname", description = "중복 확인할 닉네임", required = true, example = "파도")
@@ -66,22 +78,32 @@ public class AuthController {
     @Operation(summary = "회원가입", description = "이메일, 비밀번호, 닉네임, 성별, 관심 분야, 지역 정보를 입력 받아 회원 계정을 생성합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "회원가입 성공"),
-            @ApiResponse(responseCode = "400", description = "입력값 유효성 검증 실패",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "유효성 검증 실패 예시",
-                                    value = "{\"error_code\": \"INVALID_EMAIL_FORMAT\", \"field\": \"email\", \"message\": \"유효한 이메일 형식이 아닙니다.\"}"
-                            ))),
             @ApiResponse(responseCode = "409", description = "이미 존재하는 이메일 또는 닉네임",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = {
-                                    @ExampleObject(name = "이메일 중복",
-                                            value = "{\"error_code\": \"DUPLICATE_EMAIL\", \"field\": \"email\", \"message\": \"이미 사용 중인 이메일입니다.\"}"),
-                                    @ExampleObject(name = "닉네임 중복",
-                                            value = "{\"error_code\": \"DUPLICATE_NICKNAME\", \"field\": \"nickname\", \"message\": \"이미 사용 중인 닉네임입니다.\"}")
-                            }))
+                                    @ExampleObject(name = "이미 존재하는 이메일",
+                                            value = """
+                                                    {
+                                                      "code": "DUPLICATE_EMAIL",
+                                                      "message": "이미 사용 중인 이메일입니다.",
+                                                      "errors": [],
+                                                      "timestamp": "2025-09-07T08:15:10.8668626",
+                                                      "path": "/api/auth/signup"
+                                                    }
+                                                    """),
+                                    @ExampleObject(name = "이미 존재하는 닉네임",
+                                            value = """
+                                                    {
+                                                      "code": "DUPLICATE_NICKNAME",
+                                                      "message": "이미 사용 중인 닉네임입니다.",
+                                                      "errors": [],
+                                                      "timestamp": "2025-09-07T08:15:10.8668626",
+                                                      "path": "/api/auth/signup"
+                                                    }
+                                                    """)
+                            })
+            )
     })
     @PostMapping("/signup")
     public ResponseEntity<Void> register(@Valid @RequestBody SignUpRequestDto request) {
@@ -97,9 +119,19 @@ public class AuthController {
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
-                                    name = "인증 실패 예시",
-                                    value = "{\"error_code\": \"AUTHENTICATION_FAILED\", \"message\": \"이메일 또는 비밀번호가 일치하지 않습니다.\"}"
-                            )))
+                                    name = "인증 실패",
+                                    value = """
+                                            {
+                                              "code": "AUTHENTICATION_FAILED",
+                                              "message": "이메일 또는 비밀번호가 일치하지 않습니다.",
+                                              "errors": [],
+                                              "timestamp": "2025-09-07T08:15:10.8668626",
+                                              "path": "/api/auth/login"
+                                            }
+                                            """
+                            )
+                    )
+            )
     })
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
@@ -112,14 +144,21 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "인증번호 전송 성공",
                     content = @Content(schema = @Schema(implementation = EmailVerificationResponseDto.class),
                             examples = @ExampleObject(value = "{\"success\": true, \"message\": \"인증번호가 성공적으로 전송되었습니다.\"}"))),
-            @ApiResponse(responseCode = "400", description = "유효하지 않은 이메일 형식",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(name = "잘못된 이메일 형식 예시",
-                                    value = "{\"error_code\": \"INVALID_EMAIL_FORMAT\", \"field\": \"email\", \"message\": \"유효한 이메일 형식이 아닙니다.\"}"))),
             @ApiResponse(responseCode = "409", description = "이미 가입된 이메일",
                     content = @Content(schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(name = "이메일 중복 예시",
-                                    value = "{\"error_code\": \"DUPLICATE_EMAIL\", \"field\": \"email\", \"message\": \"이미 사용 중인 이메일입니다.\"}")))
+                            examples = @ExampleObject(name = "이미 가입된 이메일",
+                                    value = """
+                                            {
+                                              "code": "DUPLICATE_EMAIL",
+                                              "message": "이미 사용 중인 이메일입니다.",
+                                              "errors": [],
+                                              "timestamp": "2025-09-07T08:15:10.8668626",
+                                              "path": "/api/auth/email/send"
+                                            }
+                                            """
+                            )
+                    )
+            )
     })
     @PostMapping("/email/send")
     public ResponseEntity<EmailVerificationResponseDto> sendVerificationEmail(@Valid @RequestBody EmailSendRequestDto request) {
@@ -134,8 +173,19 @@ public class AuthController {
                             examples = @ExampleObject(value = "{\"success\": true, \"message\": \"이메일 인증이 완료되었습니다.\"}"))),
             @ApiResponse(responseCode = "401", description = "인증번호 불일치 또는 만료",
                     content = @Content(schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(name = "인증번호 불일치/만료 예시",
-                                    value = "{\"error_code\": \"VERIFICATION_CODE_MISMATCH\", \"field\": \"verification_code\", \"message\": \"인증번호가 일치하지 않거나 만료되었습니다.\"}")))
+                            examples = @ExampleObject(name = "인증번호 불일치 또는 만료",
+                                    value = """
+                                            {
+                                              "code": "VERIFICATION_CODE_MISMATCH",
+                                              "message": "인증번호가 일치하지 않거나 만료되었습니다.",
+                                              "errors": [],
+                                              "timestamp": "2025-09-07T08:15:10.8668626",
+                                              "path": "/api/auth/email/verify"
+                                            }
+                                            """
+                            )
+                    )
+            )
     })
     @PostMapping("/email/verify")
     public ResponseEntity<EmailVerificationResponseDto> verifyEmailCode(@Valid @RequestBody EmailVerifyRequestDto request) {

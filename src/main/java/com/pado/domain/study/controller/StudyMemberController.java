@@ -107,20 +107,25 @@ public class StudyMemberController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
-            @ApiResponse(responseCode = "400", description = "유효하지 않은 역할 값",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "역할 값 유효성 검사 실패 예시",
-                                    value = "{\"error_code\": \"INVALID_ROLE\", \"field\": \"role\", \"message\": \"유효하지 않은 역할 값입니다.\"}"
-                            ))),
             @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
                                     name = "상태 변경 충돌 예시",
-                                    value = "{\"error_code\": \"INVALID_STATE_CHANGE\", \"field\": \"role\", \"message\": \"이미 스터디원인 사용자를 신청 대기 상태로 변경할 수 없습니다.\"}"
-                            )))
+                                    value = """
+                                        {
+                                          "code": "INVALID_STATE_CHANGE",
+                                          "message": "상태 변경이 유효하지 않습니다.",
+                                          "errors": [
+                                            "role: 이미 스터디원인 사용자를 신청 대기 상태로 변경할 수 없습니다."
+                                          ],
+                                          "timestamp": "2025-09-07T08:15:30.123Z",
+                                          "path": "/api/users/change-status"
+                                        }
+                                        """
+                            )
+                    )
+            )
     })
     @Parameters({
             @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
