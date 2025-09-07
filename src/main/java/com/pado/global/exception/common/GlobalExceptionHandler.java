@@ -1,15 +1,19 @@
 package com.pado.global.exception.common;
 
+import com.pado.global.exception.dto.ErrorResponseDto;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-import java.util.List;
-import com.pado.global.exception.dto.ErrorResponseDto;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -18,7 +22,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponseDto> handleBusiness(BusinessException ex, WebRequest req) {
         ErrorCode code = ex.getErrorCode();
-        ErrorResponseDto body = ErrorResponseDto.of(code, ex.getMessage(), null, path(req));
+        ErrorResponseDto body = ErrorResponseDto.of(code, ex.getMessage(), Collections.emptyList(), path(req));
         return ResponseEntity.status(code.status).body(body);
     }
 
@@ -33,11 +37,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(code.status).body(body);
     }
 
+    // 파라미터 유효성 검증 실패 (@RequestParam, @PathVariable)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleConstraintViolation(ConstraintViolationException ex, WebRequest req) {
+        List<String> errors = ex.getConstraintViolations().stream()
+                .map(violation -> {
+                    String path = violation.getPropertyPath().toString();
+                    String paramName = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+                    return paramName + ": " + violation.getMessage();
+                })
+                .collect(Collectors.toList());
+
+        ErrorCode code = ErrorCode.INVALID_INPUT;
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
     // JSON 파싱 실패 등 Body 해석 불가
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponseDto> handleNotReadable(HttpMessageNotReadableException ex, WebRequest req) {
         ErrorCode code = ErrorCode.JSON_PARSE_ERROR;
-        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, null, path(req));
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(), path(req));
         return ResponseEntity.status(code.status).body(body);
     }
 
@@ -45,7 +65,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDataIntegrity(DataIntegrityViolationException ex, WebRequest req) {
         ErrorCode code = ErrorCode.DUPLICATE_KEY;
-        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, null, path(req));
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(), path(req));
         return ResponseEntity.status(code.status).body(body);
     }
 
@@ -53,7 +73,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleUnexpected(Exception ex, WebRequest req) {
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
-        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, null, path(req));
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(), path(req));
         return ResponseEntity.status(code.status).body(body);
     }
 
