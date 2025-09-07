@@ -5,7 +5,6 @@ import com.pado.domain.material.dto.request.MaterialDeleteRequestDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
 import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
 import com.pado.global.exception.dto.ErrorResponseDto;
-import com.pado.global.swagger.annotation.material.Api400InvalidTitleError;
 import com.pado.global.swagger.annotation.material.Api403ForbiddenMaterialOwnerOrLeaderError;
 import com.pado.global.swagger.annotation.material.Api404MaterialNotFoundError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
@@ -38,7 +37,6 @@ public class DocumentController {
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
-    @Api400InvalidTitleError
     @Operation(
             summary = "자료 업로드",
             description = "새로운 학습 자료를 업로드합니다. (스터디 멤버만 가능)"
@@ -58,7 +56,6 @@ public class DocumentController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @Api400InvalidTitleError
     @Api403ForbiddenMaterialOwnerOrLeaderError
     @Api404MaterialNotFoundError
     @Operation(

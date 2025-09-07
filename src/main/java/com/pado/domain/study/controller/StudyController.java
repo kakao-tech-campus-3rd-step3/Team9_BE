@@ -4,7 +4,6 @@ import com.pado.domain.study.dto.request.StudyCreateRequestDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
-import com.pado.global.swagger.annotation.study.Api400InvalidMaxMembersError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
@@ -89,7 +88,6 @@ public class StudyController {
         return ResponseEntity.ok(mockResponse);
     }
 
-    @Api400InvalidMaxMembersError
     @Operation(summary = "스터디 생성", description = "새로운 스터디를 생성 (스터디 이름, 한 줄 소개, 스터디 설명, 카테고리, 제한 인원, 이미지)")
     @ApiResponse(
             responseCode = "201", description = "스터디 생성 성공"
@@ -135,7 +133,6 @@ public class StudyController {
         return ResponseEntity.ok(mockResponse);
     }
 
-    @Api400InvalidMaxMembersError
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404StudyNotFoundError
     @Operation(
