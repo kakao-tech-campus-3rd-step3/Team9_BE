@@ -33,8 +33,8 @@ public record StudyDetailResponseDto(
         List<String> conditions,
 
         @Schema(description = "현재 스터디원 수", example = "5")
-        int current_members,
+        Integer current_members,
 
         @Schema(description = "최대 스터디원 수", example = "10")
-        int max_members
+        Integer max_members
 ) {}
