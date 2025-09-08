@@ -56,8 +56,28 @@ public class GlobalExceptionHandler {
     // JSON 파싱 실패 등 Body 해석 불가
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponseDto> handleNotReadable(HttpMessageNotReadableException ex, WebRequest req) {
+        Throwable cause = ex.getCause();
+
+        // Enum 변환 실패인 경우 별도로 처리
+        if (cause instanceof IllegalArgumentException) {
+            return buildInvalidEnumResponse((IllegalArgumentException) cause, req);
+        }
+
         ErrorCode code = ErrorCode.JSON_PARSE_ERROR;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(), path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidEnum(IllegalArgumentException ex, WebRequest req) {
+        return buildInvalidEnumResponse(ex, req);
+    }
+
+    private ResponseEntity<ErrorResponseDto> buildInvalidEnumResponse(IllegalArgumentException ex, WebRequest req) {
+        ErrorCode code = ErrorCode.INVALID_INPUT;
+        List<String> errors = Collections.singletonList(ex.getMessage());
+
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
         return ResponseEntity.status(code.status).body(body);
     }
 
