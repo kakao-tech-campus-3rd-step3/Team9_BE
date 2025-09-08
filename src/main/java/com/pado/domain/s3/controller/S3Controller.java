@@ -1,7 +1,7 @@
-package com.pado.global.upload.controller;
+package com.pado.domain.s3.controller;
 
 import com.pado.global.swagger.annotation.common.NoApi409Conflict;
-import com.pado.global.upload.dto.PreSignedUrlResponseDto;
+import com.pado.domain.s3.dto.PreSignedUrlResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "03. Upload", description = "파일 업로드 관련 유틸리티 API")
 @RestController
 @RequestMapping("/api/upload")
-public class UploadController {
+public class S3Controller {
 
     // TODO: 서비스 레이어 종속성 주입
 

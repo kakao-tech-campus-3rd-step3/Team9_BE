@@ -1,4 +1,4 @@
-package com.pado.global.upload.dto;
+package com.pado.domain.s3.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
