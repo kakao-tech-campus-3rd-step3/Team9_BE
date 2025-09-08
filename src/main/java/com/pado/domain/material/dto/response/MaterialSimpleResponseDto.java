@@ -17,11 +17,20 @@ public record MaterialSimpleResponseDto(
         @Schema(description = "자료 카테고리", example = "강의")
         String category,
 
+        @Schema(description = "주차 정보 (학습자료에만 존재)", example = "1", nullable = true)
+        String week,
+
+        @Schema(description = "작성자 ID", example = "1")
+        Long userId,
+
+        @Schema(description = "작성자 닉네임", example = "김민수")
+        String nickname,
+
         @JsonProperty("data_urls")
         @Schema(name = "data_urls", description = "자료 URL 리스트", example = "[\"https://pado-storage.com/data1.pdf\"]")
         List<String> dataUrls,
 
-        @JsonProperty("updated_at")
-        @Schema(name = "updated_at", description = "마지막 수정일", example = "2025-09-02T13:30:00")
-        LocalDateTime updatedAt
+        @JsonProperty("created_at")
+        @Schema(name = "created_at", description = "자료 생성일", example = "2025-09-02T13:30:00")
+        LocalDateTime createdAt
 ) {}

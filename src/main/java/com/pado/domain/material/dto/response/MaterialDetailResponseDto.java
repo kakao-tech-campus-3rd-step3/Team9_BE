@@ -16,8 +16,17 @@ public record MaterialDetailResponseDto (
         @Schema(description = "자료 카테고리", example = "자료")
         String category,
 
+        @Schema(description = "주차 정보 (학습자료에만 존재)", example = "1", nullable = true)
+        String week,
+
         @Schema(description = "자료 전체 내용")
         String content,
+
+        @Schema(description = "작성자 ID", example = "1")
+        Long userId,
+
+        @Schema(description = "작성자 닉네임", example = "김민수")
+        String nickname,
 
         @JsonProperty("created_at")
         @Schema(name = "created_at", description = "생성일", example = "2025-09-02T13:30:00")
