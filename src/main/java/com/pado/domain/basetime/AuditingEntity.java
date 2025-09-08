@@ -1,4 +1,4 @@
-package com.pado.domain.baseTime;
+package com.pado.domain.basetime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

@@ -1,6 +1,6 @@
 package com.pado.domain.material.entity;
 
-import com.pado.domain.baseTime.AuditingEntity;
+import com.pado.domain.basetime.AuditingEntity;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.*;
