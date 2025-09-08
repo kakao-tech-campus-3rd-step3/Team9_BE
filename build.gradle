@@ -45,6 +45,10 @@ dependencies {
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// AWS
+	implementation platform('software.amazon.awssdk:bom:2.25.56')
+	implementation 'software.amazon.awssdk:s3'
 }
 
 tasks.named('test') {
