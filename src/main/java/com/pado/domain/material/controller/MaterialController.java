@@ -1,9 +1,6 @@
 package com.pado.domain.material.controller;
 
-import com.pado.domain.material.dto.request.FilePresignedUrlRequestDto;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
-import com.pado.domain.material.dto.request.MaterialDeleteRequestDto;
-import com.pado.domain.material.dto.response.FilePresignedUrlResponseDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
 import com.pado.domain.material.service.MaterialService;
@@ -23,7 +20,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,19 +38,6 @@ import java.util.List;
 public class MaterialController {
 
     private final MaterialService materialService;
-
-    @Operation(
-            summary = "파일 업로드용 Presigned URL 생성",
-            description = "S3에 파일을 직접 업로드할 수 있는 임시 URL을 발급받습니다."
-    )
-    @ApiResponse(responseCode = "200", description = "Presigned URL 발급 성공")
-    @PostMapping("/materials/presigned-url")
-    public ResponseEntity<FilePresignedUrlResponseDto> createPresignedUrl(
-            @Valid @RequestBody FilePresignedUrlRequestDto request
-    ) {
-        FilePresignedUrlResponseDto response = materialService.createPresignedUrl(request);
-        return ResponseEntity.ok(response);
-    }
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
@@ -76,7 +64,7 @@ public class MaterialController {
     @Api404MaterialNotFoundError
     @Operation(
             summary = "자료 수정",
-            description = "이미 업로드된 학습 자료의 정보를 수정합니다. (자료 작성자 또는 스터디 리더만 가능)"
+            description = "이미 업로드된 학습 자료의 정보를 수정합니다. (자료 작성자만 가능)"
     )
     @ApiResponse(responseCode = "200", description = "자료 수정 성공")
     @Parameters({
@@ -95,7 +83,7 @@ public class MaterialController {
     @Api404MaterialNotFoundError
     @Operation(
             summary = "자료 삭제",
-            description = "특정 학습 자료들을 삭제합니다. (자료 작성자 또는 스터디 리더만 가능)"
+            description = "특정 학습 자료들을 삭제합니다. (자료 작성자만 가능)"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "자료 삭제 성공"),
@@ -108,11 +96,16 @@ public class MaterialController {
                                     value = "{\"error_code\": \"INVALID_MATERIAL_IDS\", \"field\": \"material_ids\", \"message\": \"자료 ID 목록은 최소 한 개 이상 포함되어야 합니다.\"}"
                             )))
     })
+    @Parameters({
+            @Parameter(name = "material_ids", description = "삭제할 자료 ID 목록 (쉼표로 구분)", required = true, example = "1,2,3")
+    })
     @DeleteMapping("/materials")
     public ResponseEntity<Void> deleteMaterials(
-            @Valid @RequestBody MaterialDeleteRequestDto request
+            @RequestParam("material_ids")
+            @NotEmpty(message = "자료 ID 목록은 최소 한 개 이상 포함되어야 합니다.")
+            List<Long> materialIds
     ) {
-        materialService.deleteMaterial(request.materialIds());
+        materialService.deleteMaterial(materialIds);
         return ResponseEntity.noContent().build();
     }
 
@@ -128,18 +121,28 @@ public class MaterialController {
     )
     @Parameters({
             @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
-            @Parameter(name = "category", description = "필터링할 카테고리 목록 (쉼표로 구분)", example = "공지,학습자료"),
-            @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", required = true, example = "0"),
-            @Parameter(name = "page_size", description = "페이지 당 사이즈", example = "10")
+            @Parameter(name = "category", description = "필터링할 카테고리 목록 (쉼표로 구분). '전체'를 포함하면 모든 카테고리 조회", example = "공지,학습자료 또는 전체"),
+            @Parameter(name = "week", description = "필터링할 주차 목록 (쉼표로 구분, 학습자료에만 적용)", example = "1,2,3"),
+            @Parameter(name = "keyword", description = "검색 키워드 (제목, 내용에서 검색)", example = "스프링"),
+            @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", example = "0"),
+            @Parameter(name = "size", description = "페이지 당 사이즈 (기본값: 10)", example = "10"),
+            @Parameter(name = "sort", description = "정렬 기준 (기본값: createdAt,desc)", example = "createdAt,desc")
     })
     @GetMapping("/studies/{study_id}/materials")
     public ResponseEntity<MaterialListResponseDto> getMaterials(
             @PathVariable("study_id") Long studyId,
             @RequestParam(required = false) List<String> category,
-            @RequestParam int page,
-            @RequestParam(name = "page_size", defaultValue = "10") int pageSize
+            @RequestParam(required = false) List<String> week,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        MaterialListResponseDto response = materialService.findAllMaterials(studyId, category, page, pageSize);
+        MaterialListResponseDto response = materialService.findAllMaterials(
+                studyId,
+                category,
+                week,
+                keyword,
+                pageable
+        );
         return ResponseEntity.ok(response);
     }
 
