@@ -1,9 +1,7 @@
 package com.pado.domain.material.service;
 
-import com.pado.domain.material.dto.request.FilePresignedUrlRequestDto;
 import com.pado.domain.material.dto.request.FileRequestDto;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
-import com.pado.domain.material.dto.response.FilePresignedUrlResponseDto;
 import com.pado.domain.material.dto.response.FileResponseDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
@@ -15,10 +13,9 @@ import com.pado.domain.material.repository.FileRepository;
 import com.pado.domain.material.repository.MaterialRepository;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
+import com.pado.domain.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -34,29 +30,29 @@ public class MaterialServiceImpl implements MaterialService {
 
     private final MaterialRepository materialRepository;
     private final FileRepository fileRepository;
-    // private final S3Service s3Service; // TODO: S3 연동 시 주입
-    // private final SecurityService securityService; // TODO: 인증 서비스 연동 시 주입
-
-    // S3로부터 임시 파일 URL 요청
-    @Override
-    public FilePresignedUrlResponseDto createPresignedUrl(FilePresignedUrlRequestDto request) {
-        // TODO: S3Service 구현 후 활성화
-        String mockUrl = "https://pado-bucket.s3.ap-northeast-2.amazonaws.com/materials/" + request.name();
-        return new FilePresignedUrlResponseDto(mockUrl, request.name());
-    }
+    private final S3Service s3Service;
 
     // 자료 생성
     @Transactional
     @Override
     public MaterialDetailResponseDto createMaterial(Long studyId, MaterialRequestDto request) {
+        // TODO: 토큰을 통해 실제 사용자 ID 가져오기
         Long userId = getCurrentUserId(); // 임시 메서드
 
-        // Material 엔티티 생성
-        Material material = createMaterialEntity(request, studyId, userId);
+        MaterialCategory category = MaterialCategory.fromString(request.category());
+        Material material = new Material(request.title(), category, request.week(), request.content(), studyId, userId);
+
         Material savedMaterial = materialRepository.save(material);
 
         // 첨부파일 처리
-        saveFiles(savedMaterial, request.files());
+        Optional.ofNullable(request.files())
+                .filter(files -> !files.isEmpty())
+                .ifPresent(files -> {
+                    List<File> fileEntities = files.stream()
+                            .map(fileDto -> createFileEntity(fileDto, material))
+                            .collect(Collectors.toList());
+                    fileRepository.saveAll(fileEntities);
+                });
 
         return convertToDetailResponseDto(savedMaterial);
     }
@@ -65,43 +61,68 @@ public class MaterialServiceImpl implements MaterialService {
     @Override
     public MaterialDetailResponseDto findMaterialById(Long materialId) {
 
-        Material material = getMaterialById(materialId);
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND));
+
         return convertToDetailResponseDto(material);
     }
 
     // 자료 목록 조회
     @Override
-    public MaterialListResponseDto findAllMaterials(Long studyId, List<String> categories, int page, int size) {
-        log.info("Finding materials for study: {}, categories: {}, page: {}, size: {}",
-                studyId, categories, page, size);
+    public MaterialListResponseDto findAllMaterials(
+            Long studyId,
+            List<String> categories,
+            List<String> weeks,
+            String keyword,
+            Pageable pageable) {
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Material> materialPage = findMaterialsWithFiltering(studyId, categories, pageable);
+        Page<Material> materialPage;
+        Optional<List<MaterialCategory>> materialCategoriesOpt = Optional.empty();
+
+        if (categories != null && !categories.isEmpty() && !categories.contains("전체")) {
+            List<MaterialCategory> materialCategories = categories.stream()
+                    .map(MaterialCategory::fromString)
+                    .collect(Collectors.toList());
+            materialCategoriesOpt = Optional.of(materialCategories);
+        }
+
+        // 필터 조건이 있는 경우 필터링 후 조회
+        if (materialCategoriesOpt.isPresent() || weeks != null || keyword != null) {
+            materialPage = materialRepository.findByStudyIdWithFiltersAndKeyword(
+                    studyId, materialCategoriesOpt.orElse(null), weeks, keyword, pageable);
+        } else {
+            materialPage = materialRepository.findByStudyId(studyId, pageable);
+        }
 
         List<MaterialSimpleResponseDto> materials = materialPage.getContent().stream()
                 .map(this::convertToSimpleResponseDto)
                 .collect(Collectors.toList());
 
-        return new MaterialListResponseDto(materials, page, size, materialPage.hasNext());
+        return new MaterialListResponseDto(materials, pageable.getPageNumber(), pageable.getPageSize(), materialPage.hasNext());
     }
 
     // 자료 수정
     @Transactional
     @Override
     public MaterialDetailResponseDto updateMaterial(Long materialId, MaterialRequestDto request) {
-        Long userId = getCurrentUserId();
+        // TODO: 토큰을 통해 실제 사용자 ID 가져오기
+        Long userId = getCurrentUserId(); // 임시
 
-        Material material = getMaterialById(materialId);
-        validateMaterialAccess(material, userId);
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND));
+
+        if (!material.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_MATERIAL_ACCESS);
+        }
 
         // 자료 정보 업데이트
-        updateMaterialInfo(material, request);
+        MaterialCategory category = MaterialCategory.fromString(request.category());
+        material.updateMaterial(request.title(), category, request.week(), request.content());
 
         // 파일 차분 업데이트
         updateMaterialFiles(materialId, request.files());
 
         Material updatedMaterial = materialRepository.save(material);
-
         return convertToDetailResponseDto(updatedMaterial);
     }
 
@@ -118,25 +139,6 @@ public class MaterialServiceImpl implements MaterialService {
         materialRepository.deleteAll(materials);
     }
 
-    // 자료 엔티티 생성 메서드
-    private Material createMaterialEntity(MaterialRequestDto request, Long studyId, Long userId) {
-        MaterialCategory category = MaterialCategory.fromString(request.category());
-        return new Material(request.title(), category, request.content(), studyId, userId);
-    }
-
-    // 파일 저장 메서드
-    private void saveFiles(Material material, List<FileRequestDto> fileRequests) {
-        if (fileRequests == null || fileRequests.isEmpty()) {
-            return;
-        }
-
-        List<File> files = fileRequests.stream()
-                .map(fileDto -> createFileEntity(fileDto, material))
-                .collect(Collectors.toList());
-
-        fileRepository.saveAll(files);
-    }
-
     // 파일 엔티티 생성 메서드
     private File createFileEntity(FileRequestDto fileDto, Material material) {
         File file = new File(fileDto.name(), fileDto.url());
@@ -144,42 +146,26 @@ public class MaterialServiceImpl implements MaterialService {
         return file;
     }
 
-    // 해당하는 카테고리의 자료들 조회
-    private Page<Material> findMaterialsWithFiltering(Long studyId, List<String> categories, Pageable pageable) {
-        if (categories != null && !categories.isEmpty()) {
-            List<MaterialCategory> materialCategories = categories.stream()
-                    .map(MaterialCategory::fromString)
-                    .collect(Collectors.toList());
-
-            return materialRepository.findByStudyIdAndMaterialCategoryInOrderByCreatedAtDesc(
-                    studyId, materialCategories, pageable);
-        }
-
-        return materialRepository.findByStudyIdOrderByCreatedAtDesc(studyId, pageable);
-    }
-
-    // 자료 정보 수정 메서드
-    private void updateMaterialInfo(Material material, MaterialRequestDto request) {
-        MaterialCategory category = MaterialCategory.fromString(request.category());
-        material.updateMaterial(request.title(), category, request.content());
-    }
-
     // 자료 수정 시 연관된 파일 수정 메서드
     private void updateMaterialFiles(Long materialId, List<FileRequestDto> requestFiles) {
 
-        // 변경사항 X
-        if (requestFiles == null) {
+        Optional<List<FileRequestDto>> filesOpt = Optional.ofNullable(requestFiles);
+        
+        // 변경사항이 없는 경우
+        if (filesOpt.isEmpty()) {
             return;
         }
 
+        List<FileRequestDto> files = filesOpt.get();
+        
         // 모든 파일 삭제
-        if (requestFiles.isEmpty()) {
+        if (files.isEmpty()) {
             fileRepository.deleteByMaterialId(materialId);
             return;
         }
 
         // 일부 파일만 삭제 및 추가
-        processDifferentialFileUpdate(materialId, requestFiles);
+        processDifferentialFileUpdate(materialId, files);
     }
 
     // 자료 수정 시 파일의 변경점이 있는 경우 생성 및 삭제 처리하는 메서드
@@ -203,32 +189,19 @@ public class MaterialServiceImpl implements MaterialService {
                 .map(fileDto -> createFileEntity(fileDto, materialRepository.getReferenceById(materialId)))
                 .collect(Collectors.toList());
 
-        // 삭제 및 추가 실행
+        // S3에서 파일 삭제 후 DB에서 삭제 (S3Service에서 예외 처리됨)
         if (!filesToDelete.isEmpty()) {
+            filesToDelete.forEach(file -> s3Service.deleteFileByUrl(file.getUrl()));
             fileRepository.deleteAll(filesToDelete);
         }
 
+        // 추가 실행
         if (!newFiles.isEmpty()) {
             fileRepository.saveAll(newFiles);
         }
     }
 
-    // 자료 ID로 특정 자료 조회
-    private Material getMaterialById(Long materialId) {
-
-        return materialRepository.findById(materialId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND));
-    }
-
-    // 유저의 권한 확인 메서드
-    private void validateMaterialAccess(Material material, Long userId) {
-        // TODO: 추후 스터디 리더 권한 확인 로직 추가
-        if (!material.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_MATERIAL_ACCESS);
-        }
-    }
-
-    // 자료가 존재하고 접근 가능한지 검사하는 메서드
+    // 자료 삭제 시, 자료가 존재하는지와 해당 자료가 본인이 작성한 글인지 검사하는 메서드
     private List<Material> validateMaterialsExistAndAccess(List<Long> ids, Long userId) {
         List<Material> materials = materialRepository.findByIdIn(ids);
 
@@ -236,21 +209,34 @@ public class MaterialServiceImpl implements MaterialService {
             throw new BusinessException(ErrorCode.MATERIAL_NOT_FOUND);
         }
 
-        // 권한 확인
-        materials.forEach(material -> validateMaterialAccess(material, userId));
+        // 본인이 작성한 글인지 확인
+        materials.forEach(
+                material ->
+                {
+                    if (!material.getUserId().equals(userId)) {
+                        throw new BusinessException(ErrorCode.FORBIDDEN_MATERIAL_ACCESS);
+                    }
+                }
+        );
 
         return materials;
     }
 
-    // 해당 자료들과 관련된 파일들을 삭제하는 메서드
+    // 자료 삭제 시 연관된 파일들을 S3에서 삭제
     private void deleteAssociatedFiles(List<Long> materialIds) {
+        materialIds.forEach(materialId -> {
+            List<File> files = fileRepository.findByMaterialId(materialId);
+            
+            // S3에서 파일 삭제
+            files.forEach(file -> s3Service.deleteFileByUrl(file.getUrl()));
 
-        materialIds.forEach(fileRepository::deleteByMaterialId);
+            fileRepository.deleteByMaterialId(materialId);
+        });
     }
 
     // 유저의 ID를 가져오는 메서드
     private Long getCurrentUserId() {
-        // TODO: SecurityContext에서 실제 사용자 ID 가져오기
+        // TODO: 토큰을 통해 실제 사용자 ID 가져오기
         return 1L;
     }
 
@@ -265,7 +251,10 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getId(),
                 material.getTitle(),
                 material.getMaterialCategory().name,
+                material.getWeek(),
                 material.getContent(),
+                material.getUserId(),
+                "임시 닉네임",
                 material.getCreatedAt(),
                 material.getUpdatedAt(),
                 fileResponseDtos
@@ -283,6 +272,9 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getId(),
                 material.getTitle(),
                 material.getMaterialCategory().name,
+                material.getWeek(),
+                material.getUserId(),
+                "임시 닉네임",
                 dataUrls,
                 material.getUpdatedAt()
         );
