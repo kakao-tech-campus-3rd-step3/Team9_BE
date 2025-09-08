@@ -1,11 +1,10 @@
-package com.pado.domain.material.dto.response;
+package com.pado.domain.s3.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "S3 Presigned URL 발급 응답 DTO")
-public record FilePresignedUrlResponseDto(
-
+@Schema(description = "S3 Pre-signed URL 발급 응답 DTO")
+public record PreSignedUrlResponseDto(
         @JsonProperty("presigned_url")
         @Schema(
                 name = "presigned_url",
