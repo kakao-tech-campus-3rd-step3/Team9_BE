@@ -5,7 +5,6 @@ import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
 import com.pado.domain.material.service.MaterialService;
 import com.pado.global.exception.dto.ErrorResponseDto;
-import com.pado.global.swagger.annotation.material.Api400InvalidTitleError;
 import com.pado.global.swagger.annotation.material.Api403ForbiddenMaterialOwnerOrLeaderError;
 import com.pado.global.swagger.annotation.material.Api404MaterialNotFoundError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
@@ -41,7 +40,6 @@ public class MaterialController {
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
-    @Api400InvalidTitleError
     @Operation(
             summary = "자료 업로드",
             description = "S3에 파일 업로드 후, 자료 정보를 최종적으로 DB에 업로드합니다. (스터디 멤버만 가능)"
@@ -59,7 +57,6 @@ public class MaterialController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Api400InvalidTitleError
     @Api403ForbiddenMaterialOwnerOrLeaderError
     @Api404MaterialNotFoundError
     @Operation(
@@ -93,8 +90,20 @@ public class MaterialController {
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
                                     name = "자료 ID 유효성 오류",
-                                    value = "{\"error_code\": \"INVALID_MATERIAL_IDS\", \"field\": \"material_ids\", \"message\": \"자료 ID 목록은 최소 한 개 이상 포함되어야 합니다.\"}"
-                            )))
+                                    value = """
+                                        {
+                                          "code": "INVALID_MATERIAL_IDS",
+                                          "message": "자료 ID가 올바르지 않습니다.",
+                                          "errors": [
+                                            "material_ids: 자료 ID 목록은 최소 한 개 이상 포함되어야 합니다."
+                                          ],
+                                          "timestamp": "2025-09-07T08:15:30.123Z",
+                                          "path": "/api/materials/delete"
+                                        }
+                                        """
+                            )
+                    )
+            )
     })
     @Parameters({
             @Parameter(name = "material_ids", description = "삭제할 자료 ID 목록 (쉼표로 구분)", required = true, example = "1,2,3")

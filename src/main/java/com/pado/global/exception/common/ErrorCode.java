@@ -48,7 +48,7 @@ public enum ErrorCode {
     // Material Domain
     MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다."),
     FORBIDDEN_MATERIAL_ACCESS(HttpStatus.FORBIDDEN, "FORBIDDEN_MATERIAL_ACCESS", "자료에 접근할 권한이 없습니다."),
-    
+
     // File/S3 Domain
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", "파일을 찾을 수 없습니다."),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_DELETE_FAILED", "파일 삭제에 실패했습니다."),

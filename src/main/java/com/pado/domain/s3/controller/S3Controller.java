@@ -3,6 +3,7 @@ package com.pado.domain.s3.controller;
 import com.pado.domain.s3.dto.PreSignedUrlRequestDto;
 import com.pado.domain.s3.dto.PreSignedUrlResponseDto;
 import com.pado.domain.s3.service.S3Service;
+import com.pado.global.swagger.annotation.common.NoApi409Conflict;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,6 +29,7 @@ public class S3Controller {
     // TODO: 서비스 레이어 종속성 주입
     private final S3Service s3Service;
 
+    @NoApi409Conflict
     @Operation(summary = "데이터 저장 임시 url 발급", description = "프로필 이미지 등 파일을 S3에 직접 업로드하기 위한 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",

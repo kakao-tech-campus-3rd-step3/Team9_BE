@@ -3,7 +3,6 @@ package com.pado.domain.schedule.controller;
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
 import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
-import com.pado.global.swagger.annotation.schedule.Api400InvalidStartTimeError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
 import com.pado.global.swagger.annotation.schedule.Api404ScheduleNotFoundError;
@@ -87,7 +86,6 @@ public class ScheduleController {
         return ResponseEntity.ok(mockResponse);
     }
 
-    @Api400InvalidStartTimeError
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404StudyNotFoundError
     @Operation(
@@ -109,7 +107,6 @@ public class ScheduleController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @Api400InvalidStartTimeError
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404ScheduleNotFoundError
     @Operation(
