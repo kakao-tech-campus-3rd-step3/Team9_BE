@@ -35,7 +35,7 @@ public class User {
     private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('MALE', 'FEMALE')")
+    @Column(nullable = false)
     private Gender gender;
 
     @CreationTimestamp

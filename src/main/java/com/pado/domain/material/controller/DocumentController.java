@@ -5,7 +5,6 @@ import com.pado.domain.material.dto.request.MaterialDeleteRequestDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
 import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
 import com.pado.global.exception.dto.ErrorResponseDto;
-import com.pado.global.swagger.annotation.material.Api400InvalidTitleError;
 import com.pado.global.swagger.annotation.material.Api403ForbiddenMaterialOwnerOrLeaderError;
 import com.pado.global.swagger.annotation.material.Api404MaterialNotFoundError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
@@ -38,7 +37,6 @@ public class DocumentController {
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
-    @Api400InvalidTitleError
     @Operation(
             summary = "자료 업로드",
             description = "새로운 학습 자료를 업로드합니다. (스터디 멤버만 가능)"
@@ -58,7 +56,6 @@ public class DocumentController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @Api400InvalidTitleError
     @Api403ForbiddenMaterialOwnerOrLeaderError
     @Api404MaterialNotFoundError
     @Operation(
@@ -94,8 +91,20 @@ public class DocumentController {
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
                                     name = "자료 ID 유효성 오류",
-                                    value = "{\"error_code\": \"INVALID_MATERIAL_IDS\", \"field\": \"material_ids\", \"message\": \"자료 ID 목록은 최소 한 개 이상 포함되어야 합니다.\"}"
-                            )))
+                                    value = """
+                                        {
+                                          "code": "INVALID_MATERIAL_IDS",
+                                          "message": "자료 ID가 올바르지 않습니다.",
+                                          "errors": [
+                                            "material_ids: 자료 ID 목록은 최소 한 개 이상 포함되어야 합니다."
+                                          ],
+                                          "timestamp": "2025-09-07T08:15:30.123Z",
+                                          "path": "/api/materials/delete"
+                                        }
+                                        """
+                            )
+                    )
+            )
     })
     @DeleteMapping("/materials")
     public ResponseEntity<Void> deleteMaterials(
