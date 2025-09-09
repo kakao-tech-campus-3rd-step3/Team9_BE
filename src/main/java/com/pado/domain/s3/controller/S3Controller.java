@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/upload")
 public class S3Controller {
 
-    // TODO: 서비스 레이어 종속성 주입
     private final S3Service s3Service;
 
     @NoApi409Conflict
@@ -38,7 +37,6 @@ public class S3Controller {
     public ResponseEntity<PreSignedUrlResponseDto> createPreSignedUrl(
             @Valid @RequestBody PreSignedUrlRequestDto request
     ) {
-        // TODO: Pre-signed URL 생성 로직 구현
         PreSignedUrlResponseDto response = s3Service.createPresignedUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
