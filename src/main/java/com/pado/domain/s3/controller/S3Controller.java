@@ -41,6 +41,7 @@ public class S3Controller {
         // TODO: Pre-signed URL 생성 로직 구현
         PreSignedUrlResponseDto response = s3Service.createPresignedUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
     }
 }
 
