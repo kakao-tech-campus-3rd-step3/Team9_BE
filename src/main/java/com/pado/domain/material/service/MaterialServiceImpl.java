@@ -45,14 +45,12 @@ public class MaterialServiceImpl implements MaterialService {
         Material savedMaterial = materialRepository.save(material);
 
         // 첨부파일 처리
-        Optional.ofNullable(request.files())
-                .filter(files -> !files.isEmpty())
-                .ifPresent(files -> {
-                    List<File> fileEntities = files.stream()
-                            .map(fileDto -> createFileEntity(fileDto, material))
-                            .collect(Collectors.toList());
-                    fileRepository.saveAll(fileEntities);
-                });
+        if (!request.files().isEmpty()) {
+            List<File> fileEntities = request.files().stream()
+                    .map(fileDto -> createFileEntity(fileDto, material))
+                    .collect((Collectors.toList()));
+            fileRepository.saveAll(fileEntities);
+        }
 
         return convertToDetailResponseDto(savedMaterial);
     }
@@ -119,7 +117,7 @@ public class MaterialServiceImpl implements MaterialService {
         MaterialCategory category = MaterialCategory.fromString(request.category());
         material.updateMaterial(request.title(), category, request.week(), request.content());
 
-        // 파일 차분 업데이트
+        // 파일 업데이트
         updateMaterialFiles(materialId, request.files());
 
         Material updatedMaterial = materialRepository.save(material);
@@ -146,30 +144,8 @@ public class MaterialServiceImpl implements MaterialService {
         return file;
     }
 
-    // 자료 수정 시 연관된 파일 수정 메서드
-    private void updateMaterialFiles(Long materialId, List<FileRequestDto> requestFiles) {
-
-        Optional<List<FileRequestDto>> filesOpt = Optional.ofNullable(requestFiles);
-        
-        // 변경사항이 없는 경우
-        if (filesOpt.isEmpty()) {
-            return;
-        }
-
-        List<FileRequestDto> files = filesOpt.get();
-        
-        // 모든 파일 삭제
-        if (files.isEmpty()) {
-            fileRepository.deleteByMaterialId(materialId);
-            return;
-        }
-
-        // 일부 파일만 삭제 및 추가
-        processDifferentialFileUpdate(materialId, files);
-    }
-
     // 자료 수정 시 파일의 변경점이 있는 경우 생성 및 삭제 처리하는 메서드
-    private void processDifferentialFileUpdate(Long materialId, List<FileRequestDto> requestFiles) {
+    private void updateMaterialFiles(Long materialId, List<FileRequestDto> requestFiles) {
         List<File> currentFiles = fileRepository.findByMaterialId(materialId);
 
         // 요청에 포함된 기존 파일 ID들

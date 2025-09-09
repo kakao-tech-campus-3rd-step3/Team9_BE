@@ -2,6 +2,7 @@ package com.pado.domain.material.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
@@ -28,13 +29,14 @@ public record MaterialRequestDto(
 
         @Schema(description = """
                 업로드할 파일 정보 목록 (선택사항)
-                - 자료 생성 시: id는 모두 null
+                - 자료 생성 시: 
+                  * id는 모두 null
+                  * 파일 첨부 x: 빈 배열 []
                 - 자료 수정 시: 
                   * 기존 파일 유지: id 포함
                   * 새 파일 추가: id는 null  
                   * 파일 삭제: 해당 파일을 목록에서 제외
                   * 모든 파일 삭제: 빈 배열 []
-                  * 파일 변경 없음: null
                 """,
                 example = """
                 [
@@ -42,5 +44,6 @@ public record MaterialRequestDto(
                   {"id": null, "name": "새파일.jpg", "url": "https://..."}
                 ]
                 """)
+        @NotNull(message = "files는 null일 수 없습니다.")
         List<FileRequestDto> files
 ) {}
