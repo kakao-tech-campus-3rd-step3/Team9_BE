@@ -7,12 +7,10 @@ import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -33,18 +31,16 @@ public class S3Service {
 
     public PreSignedUrlResponseDto createPresignedUrl(PreSignedUrlRequestDto request) {
         String fileName = request.name();
-
-        String presignedUrl = generatePresignedUploadUrl(fileName);
-        String fileUrl = getFileUrl(fileName);
+        String key = generateFileKey(fileName);
+        String presignedUrl = generatePresignedUploadUrl(key);
+        String fileUrl = getFileUrl(key);
 
         return new PreSignedUrlResponseDto(presignedUrl, fileUrl);
     }
 
     //파일 업로드용 Presigned URL 생성 (15분 유효)
-    public String generatePresignedUploadUrl(String fileName) {
+    public String generatePresignedUploadUrl(String key) {
         try {
-            String key = generateFileKey(fileName);
-            
             PutObjectPresignRequest putObjectRequest = PutObjectPresignRequest.builder()
                     .signatureDuration(Duration.ofMinutes(15))
                     .putObjectRequest(req -> req.bucket(bucketName).key(key))
@@ -61,13 +57,9 @@ public class S3Service {
 
 
     // 업로드된 파일의 공개 접근 URL 생성
-    public String getFileUrl(String fileName) {
-        try {
-            String key = generateFileKey(fileName);
-            return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, getRegion(), key);
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
-        }
+    public String getFileUrl(String key) {
+
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, getRegion(), key);
     }
 
 
