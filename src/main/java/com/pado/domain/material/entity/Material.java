@@ -26,7 +26,7 @@ public class Material extends AuditingEntity {
     private MaterialCategory materialCategory;
 
     @Column(name = "week", length = 10)
-    private String week;
+    private Integer week;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
@@ -47,7 +47,7 @@ public class Material extends AuditingEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    public Material(String title, MaterialCategory materialCategory, String week, String content, Long studyId, Long userId) {
+    public Material(String title, MaterialCategory materialCategory, Integer week, String content, Long studyId, Long userId) {
 
         validateCategoryAndWeek(materialCategory, week);
 
@@ -59,7 +59,7 @@ public class Material extends AuditingEntity {
         this.userId = userId;
     }
 
-    public void updateMaterial(String title, MaterialCategory materialCategory, String week, String content) {
+    public void updateMaterial(String title, MaterialCategory materialCategory, Integer week, String content) {
 
         validateCategoryAndWeek(materialCategory, week);
 
@@ -77,10 +77,10 @@ public class Material extends AuditingEntity {
         return MaterialCategory.LEARNING.equals(this.materialCategory);
     }
 
-    private void validateCategoryAndWeek(MaterialCategory materialCategory, String week) {
+    private void validateCategoryAndWeek(MaterialCategory materialCategory, Integer week) {
         if (MaterialCategory.LEARNING.equals(materialCategory)) {
             // 학습자료는 주차가 필수
-            if (week == null || week.trim().isEmpty()) {
+            if (week == null) {
                 throw new BusinessException(ErrorCode.INVALID_MATERIAL_WEEK_REQUIRED);
             }
         }

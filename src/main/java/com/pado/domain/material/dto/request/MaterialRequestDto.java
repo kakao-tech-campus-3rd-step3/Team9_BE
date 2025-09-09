@@ -1,5 +1,6 @@
 package com.pado.domain.material.dto.request;
 
+import com.pado.domain.material.entity.MaterialCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,15 +14,15 @@ public record MaterialRequestDto(
         String title,
 
         @Schema(description = "자료 카테고리", example = "학습자료", allowableValues = {"공지", "학습자료", "과제"})
-        @NotBlank(message = "자료 카테고리는 필수 입력 항목입니다.")
-        String category,
+        @NotNull(message = "자료 카테고리는 필수 입력 항목입니다.")
+        MaterialCategory category,
 
         @Schema(
                 description = "주차 정보 (학습자료에만 필수, 다른 카테고리는 null)",
                 example = "1",
                 nullable = true
         )
-        String week,
+        Integer week,
 
         @Schema(description = "자료 내용", example = "스프링 웹 개발의 기본 개념을 정리한 강의 자료입니다.")
         @NotBlank(message = "자료 내용은 필수 입력 항목입니다.")

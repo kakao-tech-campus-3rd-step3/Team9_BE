@@ -17,7 +17,7 @@ public record MaterialDetailResponseDto (
         String category,
 
         @Schema(description = "주차 정보 (학습자료에만 존재)", example = "1", nullable = true)
-        String week,
+        Integer week,
 
         @Schema(description = "자료 전체 내용")
         String content,

@@ -18,7 +18,7 @@ public record MaterialSimpleResponseDto(
         String category,
 
         @Schema(description = "주차 정보 (학습자료에만 존재)", example = "1", nullable = true)
-        String week,
+        Integer week,
 
         @Schema(description = "작성자 ID", example = "1")
         Long userId,

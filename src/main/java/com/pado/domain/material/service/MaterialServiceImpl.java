@@ -39,8 +39,7 @@ public class MaterialServiceImpl implements MaterialService {
         // TODO: 토큰을 통해 실제 사용자 ID 가져오기
         Long userId = getCurrentUserId(); // 임시 메서드
 
-        MaterialCategory category = MaterialCategory.fromString(request.category());
-        Material material = new Material(request.title(), category, request.week(), request.content(), studyId, userId);
+        Material material = new Material(request.title(), request.category(), request.week(), request.content(), studyId, userId);
 
         Material savedMaterial = materialRepository.save(material);
 
@@ -114,8 +113,7 @@ public class MaterialServiceImpl implements MaterialService {
         }
 
         // 자료 정보 업데이트
-        MaterialCategory category = MaterialCategory.fromString(request.category());
-        material.updateMaterial(request.title(), category, request.week(), request.content());
+        material.updateMaterial(request.title(), request.category(), request.week(), request.content());
 
         // 파일 업데이트
         updateMaterialFiles(materialId, request.files());
