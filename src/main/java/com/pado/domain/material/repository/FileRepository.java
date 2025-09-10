@@ -10,6 +10,7 @@ import java.util.List;
 public interface FileRepository extends JpaRepository<File, Long> {
 
     List<File> findByMaterialId(Long materialId);
+    List<File> findByMaterialIdIn(List<Long> materialIds);
 
     void deleteByMaterialId(Long materialId);
     void deleteAllByUrlIn(List<String> urls);

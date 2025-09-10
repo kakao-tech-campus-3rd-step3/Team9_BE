@@ -94,9 +94,24 @@ public class MaterialServiceImpl implements MaterialService {
             materialPage = materialRepository.findByStudyId(studyId, pageable);
         }
 
-        List<MaterialSimpleResponseDto> materials = materialPage.getContent().stream()
-                .map(this::convertToSimpleResponseDto)
-                .collect(Collectors.toList());
+        // 자료에서 id만 추출
+        List<Long> materialIds = materialPage.stream()
+                .map(Material::getId)
+                .toList();
+
+        // 파일목록 조회
+        List<File> files = fileRepository.findByMaterialIdIn(materialIds);
+
+        // 자료 id와 파일 리스트들을 Map을 통해 관리
+        Map<Long, List<File>> filesByMaterialIdMap = files.stream()
+                .collect(Collectors.groupingBy(file -> file.getMaterial().getId()));
+
+        List<MaterialSimpleResponseDto> materials =  materialPage.getContent().stream()
+                .map(material -> {
+                    List<File> mappedFiles = filesByMaterialIdMap.getOrDefault(material.getId(), Collections.emptyList());
+                    return convertToSimpleResponseDto(material, mappedFiles);
+                })
+                .toList();
 
         return new MaterialListResponseDto(materials, pageable.getPageNumber(), pageable.getPageSize(), materialPage.hasNext());
     }
@@ -253,8 +268,7 @@ public class MaterialServiceImpl implements MaterialService {
     }
 
     // 자료 목록 조회 DTO 변환 메서드
-    private MaterialSimpleResponseDto convertToSimpleResponseDto(Material material) {
-        List<File> files = fileRepository.findByMaterialId(material.getId());
+    private MaterialSimpleResponseDto convertToSimpleResponseDto(Material material, List<File> files) {
         List<String> dataUrls = files.stream()
                 .map(File::getUrl)
                 .collect(Collectors.toList());
@@ -267,7 +281,7 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getUserId(),
                 "임시 닉네임",
                 dataUrls,
-                material.getUpdatedAt()
+                material.getCreatedAt()
         );
     }
 }
