@@ -14,13 +14,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
-
       - name: Run tests with Gradle
         uses: gradle/gradle-build-action@v2
         with:
@@ -32,28 +30,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
-
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v2
         with:
           arguments: build -x test --parallel --configure-on-demand
-
       - name: Get current git commit hash
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -74,51 +67,61 @@ jobs:
             DOCKER_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             APP_NAME=pado-app
             IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
-            HEALTH_CHECK_URL=http://localhost:8080/actuator/health
-            MAX_RETRIES=12
-            SLEEP_INTERVAL=5
+            NGINX_CONF_PATH="/etc/nginx/sites-available/pado"
 
-            sudo docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
-
-            CURRENT_CONTAINER_ID=$(cat /home/ubuntu/current_container.txt || echo "")
-
-            NEW_CONTAINER_ID=$(sudo docker run -d --network="host" \
-             -e SPRING_PROFILES_ACTIVE=prod \
-             -e DB_URL=${{ secrets.DB_URL }} \
-             -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-             -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-             $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG)
-
-            echo "New container ($NEW_CONTAINER_ID) started. Starting health check..."
-
-            HEALTH_CHECK_PASSED=false
-            for i in $(seq 1 $MAX_RETRIES); do
-             echo "Health check attempt #$i..."
-             if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
-               echo "Health check PASSED."
-               HEALTH_CHECK_PASSED=true
-               break
-             fi
-             echo "Health check failed. Retrying in $SLEEP_INTERVAL seconds..."
-             sleep $SLEEP_INTERVAL
-            done
-
-            if [ "$HEALTH_CHECK_PASSED" = true ]; then
-             echo "Deployment successful. Switching over to the new container."
-             echo $NEW_CONTAINER_ID > /home/ubuntu/current_container.txt
+            CURRENT_PORT=$(grep -oP '(?<=server 127.0.0.1:)\d+' $NGINX_CONF_PATH)
             
-             if [ ! -z "$CURRENT_CONTAINER_ID" ]; then
-               echo "Stopping and removing the old container: $CURRENT_CONTAINER_ID"
-               sudo docker stop $CURRENT_CONTAINER_ID || true
-               sudo docker rm $CURRENT_CONTAINER_ID || true
-             fi
-             sudo docker image prune -f
-             exit 0
+            if [ "$CURRENT_PORT" = "8081" ]; then
+              TARGET_PORT=8082
             else
-             echo "Health check FAILED. Rolling back the deployment."
-             sudo docker stop $NEW_CONTAINER_ID || true
-             sudo docker rm $NEW_CONTAINER_ID || true
+              TARGET_PORT=8081
+            fi
             
-             echo "Rollback complete. The old container is still running."
-             exit 1
+            echo "Current Port: $CURRENT_PORT, Target Port for New Container: $TARGET_PORT"
+            
+            sudo docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+            
+            NEW_CONTAINER_ID=$(sudo docker run -d -p ${TARGET_PORT}:8080 \
+              -e SPRING_PROFILES_ACTIVE=prod \
+              -e DB_URL=${{ secrets.DB_URL }} \
+              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG)
+            
+            echo "New container ($NEW_CONTAINER_ID) started on port $TARGET_PORT. Starting health check..."
+            
+            HEALTH_CHECK_URL=http://localhost:${TARGET_PORT}/actuator/health
+            HEALTH_CHECK_PASSED=false
+            for i in $(seq 1 12); do
+              echo "Health check attempt #$i..."
+              if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
+                echo "Health check PASSED."
+                HEALTH_CHECK_PASSED=true
+                break
+              fi
+              sleep 5
+            done
+            
+            if [ "$HEALTH_CHECK_PASSED" = true ]; then
+              echo "Deployment successful. Switching Nginx to port $TARGET_PORT."
+            
+              sudo sed -i "s/server 127.0.0.1:.*/server 127.0.0.1:${TARGET_PORT};/" $NGINX_CONF_PATH
+            
+              sudo systemctl reload nginx
+            
+              echo "Nginx reloaded. Stopping old container on port $CURRENT_PORT."
+            
+              OLD_CONTAINER_ID=$(sudo docker ps -q --filter "publish=${CURRENT_PORT}")
+              if [ ! -z "$OLD_CONTAINER_ID" ]; then
+                sudo docker stop $OLD_CONTAINER_ID
+                sudo docker rm $OLD_CONTAINER_ID
+              fi
+            
+              sudo docker image prune -f
+              exit 0
+            else
+              echo "Health check FAILED. Rolling back deployment."
+              sudo docker stop $NEW_CONTAINER_ID
+              sudo docker rm $NEW_CONTAINER_ID
+              exit 1
             fi
