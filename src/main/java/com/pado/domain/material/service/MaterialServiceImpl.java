@@ -228,18 +228,6 @@ public class MaterialServiceImpl implements MaterialService {
         return materials;
     }
 
-    // 자료 삭제 시 연관된 파일들을 S3에서 삭제
-    private void deleteAssociatedFiles(List<Long> materialIds) {
-        materialIds.forEach(materialId -> {
-            List<File> files = fileRepository.findByMaterialId(materialId);
-            
-            // S3에서 파일 삭제
-            files.forEach(file -> s3Service.deleteFileByUrl(file.getUrl()));
-
-            fileRepository.deleteByMaterialId(materialId);
-        });
-    }
-
     // 유저의 ID를 가져오는 메서드
     private Long getCurrentUserId() {
         // TODO: 토큰을 통해 실제 사용자 ID 가져오기

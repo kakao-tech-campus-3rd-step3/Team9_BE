@@ -62,26 +62,7 @@ public class S3Service {
 
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, getRegion(), key);
     }
-
-
-    // S3에서 파일 삭제 (URL 기준)
-    public void deleteFileByUrl(String fileUrl) {
-        Optional<String> keyOpt = extractS3KeyFromUrl(fileUrl);
-        String key = keyOpt.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_FILE_FORMAT));
-        
-        try {
-            // 파일 삭제
-            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(key)
-                    .build();
-            
-            s3Client.deleteObject(deleteRequest);
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.FILE_DELETE_FAILED);
-        }
-    }
-
+    
     // 파일명으로 S3 키 생성 (UUID + 확장자)
     private String generateFileKey(String fileName) {
         if (fileName == null || fileName.trim().isEmpty()) {
