@@ -7,6 +7,7 @@ import com.pado.domain.auth.dto.request.SignUpRequestDto;
 import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
+import com.pado.domain.auth.service.AuthService;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import com.pado.global.swagger.annotation.common.NoApi409Conflict;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +33,10 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     // TODO: 서비스 레이어 종속성 주입
-
+    private final AuthService authService;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
     @Operation(summary = "닉네임 중복 확인", description = "입력한 닉네임이 사용 가능한지 확인합니다.\n\n" +
             "**[Mock 테스트용 안내]**\n" +
             "- `nickname`으로 \"중복닉네임\"을 전송하면 `false`를 반환합니다.\n" +
@@ -112,6 +116,8 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<Void> register(@Valid @RequestBody SignUpRequestDto request) {
         // TODO: 회원가입 로직 구현
+        System.out.println("회원가입");
+        authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -141,7 +147,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         // TODO: 로그인 로직 구현
-        return ResponseEntity.ok(new TokenResponseDto("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"));
+
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @NoApi409Conflict
