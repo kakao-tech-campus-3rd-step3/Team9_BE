@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -69,14 +70,6 @@ public class S3Service {
         String key = keyOpt.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_FILE_FORMAT));
         
         try {
-            // 파일 존재 확인
-            HeadObjectRequest headRequest = HeadObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(key)
-                    .build();
-            
-            s3Client.headObject(headRequest);
-            
             // 파일 삭제
             DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
                     .bucket(bucketName)
@@ -84,8 +77,6 @@ public class S3Service {
                     .build();
             
             s3Client.deleteObject(deleteRequest);
-        } catch (NoSuchKeyException e) {
-            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.FILE_DELETE_FAILED);
         }
