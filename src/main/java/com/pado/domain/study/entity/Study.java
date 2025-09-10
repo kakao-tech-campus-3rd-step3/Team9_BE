@@ -1,7 +1,8 @@
 package com.pado.domain.study.entity;
 
 import com.pado.domain.basetime.AuditingEntity;
-import com.pado.domain.category.entity.Category;
+import com.pado.domain.shared.entity.Category;
+import com.pado.domain.shared.entity.Region;
 import com.pado.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;

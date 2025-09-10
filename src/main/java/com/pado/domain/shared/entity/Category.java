@@ -1,4 +1,4 @@
-package com.pado.domain.category.entity;
+package com.pado.domain.shared.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
