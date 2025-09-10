@@ -9,12 +9,14 @@ import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
 import com.pado.domain.material.entity.File;
 import com.pado.domain.material.entity.Material;
 import com.pado.domain.material.entity.MaterialCategory;
+import com.pado.domain.material.event.MaterialDeletedEvent;
 import com.pado.domain.material.repository.FileRepository;
 import com.pado.domain.material.repository.MaterialRepository;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import com.pado.domain.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class MaterialServiceImpl implements MaterialService {
     private final MaterialRepository materialRepository;
     private final FileRepository fileRepository;
     private final S3Service s3Service;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 자료 생성
     @Transactional
@@ -119,6 +122,7 @@ public class MaterialServiceImpl implements MaterialService {
         updateMaterialFiles(materialId, request.files());
 
         Material updatedMaterial = materialRepository.save(material);
+
         return convertToDetailResponseDto(updatedMaterial);
     }
 
@@ -130,9 +134,21 @@ public class MaterialServiceImpl implements MaterialService {
 
         List<Material> materials = validateMaterialsExistAndAccess(ids, userId);
 
-        // 연관된 파일들 먼저 삭제 후 자료 삭제
-        deleteAssociatedFiles(ids);
+        // 삭제할 파일 URL 수집
+        List<String> fileUrls = new ArrayList<>();
+        ids.forEach(id -> {
+            List<File> files = fileRepository.findByMaterialId(id);
+
+            files.forEach((file -> fileUrls.add(file.getUrl())));
+            fileRepository.deleteByMaterialId(id);
+        });
+
         materialRepository.deleteAll(materials);
+
+        // 자료, 파일이 모두 삭제되면 S3 버킷에 있는 파일들을 삭제할 이벤트 등록
+        if (!fileUrls.isEmpty()) {
+            eventPublisher.publishEvent(new MaterialDeletedEvent(fileUrls));
+        }
     }
 
     // 파일 엔티티 생성 메서드
@@ -152,10 +168,11 @@ public class MaterialServiceImpl implements MaterialService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // 삭제할 파일들 (요청에 없는 기존 파일들)
-        List<File> filesToDelete = currentFiles.stream()
+        // 삭제할 파일의 url 리스트 (요청에 없는 기존 파일들)
+        List<String> fileUrlsToDelete = currentFiles.stream()
                 .filter(file -> !requestFileIds.contains(file.getId()))
-                .collect(Collectors.toList());
+                .map(File::getUrl)
+                .toList();
 
         // 새로 추가할 파일들 (ID가 null인 파일들)
         List<File> newFiles = requestFiles.stream()
@@ -163,11 +180,11 @@ public class MaterialServiceImpl implements MaterialService {
                 .map(fileDto -> createFileEntity(fileDto, materialRepository.getReferenceById(materialId)))
                 .collect(Collectors.toList());
 
-        // S3에서 파일 삭제 후 DB에서 삭제 (S3Service에서 예외 처리됨)
-        if (!filesToDelete.isEmpty()) {
-            filesToDelete.forEach(file -> s3Service.deleteFileByUrl(file.getUrl()));
-            fileRepository.deleteAll(filesToDelete);
+        // DB에서 파일 삭제 후 이벤트 발생시켜 s3에 있는 파일 삭제
+        if (!fileUrlsToDelete.isEmpty()) {
+            fileRepository.deleteAllByUrlIn(fileUrlsToDelete);
         }
+        eventPublisher.publishEvent(new MaterialDeletedEvent(fileUrlsToDelete));
 
         // 추가 실행
         if (!newFiles.isEmpty()) {
