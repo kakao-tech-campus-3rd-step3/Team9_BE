@@ -82,8 +82,8 @@ jobs:
             sudo docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
             
             NEW_CONTAINER_ID=$(sudo docker run -d -p ${TARGET_PORT}:8080 \
+              --add-host host.docker.internal:host-gateway
               -e SPRING_PROFILES_ACTIVE=prod \
-              -e DB_URL=${{ secrets.DB_URL }} \
               -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
               $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG)
