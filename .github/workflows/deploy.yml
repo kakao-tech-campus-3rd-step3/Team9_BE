@@ -71,12 +71,32 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:latest
-            sudo docker stop pado-app-container || true
-            sudo docker rm pado-app-container || true
-            sudo docker run -d --network="host" \
+            DOCKER_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            APP_NAME=pado-app
+            IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
+
+            sudo docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
+
+            CURRENT_CONTAINER_ID=$(cat /home/ubuntu/current_container.txt || echo "")
+
+            NEW_CONTAINER_ID=$(sudo docker run -d --network="host" \
               -e SPRING_PROFILES_ACTIVE=prod \
               -e DB_URL=${{ secrets.DB_URL }} \
               -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              --name pado-app-container ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:latest
+              $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG)
+            
+            echo $NEW_CONTAINER_ID > /home/ubuntu/current_container.txt
+
+            echo "Waiting for 15 seconds for the new container to start..."
+            sleep 15
+
+            if [ ! -z "$CURRENT_CONTAINER_ID" ]; then
+              echo "Stopping and removing the old container: $CURRENT_CONTAINER_ID"
+              sudo docker stop $CURRENT_CONTAINER_ID || true
+              sudo docker rm $CURRENT_CONTAINER_ID || true
+            else
+              echo "No old container to stop."
+            fi
+            
+            sudo docker image prune -f
