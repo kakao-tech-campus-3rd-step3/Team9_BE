@@ -1,4 +1,4 @@
-package com.pado.global.auth;
+package com.pado.global.auth.jwt;
 
 import com.pado.global.config.JwtProps;
 import com.pado.global.exception.common.BusinessException;

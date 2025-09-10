@@ -32,7 +32,6 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirements({})
 public class AuthController {
 
-    // TODO: 서비스 레이어 종속성 주입
     private final AuthService authService;
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -115,8 +114,6 @@ public class AuthController {
     })
     @PostMapping("/signup")
     public ResponseEntity<Void> register(@Valid @RequestBody SignUpRequestDto request) {
-        // TODO: 회원가입 로직 구현
-        System.out.println("회원가입");
         authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -146,8 +143,6 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
-        // TODO: 로그인 로직 구현
-
         return ResponseEntity.ok(authService.login(request));
     }
 
