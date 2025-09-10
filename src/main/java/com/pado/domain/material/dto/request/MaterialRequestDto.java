@@ -13,7 +13,7 @@ public record MaterialRequestDto(
         @NotBlank(message = "자료 제목은 필수 입력 항목입니다.")
         String title,
 
-        @Schema(description = "자료 카테고리", example = "학습자료", allowableValues = {"공지", "학습자료", "과제"})
+        @Schema(description = "자료 카테고리", example = "NOTICE", allowableValues = {"NOTICE", "LEARNING", "ASSIGNMENT"})
         @NotNull(message = "자료 카테고리는 필수 입력 항목입니다.")
         MaterialCategory category,
 
