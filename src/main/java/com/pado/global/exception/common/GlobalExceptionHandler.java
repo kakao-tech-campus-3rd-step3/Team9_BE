@@ -59,10 +59,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponseDto> handleNotReadable(HttpMessageNotReadableException ex, WebRequest req) {
         Throwable cause = ex.getCause();
+        Throwable rootCause = (cause != null) ? cause.getCause() : null;
 
         // Enum 변환 실패인 경우 별도로 처리
-        if (cause instanceof IllegalArgumentException) {
-            return buildInvalidEnumResponse((IllegalArgumentException) cause, req);
+        if (rootCause instanceof IllegalArgumentException) {
+            return buildInvalidEnumResponse((IllegalArgumentException) rootCause, req);
         }
 
         ErrorCode code = ErrorCode.JSON_PARSE_ERROR;
