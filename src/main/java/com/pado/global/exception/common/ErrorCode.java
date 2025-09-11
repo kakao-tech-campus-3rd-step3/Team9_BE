@@ -16,6 +16,7 @@ public enum ErrorCode {
     FORBIDDEN_STUDY_MEMBER_ONLY(HttpStatus.FORBIDDEN, "FORBIDDEN_STUDY_MEMBER_ONLY", "스터디 멤버만 접근할 수 있습니다."),
     FORBIDDEN_OWNER_OR_LEADER_ONLY(HttpStatus.FORBIDDEN, "FORBIDDEN_OWNER_OR_LEADER_ONLY", "소유자 또는 스터디 리더만 접근할 수 있습니다."),
 
+
     // Validation
     INVALID_NICKNAME_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_NICKNAME_FORMAT", "닉네임 형식이 올바르지 않습니다."),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_EMAIL_FORMAT", "이메일 형식이 올바르지 않습니다."),
@@ -28,6 +29,11 @@ public enum ErrorCode {
     INVALID_START_TIME(HttpStatus.BAD_REQUEST, "INVALID_START_TIME", "시작 시간이 올바르지 않습니다."),
     INVALID_CANDIDATE_DATES(HttpStatus.BAD_REQUEST, "INVALID_CANDIDATE_DATES", "가능 날짜가 올바르지 않습니다."),
 
+    // Jwt
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED", "토큰이 만료되었습니다."),
+    TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "TOKEN_INVALID", "유효하지 않은 토큰입니다."),
+
+
     // Domain Common
     ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND, "ENTITY_NOT_FOUND", "요청한 대상을 찾을 수 없습니다."),
     DUPLICATE_KEY(HttpStatus.CONFLICT, "DUPLICATE_KEY", "이미 존재하는 값입니다."),
@@ -36,6 +42,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다."),
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "DUPLICATE_NICKNAME", "이미 사용 중인 닉네임입니다."),
+    DUPLICATE_INTEREST(HttpStatus.CONFLICT, "DUPLICATE_INTEREST", "이미 등록된 관심분야입니다."),
 
     // Study Domain
     STUDY_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_NOT_FOUND", "스터디를 찾을 수 없습니다."),

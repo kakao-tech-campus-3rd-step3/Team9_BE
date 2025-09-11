@@ -1,11 +1,11 @@
 package com.pado.domain.study.controller;
 
-import com.pado.domain.category.entity.Category;
+import com.pado.domain.shared.entity.Category;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
-import com.pado.domain.study.entity.Region;
+import com.pado.domain.shared.entity.Region;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;

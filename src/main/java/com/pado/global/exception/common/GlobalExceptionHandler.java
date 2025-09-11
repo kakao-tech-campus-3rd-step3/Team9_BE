@@ -2,6 +2,7 @@ package com.pado.global.exception.common;
 
 import com.pado.global.exception.dto.ErrorResponseDto;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -92,6 +94,11 @@ public class GlobalExceptionHandler {
     // 마지막 안전망
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleUnexpected(Exception ex, WebRequest req) {
+        //로그
+        String description = req.getDescription(false);
+        String path = description.replace("uri=", "");
+        log.error("Internal error at {}: {}", path, ex.getMessage(), ex);
+
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(), path(req));
         return ResponseEntity.status(code.status).body(body);
