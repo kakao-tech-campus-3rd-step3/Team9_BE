@@ -27,16 +27,12 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getPrincipal() == null) {
-            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER);
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            return null;
         }
 
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof CustomUserDetails customUserDetails) {
-            return customUserDetails.getUser();
-        }
-
-        throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        return userDetails.getUser();
     }
 }
 
