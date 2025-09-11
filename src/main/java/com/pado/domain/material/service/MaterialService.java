@@ -1,7 +1,5 @@
 package com.pado.domain.material.service;
 
-import com.pado.domain.s3.dto.PreSignedUrlRequestDto;
-import com.pado.domain.s3.dto.PreSignedUrlResponseDto;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;

@@ -149,26 +149,26 @@ public class MaterialServiceImpl implements MaterialService {
 
         List<Material> materials = validateMaterialsExistAndAccess(ids, userId);
 
-        // 삭제할 파일 URL 수집
-        List<String> fileUrls = new ArrayList<>();
+        // 삭제할 파일 키 수집
+        List<String> fileKeys = new ArrayList<>();
         ids.forEach(id -> {
             List<File> files = fileRepository.findByMaterialId(id);
 
-            files.forEach((file -> fileUrls.add(file.getUrl())));
+            files.forEach((file -> fileKeys.add(file.getFileKey())));
             fileRepository.deleteByMaterialId(id);
         });
 
         materialRepository.deleteAll(materials);
 
         // 자료, 파일이 모두 삭제되면 S3 버킷에 있는 파일들을 삭제할 이벤트 등록
-        if (!fileUrls.isEmpty()) {
-            eventPublisher.publishEvent(new MaterialDeletedEvent(fileUrls));
+        if (!fileKeys.isEmpty()) {
+            eventPublisher.publishEvent(new MaterialDeletedEvent(fileKeys));
         }
     }
 
     // 파일 엔티티 생성 메서드
     private File createFileEntity(FileRequestDto fileDto, Material material) {
-        File file = new File(fileDto.name(), fileDto.url());
+        File file = new File(fileDto.name(), fileDto.key());
         file.setMaterial(material);
         return file;
     }
@@ -184,9 +184,9 @@ public class MaterialServiceImpl implements MaterialService {
                 .collect(Collectors.toSet());
 
         // 삭제할 파일의 url 리스트 (요청에 없는 기존 파일들)
-        List<String> fileUrlsToDelete = currentFiles.stream()
+        List<String> fileKeysToDelete = currentFiles.stream()
                 .filter(file -> !requestFileIds.contains(file.getId()))
-                .map(File::getUrl)
+                .map(File::getFileKey)
                 .toList();
 
         // 새로 추가할 파일들 (ID가 null인 파일들)
@@ -196,10 +196,10 @@ public class MaterialServiceImpl implements MaterialService {
                 .collect(Collectors.toList());
 
         // DB에서 파일 삭제 후 이벤트 발생시켜 s3에 있는 파일 삭제
-        if (!fileUrlsToDelete.isEmpty()) {
-            fileRepository.deleteAllByUrlIn(fileUrlsToDelete);
+        if (!fileKeysToDelete.isEmpty()) {
+            fileRepository.deleteAllByFileKeyIn(fileKeysToDelete);
         }
-        eventPublisher.publishEvent(new MaterialDeletedEvent(fileUrlsToDelete));
+        eventPublisher.publishEvent(new MaterialDeletedEvent(fileKeysToDelete));
 
         // 추가 실행
         if (!newFiles.isEmpty()) {
@@ -238,7 +238,7 @@ public class MaterialServiceImpl implements MaterialService {
     private MaterialDetailResponseDto convertToDetailResponseDto(Material material) {
         List<File> files = fileRepository.findByMaterialId(material.getId());
         List<FileResponseDto> fileResponseDtos = files.stream()
-                .map(file -> new FileResponseDto(file.getId(), file.getName(), file.getUrl()))
+                .map(file -> new FileResponseDto(file.getId(), file.getName(), file.getFileKey()))
                 .collect(Collectors.toList());
 
         return new MaterialDetailResponseDto(
@@ -258,7 +258,7 @@ public class MaterialServiceImpl implements MaterialService {
     // 자료 목록 조회 DTO 변환 메서드
     private MaterialSimpleResponseDto convertToSimpleResponseDto(Material material, List<File> files) {
         List<String> dataUrls = files.stream()
-                .map(File::getUrl)
+                .map(File::getFileKey)
                 .collect(Collectors.toList());
 
         return new MaterialSimpleResponseDto(
