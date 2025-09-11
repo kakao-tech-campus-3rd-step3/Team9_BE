@@ -1,23 +1,26 @@
 package com.pado.domain.s3.service;
 
-import com.pado.domain.s3.dto.PreSignedUrlRequestDto;
-import com.pado.domain.s3.dto.PreSignedUrlResponseDto;
+import com.pado.domain.s3.dto.DownloadPresignedUrlRequestDto;
+import com.pado.domain.s3.dto.DownloadPresignedUrlResponseDto;
+import com.pado.domain.s3.dto.UploadPreSignedUrlRequestDto;
+import com.pado.domain.s3.dto.UploadPreSignedUrlResponseDto;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,13 +33,28 @@ public class S3Service {
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
-    public PreSignedUrlResponseDto createPresignedUrl(PreSignedUrlRequestDto request) {
+    // 업로드용
+    public UploadPreSignedUrlResponseDto createUploadPresignedUrl(UploadPreSignedUrlRequestDto request) {
         String fileName = request.name();
         String key = generateFileKey(fileName);
         String presignedUrl = generatePresignedUploadUrl(key);
-        String fileUrl = getFileUrl(key);
 
-        return new PreSignedUrlResponseDto(presignedUrl, fileUrl);
+        return new UploadPreSignedUrlResponseDto(presignedUrl, key);
+    }
+
+    // 다운로드용
+    public DownloadPresignedUrlResponseDto createDownloadPresignedUrl(DownloadPresignedUrlRequestDto request) {
+        String fileName = request.fileName();
+        String fileKey = request.fileKey();
+
+        // 파일 존재 여부 확인
+        if (!doesFileExist(fileKey)) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+
+        String presignedUrl = generatePresignedDownloadUrl(fileName, fileKey);
+
+        return new DownloadPresignedUrlResponseDto(presignedUrl);
     }
 
     //파일 업로드용 Presigned URL 생성 (15분 유효)
@@ -46,57 +64,53 @@ public class S3Service {
                     .signatureDuration(Duration.ofMinutes(15))
                     .putObjectRequest(req -> req.bucket(bucketName).key(key))
                     .build();
-            
+
             PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(putObjectRequest);
-            String presignedUrl = presignedRequest.url().toString();
-            
-            return presignedUrl;
+            return presignedRequest.url().toString();
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
         }
     }
 
+    // 파일 다운로드용 Presigned URL 생성
+    public String generatePresignedDownloadUrl(String fileName, String fileKey) {
+        try {
+            // String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+            // String contentDisposition = "attachment; filename=\"" + encodedFileName + "\"";
+            String contentDisposition = "attachment; filename=\"" + fileName + "\"";
 
-    // 업로드된 파일의 공개 접근 URL 생성
-    public String getFileUrl(String key) {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .responseContentDisposition(contentDisposition)
+                    .build();
 
-        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, getRegion(), key);
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(15))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            PresignedGetObjectRequest presignedGetObjectRequest = s3Presigner.presignGetObject(presignRequest);
+            return presignedGetObjectRequest.url().toString();
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
+        }
     }
-    
+
     // 파일명으로 S3 키 생성 (UUID + 확장자)
     private String generateFileKey(String fileName) {
         if (fileName == null || fileName.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_FILE_FORMAT);
         }
-        
+
         String uuid = UUID.randomUUID().toString();
         String extension = "";
-        
+
         if (fileName.contains(".")) {
             extension = fileName.substring(fileName.lastIndexOf("."));
         }
-        
-        return uuid + extension;
-    }
 
-    // URL에서 키 추출
-    private Optional<String> extractS3KeyFromUrl(String url) {
-        if (url == null || url.isEmpty()) {
-            return Optional.empty();
-        }
-        
-        try {
-            if (url.contains("amazonaws.com/")) {
-                return Optional.of(url.substring(url.indexOf("amazonaws.com/") + 14));
-            }
-            // CloudFront URL 처리
-            if (url.contains("cloudfront.net/")) {
-                return Optional.of(url.substring(url.indexOf("cloudfront.net/") + 15));
-            }
-            return Optional.empty();
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        return uuid + extension;
     }
 
     // 현재 설정된 리전 반환
@@ -104,6 +118,23 @@ public class S3Service {
         try {
             return s3Client.serviceClientConfiguration().region().id();
         } catch (Exception e) {
+            throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
+        }
+    }
+
+    // S3Service.java에 추가
+    public boolean doesFileExist(String fileKey) {
+        try {
+            HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
+
+            s3Client.headObject(headObjectRequest);
+            return true;
+        } catch (NoSuchKeyException e) {
+            return false;
+        } catch (S3Exception e) {
             throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
         }
     }
