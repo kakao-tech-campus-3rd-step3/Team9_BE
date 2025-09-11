@@ -23,6 +23,9 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: test
+        env:
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
 
   build-and-deploy:
     needs: test
@@ -86,6 +89,8 @@ jobs:
               -e SPRING_PROFILES_ACTIVE=prod \
               -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }} \
+              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
               $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG)
             
             echo "New container ($NEW_CONTAINER_ID) started on port $TARGET_PORT. Starting health check..."
