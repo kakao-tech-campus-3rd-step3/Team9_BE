@@ -31,7 +31,7 @@ public record StudyCreateRequestDto(
         List<Category> interests,
 
         @Schema(description = "스터디 지역", example = "대구")
-        @NotBlank(message = "스터디 지역은 필수 입력 항목입니다.")
+        @NotNull(message = "스터디 지역은 필수 입력 항목입니다.")
         Region region,
 
         @Schema(description = "스터디 시간", example = "매주 토요일 14:00~16:00")
@@ -43,7 +43,6 @@ public record StudyCreateRequestDto(
         Integer max_members,
 
         @Schema(description = "스터디 참여 조건", example = "[\"해당 분야에 대한 기본적인 관심\", \"정기적인 참여 가능\", \"적극적인 소통과 협력\"]")
-        @NotNull(message = "참여 조건은 필수 입력 항목입니다.")
         List<String> conditions,
 
         @Schema(description = "스터디 대표 이미지 URL", example = "https://pado-image.com/new-study-image.jpg")
