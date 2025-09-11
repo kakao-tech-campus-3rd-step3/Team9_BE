@@ -1,5 +1,6 @@
 package com.pado.domain.user.entity;
 
+import com.pado.domain.basetime.AuditingEntity;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.global.exception.common.BusinessException;
@@ -19,7 +20,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)  //JPA에서 사용
 @Table(name = "users")
-public class User {
+public class User extends AuditingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)    //AUTO_INCREMENT
@@ -47,12 +48,6 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserInterest> interests = new ArrayList<>();
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 
     @Builder
     public User(String email, String passwordHash, String nickname, Region region, String profileImageUrl, Gender gender){

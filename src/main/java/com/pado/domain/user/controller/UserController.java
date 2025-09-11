@@ -2,6 +2,8 @@ package com.pado.domain.user.controller;
 
 import com.pado.domain.user.dto.UserDetailResponseDto;
 import com.pado.domain.user.dto.UserSimpleResponseDto;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.swagger.annotation.user.Api404UserNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

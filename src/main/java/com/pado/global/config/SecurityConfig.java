@@ -1,5 +1,6 @@
 package com.pado.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pado.global.auth.jwt.JwtAuthenticationFilter;
 import com.pado.global.auth.jwt.JwtProvider;
 import com.pado.global.auth.userdetails.CustomUserDetailsService;
@@ -21,6 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final JwtProvider jwtProvider;
     private final CustomUserDetailsService customUserDetailsService;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -31,7 +33,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtProvider, customUserDetailsService),
+                        new JwtAuthenticationFilter(jwtProvider, customUserDetailsService, objectMapper),
                         UsernamePasswordAuthenticationFilter.class
                 );
 
