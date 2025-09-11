@@ -60,7 +60,9 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:latest
 
       - name: Deploy to EC2
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        # 디버깅을 위해 PR 생성 시에도 배포가 실행되도록 조건을 임시로 변경
+        # 원래 조건: if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -101,6 +103,7 @@ jobs:
             HEALTH_CHECK_PASSED=false
             for i in $(seq 1 12); do
               echo "Health check attempt #$i..."
+              # --fail 옵션은 HTTP 상태 코드가 200번대가 아니면 실패로 처리합니다.
               if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
                 echo "Health check PASSED."
                 HEALTH_CHECK_PASSED=true
@@ -128,6 +131,13 @@ jobs:
               exit 0
             else
               echo "Health check FAILED. Displaying logs before rollback."
+
+              # Health Check 실패의 상세 원인을 파악하기 위해 /actuator/health 엔드포인트의 실제 응답을 출력합니다.
+              echo "--- Health check endpoint response ---"
+              curl -s $HEALTH_CHECK_URL
+              echo
+              echo "------------------------------------"
+
               echo "--- Logs from container $NEW_CONTAINER_ID ---"
               sudo docker logs $NEW_CONTAINER_ID
               echo "-------------------------------------------"
