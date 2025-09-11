@@ -15,6 +15,6 @@ public class MaterialEventListener {
     @Async
     @TransactionalEventListener
     public void handleMaterialDeletedEvent(MaterialDeletedEvent event) {
-        s3FileDeleter.deleteFiles(event.fileUrls());
+        s3FileDeleter.deleteFiles(event.fileKeys());
     }
 }

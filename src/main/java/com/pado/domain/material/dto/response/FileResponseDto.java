@@ -10,8 +10,7 @@ public record FileResponseDto(
         @Schema(description = "파일 이름", example = "spring_guide.pdf")
         String name,
 
-        @JsonProperty("file_url")
-        @Schema(name = "file_url", description = "파일 접근 URL", example = "https://pado-storage.com/...")
-        String fileUrl
+        @Schema(description = "파일 다운로드, 삭제 시 사용되는 키")
+        String key
 ) {
 }

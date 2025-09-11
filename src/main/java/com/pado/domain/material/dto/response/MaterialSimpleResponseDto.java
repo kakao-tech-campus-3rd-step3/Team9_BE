@@ -26,9 +26,9 @@ public record MaterialSimpleResponseDto(
         @Schema(description = "작성자 닉네임", example = "김민수")
         String nickname,
 
-        @JsonProperty("data_urls")
-        @Schema(name = "data_urls", description = "자료 URL 리스트", example = "[\"https://pado-storage.com/data1.pdf\"]")
-        List<String> dataUrls,
+        @JsonProperty("file_keys")
+        @Schema(name = "file_keys", description = "자료 키 리스트", example = "[\"....\"]")
+        List<String> file_keys,
 
         @JsonProperty("created_at")
         @Schema(name = "created_at", description = "자료 생성일", example = "2025-09-02T13:30:00")

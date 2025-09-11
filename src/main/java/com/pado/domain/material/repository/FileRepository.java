@@ -13,5 +13,5 @@ public interface FileRepository extends JpaRepository<File, Long> {
     List<File> findByMaterialIdIn(List<Long> materialIds);
 
     void deleteByMaterialId(Long materialId);
-    void deleteAllByUrlIn(List<String> urls);
+    void deleteAllByFileKeyIn(List<String> fileKeys);
 }

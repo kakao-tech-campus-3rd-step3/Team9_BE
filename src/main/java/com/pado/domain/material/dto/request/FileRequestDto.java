@@ -16,7 +16,6 @@ public record FileRequestDto(
         @NotBlank(message = "파일 이름은 필수입니다.")
         String name,
 
-        @Schema(description = "S3에 저장된 최종 파일 URL", example = "https://s3...")
-        @NotBlank(message = "파일 URL은 필수입니다.")
-        String url
+        @Schema(description = "파일 키(업로드용 Presigned URL 발급 시 함께 받은 파일 키)")
+        String key
 ) {}

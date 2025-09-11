@@ -19,8 +19,8 @@ public class File {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String url; // S3에 저장된 파일의 접근 URL
+    @Column(name = "file_key", nullable = false)
+    private String fileKey; // S3에 저장된 파일의 키
 
     // Material 생성 이후 setter를 통해 연관관계를 지어줘야 함
     @Setter
@@ -28,8 +28,8 @@ public class File {
     @JoinColumn(name = "material_id", nullable = false)
     private Material material;
 
-    public File(String name, String url) {
+    public File(String name, String fileKey) {
         this.name = name;
-        this.url = url;
+        this.fileKey = fileKey;
     }
 }

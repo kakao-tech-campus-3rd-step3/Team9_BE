@@ -3,16 +3,12 @@ package com.pado.infrastruture.s3;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -24,16 +20,13 @@ public class S3FileDeleter {
     private String bucketName;
 
     // S3에서 여러 파일 삭제
-    public void deleteFiles(List<String> fileUrls) {
-        if (fileUrls == null || fileUrls.isEmpty()) {
+    public void deleteFiles(List<String> fileKeys) {
+
+        if (fileKeys == null || fileKeys.isEmpty()) {
             return;
         }
 
-        // URL에서 키 추출
-        List<ObjectIdentifier> objectIdsToDelete = fileUrls.stream()
-                .map(this::extractS3KeyFromUrl)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+        List<ObjectIdentifier> objectIdsToDelete = fileKeys.stream()
                 .map(key -> ObjectIdentifier.builder().key(key).build())
                 .toList();
 
@@ -55,23 +48,4 @@ public class S3FileDeleter {
         }
     }
 
-    // 전체 파일 URL에서 S3 객체 키 추출
-    private Optional<String> extractS3KeyFromUrl(String fileUrl) {
-        if (fileUrl == null || fileUrl.isBlank()) {
-            return Optional.empty();
-        }
-
-        try {
-            if (fileUrl.contains("amazonaws.com/")) {
-                return Optional.of(fileUrl.substring(fileUrl.indexOf("amazonaws.com/") + 14));
-            }
-            // CloudFront URL 처리
-            if (fileUrl.contains("cloudfront.net/")) {
-                return Optional.of(fileUrl.substring(fileUrl.indexOf("cloudfront.net/") + 15));
-            }
-            return Optional.empty();
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-    }
 }
