@@ -60,9 +60,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:latest
 
       - name: Deploy to EC2
-        # 디버깅을 위해 PR 생성 시에도 배포가 실행되도록 조건을 임시로 변경
-        # 원래 조건: if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
