@@ -90,6 +90,8 @@ jobs:
             
             echo "New container ($NEW_CONTAINER_ID) started on port $TARGET_PORT. Starting health check..."
             
+            sleep 10
+
             HEALTH_CHECK_URL=http://localhost:${TARGET_PORT}/actuator/health
             HEALTH_CHECK_PASSED=false
             for i in $(seq 1 12); do
@@ -120,7 +122,12 @@ jobs:
               sudo docker image prune -f
               exit 0
             else
-              echo "Health check FAILED. Rolling back deployment."
+              echo "Health check FAILED. Displaying logs before rollback."
+              echo "--- Logs from container $NEW_CONTAINER_ID ---"
+              sudo docker logs $NEW_CONTAINER_ID
+              echo "-------------------------------------------"
+            
+              echo "Rolling back deployment..."
               sudo docker stop $NEW_CONTAINER_ID
               sudo docker rm $NEW_CONTAINER_ID
               exit 1
