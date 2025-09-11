@@ -1,7 +1,7 @@
 package com.pado.domain.study.dto.response;
 
-import com.pado.domain.category.entity.Category;
-import com.pado.domain.study.entity.Region;
+import com.pado.domain.shared.entity.Category;
+import com.pado.domain.shared.entity.Region;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
