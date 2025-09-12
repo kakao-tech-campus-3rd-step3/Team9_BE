@@ -5,6 +5,11 @@ import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
 import com.pado.domain.study.dto.response.StudyMemberDetailDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.dto.response.UserDetailDto;
+import com.pado.domain.study.service.StudyMemberService;
+import com.pado.domain.study.service.StudyService;
+import com.pado.domain.user.entity.Gender;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
@@ -32,7 +37,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StudyMemberController {
 
-    // TODO: 서비스 레이어 종속성 주입
+    private final StudyMemberService studyMemberService;
 
     @Api404StudyNotFoundError
     @Operation(summary = "스터디 참여 신청", description = "사용자가 스터디에 참여 신청을 보냅니다.")
@@ -44,10 +49,11 @@ public class StudyMemberController {
     })
     @PostMapping("/apply")
     public ResponseEntity<Void> applyToStudy(
+            @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody StudyApplyRequestDto request
     ) {
-        // TODO: 스터디 참여 신청 로직 구현
+        studyMemberService.applyToStudy(user, studyId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -141,4 +147,3 @@ public class StudyMemberController {
         return ResponseEntity.ok().build();
     }
 }
-
