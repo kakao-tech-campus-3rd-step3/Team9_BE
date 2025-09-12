@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Collections;
 import java.util.List;
@@ -68,14 +69,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(code.status).body(body);
     }
 
+    // 유효하지 않은 Enum 파라미터
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponseDto> handleTypeMismatch(MethodArgumentTypeMismatchException ex, WebRequest req) {
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "알 수 없는 타입";
+
+        String message = String.format("요청 파라미터 '%s'의 값이 올바르지 않습니다.",
+                ex.getName(), ex.getValue(), requiredType);
+
+        ErrorCode code = ErrorCode.INVALID_INPUT;
+        ErrorResponseDto body = ErrorResponseDto.of(code, message, Collections.emptyList(), path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
     // JSON 파싱 실패 등 Body 해석 불가
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponseDto> handleNotReadable(HttpMessageNotReadableException ex, WebRequest req) {
         Throwable cause = ex.getCause();
+        Throwable rootCause = (cause != null) ? cause.getCause() : null;
 
         // Enum 변환 실패인 경우 별도로 처리
-        if (cause instanceof IllegalArgumentException) {
-            return buildInvalidEnumResponse((IllegalArgumentException) cause, req);
+        if (rootCause instanceof IllegalArgumentException) {
+            return buildInvalidEnumResponse((IllegalArgumentException) rootCause, req);
         }
 
         ErrorCode code = ErrorCode.JSON_PARSE_ERROR;
