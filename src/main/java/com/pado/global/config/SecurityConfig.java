@@ -21,6 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 @EnableWebSecurity
 public class SecurityConfig {
+
     private final JwtProvider jwtProvider;
     private final CustomUserDetailsService customUserDetailsService;
     private final ObjectMapper objectMapper;
@@ -28,6 +29,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
+
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-resources/**", "/api-docs/**", "/actuator/health").permitAll()
@@ -40,12 +42,25 @@ public class SecurityConfig {
                         new JwtAuthenticationFilter(jwtProvider, customUserDetailsService, objectMapper),
                         UsernamePasswordAuthenticationFilter.class
                 );
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-resources/**",
+                    "/api-docs/**", "/actuator/health").permitAll()
+                .requestMatchers("/api/upload/**", "/api/download/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/studies").permitAll()
+                .requestMatchers("/api/studies/**").authenticated()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(
+                new JwtAuthenticationFilter(jwtProvider, customUserDetailsService, objectMapper),
+                UsernamePasswordAuthenticationFilter.class
+            );
 
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

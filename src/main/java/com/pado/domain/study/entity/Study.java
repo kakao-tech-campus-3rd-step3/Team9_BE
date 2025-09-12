@@ -2,6 +2,7 @@ package com.pado.domain.study.entity;
 
 import com.pado.domain.basetime.AuditingEntity;
 import com.pado.domain.shared.entity.Category;
+import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -65,6 +66,7 @@ public class Study extends AuditingEntity {
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+
     private List<StudyCategory> interests = new ArrayList<>();
 
     public void addInterests(List<Category> categories) {

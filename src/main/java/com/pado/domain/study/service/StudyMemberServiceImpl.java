@@ -26,17 +26,39 @@ public class StudyMemberServiceImpl implements StudyMemberService {
     @Transactional
     public void applyToStudy(User user, Long studyId, StudyApplyRequestDto requestDto) {
         Study study = studyRepository.findByIdWithPessimisticLock(studyId)
-                .orElseThrow(StudyNotFoundException::new);
+            .orElseThrow(StudyNotFoundException::new);
 
         validateApplication(study, user);
 
         StudyApplication application = StudyApplication.create(
-                study,
-                user,
-                requestDto.message()
+            study,
+            user,
+            requestDto.message()
         );
 
         studyApplicationRepository.save(application);
+    }
+
+    @Override
+    public boolean isStudyLeader(User user, Study study) {
+        if (user == null || study == null || study.getLeader() == null) {
+            return false;
+        }
+        return study.getLeader().getId().equals(user.getId());
+    }
+
+    @Override
+    public boolean isStudyMember(User user, Long studyId) {
+        Study study = studyRepository.findById(studyId).orElse(null);
+        if (study == null || user == null) {
+            return false;
+        }
+
+        if (isStudyLeader(user, study)) {
+            return true;
+        }
+
+        return studyMemberRepository.existsByStudyAndUser(study, user);
     }
 
     private void validateApplication(Study study, User user) {
@@ -56,14 +78,16 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         }
 
         // 4. 이미 신청 후 대기중인 상태인지 확인
-        if (studyApplicationRepository.existsByStudyAndUserAndStatus(study, user, StudyApplicationStatus.PENDING)) {
+        if (studyApplicationRepository.existsByStudyAndUserAndStatus(study, user,
+            StudyApplicationStatus.PENDING)) {
             throw new AlreadyAppliedException();
         }
 
-        // 5. 스터디 인원 확인
+        // 5. 스터디 인원 확인 (현재 멤버 수 >= 최대 멤버 수)
         long currentMembers = studyMemberRepository.countByStudy(study);
         if (currentMembers >= study.getMaxMembers()) {
             throw new StudyFullException();
         }
     }
 }
+
