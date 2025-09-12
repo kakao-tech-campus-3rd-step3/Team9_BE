@@ -28,3 +28,6 @@ CREATE TABLE IF NOT EXISTS email_verifications (
     email VARCHAR(200) NOT NULL,
     code  VARCHAR(6)   NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_email_verifications_email
+    ON email_verifications (email);
