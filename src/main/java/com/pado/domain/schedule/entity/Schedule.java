@@ -1,7 +1,6 @@
 package com.pado.domain.schedule.entity;
 
 import com.pado.domain.basetime.AuditingEntity;
-import com.pado.domain.study.entity.Study;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -21,9 +20,8 @@ public class Schedule extends AuditingEntity {
     @Column(name = "id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "study_id", nullable = false)
-    private Study study;
+    @Column(name = "study_id", nullable = false)
+    private Long studyId;
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
@@ -38,9 +36,9 @@ public class Schedule extends AuditingEntity {
     private LocalDateTime endTime;
 
     @Builder
-    public Schedule(Study study, String title, String description, LocalDateTime startTime,
+    public Schedule(Long studyId, String title, String description, LocalDateTime startTime,
         LocalDateTime endTime) {
-        this.study = study;
+        this.studyId = studyId;
         this.title = title;
         this.description = description;
         this.startTime = startTime;

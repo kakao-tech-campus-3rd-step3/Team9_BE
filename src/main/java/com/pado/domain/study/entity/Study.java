@@ -67,7 +67,8 @@ public class Study extends AuditingEntity {
     @Builder.Default
     private List<Category> interests = new ArrayList<>();
 
-    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Schedule> schedules = new ArrayList<>();
+    // 스터디 일정과의 매핑관계 임시로 주석처리
+//    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
+//    @Builder.Default
+//    private List<Schedule> schedules = new ArrayList<>();
 }
