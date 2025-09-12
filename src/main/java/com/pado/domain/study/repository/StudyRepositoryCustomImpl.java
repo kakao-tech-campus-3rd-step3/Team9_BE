@@ -69,7 +69,7 @@ public class StudyRepositoryCustomImpl implements StudyRepositoryCustom {
         List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
 
         // 로그인 된 사용자의 경우 : 추천 점수 생성
-        if (user != null) {
+        if (user != null && user.getId() != null) {
             // 1. 관심사 점수 (최대 50점): (겹치는 개수 / 사용자 전체 관심사 개수) * 50
             Expression<Integer> interestScore;
             int totalUserInterests = user.getInterests().size(); // 사용자 관심사 개수
