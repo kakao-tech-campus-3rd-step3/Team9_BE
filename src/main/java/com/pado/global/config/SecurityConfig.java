@@ -7,6 +7,7 @@ import com.pado.global.auth.userdetails.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,6 +31,8 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-resources/**", "/api-docs/**", "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/studies/*/member").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/studies/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

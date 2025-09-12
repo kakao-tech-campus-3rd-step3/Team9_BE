@@ -71,7 +71,6 @@ public class User extends AuditingEntity {
         this.interests.add(interest);
     }
 
-
     public void changeNickname(String nickname) {
         this.nickname = nickname;
     }
@@ -82,6 +81,18 @@ public class User extends AuditingEntity {
 
     public void changeProfileImage(String url) {
         this.profileImageUrl = url;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User user)) return false;
+        return id != null && id.equals(user.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return 31;
     }
 
 }
