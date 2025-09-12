@@ -30,7 +30,7 @@ public class S3Controller {
     @NoApi409Conflict
     @Operation(summary = "파일 데이터 저장 임시 url 발급", description = "자료 파일을 S3에 직접 업로드하기 위한 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
+    @ApiResponses(value = @ApiResponse(responseCode = "201", description = "URL 발급 성공",
             content = @Content(schema = @Schema(implementation = UploadPreSignedUrlResponseDto.class))))
     @PostMapping("/upload/files")
     public ResponseEntity<UploadPreSignedUrlResponseDto> createUploadFilePreSignedUrl(
@@ -44,7 +44,7 @@ public class S3Controller {
     @NoApi409Conflict
     @Operation(summary = "사진 데이터 저장 임시 url 발급", description = "사진 파일을 S3에 직접 업로드하기 위한 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
+    @ApiResponses(value = @ApiResponse(responseCode = "201", description = "URL 발급 성공",
             content = @Content(schema = @Schema(implementation = UploadPreSignedUrlResponseDto.class))))
     @PostMapping("/upload/photos")
     public ResponseEntity<UploadPreSignedUrlResponseDto> createUploadPhotoPreSignedUrl(
@@ -58,7 +58,7 @@ public class S3Controller {
     @NoApi409Conflict
     @Operation(summary = "파일 데이터 다운로드 임시 url 발급", description = "S3에 저장된 파일들을 가져오기 위해 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
+    @ApiResponses(value = @ApiResponse(responseCode = "201", description = "URL 발급 성공",
             content = @Content(schema = @Schema(implementation = DownloadPresignedUrlResponseDto.class))))
     @PostMapping("/download/files")
     public ResponseEntity<DownloadPresignedUrlResponseDto> createDownloadFilePreSignedUrl(
@@ -72,7 +72,7 @@ public class S3Controller {
     @NoApi409Conflict
     @Operation(summary = "사진 데이터 다운로드 임시 url 발급", description = "S3에 저장된 사진들을 가져오기 위해 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
+    @ApiResponses(value = @ApiResponse(responseCode = "201", description = "URL 발급 성공",
             content = @Content(schema = @Schema(implementation = DownloadPresignedUrlResponseDto.class))))
     @PostMapping("/download/photos")
     public ResponseEntity<DownloadPresignedUrlResponseDto> createDownloadPhotoPreSignedUrl(
