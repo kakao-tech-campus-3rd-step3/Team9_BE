@@ -1,7 +1,7 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.5.5'
-	id 'io.spring.dependency-management' version '1.1.7'
+    id 'java'
+    id 'org.springframework.boot' version '3.5.5'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.pado'
@@ -9,71 +9,72 @@ version = '0.0.1-SNAPSHOT'
 description = 'Pado - Integrated Study Platform Service'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	// Web
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11'
+    // Web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.11'
 
-	// Utility
-	implementation 'org.apache.commons:commons-lang3:3.18.0'
+    // Utility
+    implementation 'org.apache.commons:commons-lang3:3.18.0'
 
-	// JPA
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // JPA
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-	// MySQL
-	runtimeOnly 'com.mysql:mysql-connector-j'
+    // MySQL
+    runtimeOnly 'com.mysql:mysql-connector-j'
 
-	// H2
-	runtimeOnly 'com.h2database:h2'
+    // H2
+    runtimeOnly 'com.h2database:h2'
 
-	// Validation
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // Validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-	// Lombok
-	compileOnly 'org.projectlombok:lombok'
-	annotationProcessor 'org.projectlombok:lombok'
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
-	// Test
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-
-	// AWS
-	implementation platform('software.amazon.awssdk:bom:2.25.56')
-	implementation 'software.amazon.awssdk:s3'
-
-	// Retry
-	implementation 'org.springframework.retry:spring-retry'
-	implementation 'org.springframework:spring-aspects'
-
-  //Security
-  implementation 'org.springframework.boot:spring-boot-starter-security'
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 
-  //JWT
-  implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-  runtimeOnly   'io.jsonwebtoken:jjwt-impl:0.11.5'
-  runtimeOnly   'io.jsonwebtoken:jjwt-jackson:0.11.5'
+    // AWS
+    implementation platform('software.amazon.awssdk:bom:2.25.56')
+    implementation 'software.amazon.awssdk:s3'
 
-	// deploy
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // Retry
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects'
+
+    //Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+
+    //JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // deploy
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
 
 jar {
-	enabled = false
+    enabled = false
 }
