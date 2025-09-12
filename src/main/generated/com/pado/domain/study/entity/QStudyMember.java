@@ -29,7 +29,7 @@ public class QStudyMember extends EntityPathBase<StudyMember> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
-    public final StringPath resolution = createString("resolution");
+    public final StringPath message = createString("message");
 
     public final EnumPath<StudyMemberRole> role = createEnum("role", StudyMemberRole.class);
 

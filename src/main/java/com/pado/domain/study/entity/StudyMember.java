@@ -31,13 +31,13 @@ public class StudyMember extends AuditingEntity {
     private StudyMemberRole role;
 
     @Column(length = 500)
-    private String resolution;
+    private String message;
 
     @Builder
-    public StudyMember(Study study, User user, StudyMemberRole role, String resolution) {
+    public StudyMember(Study study, User user, StudyMemberRole role, String message) {
         this.study = study;
         this.user = user;
         this.role = role;
-        this.resolution = resolution;
+        this.message = message;
     }
 }
