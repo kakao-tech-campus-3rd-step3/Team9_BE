@@ -101,7 +101,7 @@ public class ScheduleController {
         @PathVariable("schedule_id") Long scheduleId,
         @Valid @RequestBody ScheduleCreateRequestDto request
     ) {
-        // TODO: 일정 수정 로직 구현
+        scheduleService.updateSchedule(studyId, scheduleId, request);
         return ResponseEntity.ok().build();
     }
 
@@ -123,7 +123,7 @@ public class ScheduleController {
         @PathVariable("study_id") Long studyId,
         @PathVariable("schedule_id") Long scheduleId
     ) {
-        // TODO: 일정 삭제 로직 구현
+        scheduleService.deleteSchedule(studyId, scheduleId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

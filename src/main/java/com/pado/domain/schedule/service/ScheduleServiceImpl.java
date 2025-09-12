@@ -24,6 +24,8 @@ public class ScheduleServiceImpl implements ScheduleService {
     public void createSchedule(Long studyId, ScheduleCreateRequestDto request) {
         // TODO: 향후 Study 도메인이 구현되면, studyId로 실제 스터디가 존재하는지 확인하는 로직 추가가 필요함.
 
+        // TODO: 현재 사용자가 스터디 리더인지 권한 검증 로직 추가 예정
+        
         Schedule schedule = Schedule.builder()
             .studyId(studyId)
             .title(request.title())
@@ -60,5 +62,37 @@ public class ScheduleServiceImpl implements ScheduleService {
             schedule.getStartTime(),
             schedule.getEndTime()
         );
+    }
+
+    @Override
+    public void updateSchedule(Long studyId, Long scheduleId, ScheduleCreateRequestDto request) {
+        Schedule schedule = findScheduleById(scheduleId);
+
+        if (!schedule.getStudyId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND, "해당 스터디에 존재하지 않는 일정입니다.");
+        }
+
+        // TODO: 현재 사용자가 스터디 리더인지 권한 검증 로직 추가 예정
+
+        schedule.update(request.title(), request.content(), request.start_time(),
+            request.end_time());
+    }
+
+    @Override
+    public void deleteSchedule(Long studyId, Long scheduleId) {
+        Schedule schedule = findScheduleById(scheduleId);
+
+        if (!schedule.getStudyId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND, "해당 스터디에 존재하지 않는 일정입니다.");
+        }
+
+        // TODO: 현재 사용자가 스터디 리더인지 권한 검증 로직 추가 예정
+
+        scheduleRepository.delete(schedule);
+    }
+
+    private Schedule findScheduleById(Long scheduleId) {
+        return scheduleRepository.findById(scheduleId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
     }
 }
