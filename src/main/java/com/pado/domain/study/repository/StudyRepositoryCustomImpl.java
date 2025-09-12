@@ -36,6 +36,15 @@ public class StudyRepositoryCustomImpl implements StudyRepositoryCustom {
     private final JPAQueryFactory queryFactory;
     private final QStudy study = QStudy.study;
 
+    private static final int INTEREST_SCORE_WEIGHT = 50;
+    private static final int REGION_SCORE_WEIGHT = 30;
+    private static final int RECENCY_SCORE_TIER1_WEIGHT = 30;
+    private static final int RECENCY_SCORE_TIER2_WEIGHT = 20;
+    private static final int RECENCY_SCORE_TIER3_WEIGHT = 10;
+    private static final int RECENCY_SCORE_TIER1_DAYS = 7;
+    private static final int RECENCY_SCORE_TIER2_DAYS = 14;
+    private static final int RECENCY_SCORE_TIER3_DAYS = 30;
+
     @Override
     public Slice<Study> findStudiesByFilter(User user, String keyword, List<Category> categories, List<Region> regions, Pageable pageable) {
         // 로그인 유무 검증 후 추천 점수 생성
@@ -83,7 +92,7 @@ public class StudyRepositoryCustomImpl implements StudyRepositoryCustom {
                 // 관심사 점수 계산
                 interestScore = JPAExpressions
                         .select(studyCategory.count()
-                                .multiply(50)
+                                .multiply(INTEREST_SCORE_WEIGHT)
                                 .divide(totalUserInterests)
                                 .castToNum(Integer.class))
                         .from(studyCategory)
@@ -101,7 +110,7 @@ public class StudyRepositoryCustomImpl implements StudyRepositoryCustom {
                     : Expressions.asBoolean(false).isTrue();
             // regionMatches가 true이면 30점, 아니면 0점
             NumberExpression<Integer> regionScore = new CaseBuilder()
-                    .when(regionMatches).then(30)
+                    .when(regionMatches).then(REGION_SCORE_WEIGHT)
                     .otherwise(0);
 
             // 3. 최신성 점수 (최대 30점)
@@ -111,9 +120,9 @@ public class StudyRepositoryCustomImpl implements StudyRepositoryCustom {
                     study.createdAt
             );
             NumberExpression<Integer> recencyScore = new CaseBuilder()
-                    .when(daysSinceCreation.loe(7)).then(30) // 7일 이하 : 30점
-                    .when(daysSinceCreation.loe(14)).then(20) // 14일 이하 : 20점
-                    .when(daysSinceCreation.loe(30)).then(10) // 30일 이하 : 10점
+                    .when(daysSinceCreation.loe(RECENCY_SCORE_TIER1_DAYS)).then(RECENCY_SCORE_TIER1_WEIGHT) // 7일 이하 : 30점
+                    .when(daysSinceCreation.loe(RECENCY_SCORE_TIER2_DAYS)).then(RECENCY_SCORE_TIER2_WEIGHT) // 14일 이하 : 20점
+                    .when(daysSinceCreation.loe(RECENCY_SCORE_TIER3_DAYS)).then(RECENCY_SCORE_TIER3_WEIGHT) // 30일 이하 : 10점
                     .otherwise(0);
 
             // 최종 추천 점수 계산 후 내림차순 정렬
