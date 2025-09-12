@@ -10,9 +10,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import java.time.LocalDateTime;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,7 +69,6 @@ public class User extends AuditingEntity {
         this.interests.add(interest);
     }
 
-
     public void changeNickname(String nickname) {
         this.nickname = nickname;
     }
@@ -82,6 +79,18 @@ public class User extends AuditingEntity {
 
     public void changeProfileImage(String url) {
         this.profileImageUrl = url;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User user)) return false;
+        return id != null && id.equals(user.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return 31;
     }
 
 }

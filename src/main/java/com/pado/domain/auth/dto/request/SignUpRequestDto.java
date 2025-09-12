@@ -37,7 +37,7 @@ public record SignUpRequestDto(
         @NotNull(message = "성별은 필수 입력 항목입니다.")
         Gender gender,
 
-        @Schema(description = "관심 분야 목록", example = "[\"Java\", \"Spring\"]")
+        @Schema(description = "관심 분야 목록", example = "[\"어학\", \"취업\"]")
         @NotNull(message = "관심 분야는 null일 수 없습니다.")
         @Size(min = 1, message = "관심 분야를 하나 이상 선택해주세요.")
         List<Category> interests,

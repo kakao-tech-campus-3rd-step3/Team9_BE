@@ -14,6 +14,10 @@ java {
     }
 }
 
+ext {
+	generatedDir = 'src/main/generated'
+}
+
 repositories {
     mavenCentral()
 }
@@ -47,6 +51,11 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+	// QueryDSL
+	implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+	annotationProcessor "com.querydsl:querydsl-apt:5.1.0:jakarta"
+	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
 
     // AWS
     implementation platform('software.amazon.awssdk:bom:2.25.56')
@@ -67,8 +76,9 @@ dependencies {
 
     // deploy
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-
+  
+    //mail
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
 tasks.named('test') {
@@ -76,5 +86,17 @@ tasks.named('test') {
 }
 
 jar {
-    enabled = false
+	  enabled = false
+}
+
+sourceSets {
+	  main.java.srcDirs += [ generatedDir ]
+}
+
+tasks.withType(JavaCompile) {
+	  options.getGeneratedSourceOutputDirectory().set(file(generatedDir))
+}
+
+tasks.named('clean', Delete) {
+	  delete file(generatedDir)
 }

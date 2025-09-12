@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,11 +31,23 @@ public class GlobalExceptionHandler {
     }
 
     // DTO 검증 실패 (@Valid)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalid(MethodArgumentNotValidException ex, WebRequest req) {
-        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(GlobalExceptionHandler::formatFieldError)
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponseDto> handleHandlerMethodValidation(
+            HandlerMethodValidationException ex, WebRequest req) {
+
+        List<String> errors = ex.getParameterValidationResults().stream()
+                .flatMap(result -> {
+                    // 파라미터 이름 확보 (컴파일 옵션에 따라 null일 수도 있음)
+                    String paramName = result.getMethodParameter().getParameterName();
+                    if (paramName == null) {
+                        paramName = "arg" + result.getMethodParameter().getParameterIndex();
+                    }
+                    String finalParamName = paramName;
+                    return result.getResolvableErrors().stream()
+                            .map(err -> finalParamName + ": " + err.getDefaultMessage());
+                })
                 .toList();
+
         ErrorCode code = ErrorCode.INVALID_INPUT;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
         return ResponseEntity.status(code.status).body(body);
@@ -55,14 +69,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(code.status).body(body);
     }
 
+    // 유효하지 않은 Enum 파라미터
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponseDto> handleTypeMismatch(MethodArgumentTypeMismatchException ex, WebRequest req) {
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "알 수 없는 타입";
+
+        String message = String.format("요청 파라미터 '%s'의 값이 올바르지 않습니다.",
+                ex.getName(), ex.getValue(), requiredType);
+
+        ErrorCode code = ErrorCode.INVALID_INPUT;
+        ErrorResponseDto body = ErrorResponseDto.of(code, message, Collections.emptyList(), path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
     // JSON 파싱 실패 등 Body 해석 불가
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponseDto> handleNotReadable(HttpMessageNotReadableException ex, WebRequest req) {
         Throwable cause = ex.getCause();
+        Throwable rootCause = (cause != null) ? cause.getCause() : null;
 
         // Enum 변환 실패인 경우 별도로 처리
-        if (cause instanceof IllegalArgumentException) {
-            return buildInvalidEnumResponse((IllegalArgumentException) cause, req);
+        if (rootCause instanceof IllegalArgumentException) {
+            return buildInvalidEnumResponse((IllegalArgumentException) rootCause, req);
         }
 
         ErrorCode code = ErrorCode.JSON_PARSE_ERROR;

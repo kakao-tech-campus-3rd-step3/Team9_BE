@@ -62,11 +62,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         catch (BusinessException ex) {
             writeUnauthorized(res, ex.getErrorCode(), ex.getMessage(), req.getRequestURI());
-            return;
         }
         catch (Exception ex) {
             writeUnauthorized(res, ErrorCode.TOKEN_INVALID, ErrorCode.TOKEN_INVALID.message, req.getRequestURI());
-            return;
         }
     }
 
