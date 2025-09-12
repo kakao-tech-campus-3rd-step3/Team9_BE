@@ -5,11 +5,17 @@ import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.schedule.repository.ScheduleRepository;
+import com.pado.domain.study.entity.Study;
+import com.pado.domain.study.repository.StudyRepository;
+import com.pado.domain.study.service.StudyMemberService;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.userdetails.CustomUserDetails;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +25,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class ScheduleServiceImpl implements ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
+    private final StudyRepository studyRepository;
+    private final StudyMemberService studyMemberService;
 
     @Override
     public void createSchedule(Long studyId, ScheduleCreateRequestDto request) {
-        // TODO: 향후 Study 도메인이 구현되면, studyId로 실제 스터디가 존재하는지 확인하는 로직 추가가 필요함.
+        User currentUser = getCurrentUser();
+        Study study = findStudyById(studyId);
 
-        // TODO: 현재 사용자가 스터디 리더인지 권한 검증 로직 추가 예정
-        
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
         Schedule schedule = Schedule.builder()
             .studyId(studyId)
             .title(request.title())
@@ -38,9 +49,15 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ScheduleResponseDto> findAllSchedulesByStudyId(Long studyId) {
-        List<Schedule> schedules = scheduleRepository.findAllByStudyId(studyId);
+        User currentUser = getCurrentUser();
 
+        if (!studyMemberService.isStudyMember(currentUser, studyId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
+
+        List<Schedule> schedules = scheduleRepository.findAllByStudyId(studyId);
         return schedules.stream()
             .map(schedule -> new ScheduleResponseDto(
                 schedule.getId(),
@@ -51,9 +68,14 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ScheduleDetailResponseDto findScheduleDetailById(Long scheduleId) {
-        Schedule schedule = scheduleRepository.findById(scheduleId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+        Schedule schedule = findScheduleById(scheduleId);
+        User currentUser = getCurrentUser();
+        
+        if (!studyMemberService.isStudyMember(currentUser, schedule.getStudyId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
 
         return new ScheduleDetailResponseDto(
             schedule.getId(),
@@ -66,29 +88,48 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     @Override
     public void updateSchedule(Long studyId, Long scheduleId, ScheduleCreateRequestDto request) {
-        Schedule schedule = findScheduleById(scheduleId);
+        User currentUser = getCurrentUser();
+        Study study = findStudyById(studyId);
 
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
+        Schedule schedule = findScheduleById(scheduleId);
         if (!schedule.getStudyId().equals(studyId)) {
             throw new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND, "해당 스터디에 존재하지 않는 일정입니다.");
         }
-
-        // TODO: 현재 사용자가 스터디 리더인지 권한 검증 로직 추가 예정
-
         schedule.update(request.title(), request.content(), request.start_time(),
             request.end_time());
     }
 
     @Override
     public void deleteSchedule(Long studyId, Long scheduleId) {
-        Schedule schedule = findScheduleById(scheduleId);
+        User currentUser = getCurrentUser();
+        Study study = findStudyById(studyId);
 
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
+        Schedule schedule = findScheduleById(scheduleId);
         if (!schedule.getStudyId().equals(studyId)) {
             throw new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND, "해당 스터디에 존재하지 않는 일정입니다.");
         }
-
-        // TODO: 현재 사용자가 스터디 리더인지 권한 검증 로직 추가 예정
-
         scheduleRepository.delete(schedule);
+    }
+
+    private User getCurrentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof CustomUserDetails) {
+            return ((CustomUserDetails) principal).getUser();
+        }
+        throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER);
+    }
+
+    private Study findStudyById(Long studyId) {
+        return studyRepository.findById(studyId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
     }
 
     private Schedule findScheduleById(Long scheduleId) {
