@@ -115,8 +115,18 @@ public class AttendanceController {
                             examples = {
                                     @ExampleObject(
                                             name = "이미 출석 체크됨 예시",
-                                            value = "{\"error_code\": \"ALREADY_CHECKED_IN\", \"field\": \"attendance\", \"message\": \"이미 출석 체크가 완료되었습니다.\"}"
-                                    )}))
+                                            value = """
+                                                {
+                                                  "code": "ALREADY_CHECKED_IN",
+                                                  "message": "이미 출석 체크되었습니다.",
+                                                  "errors": [],
+                                                  "timestamp": "2025-09-07T08:15:10.8668626",
+                                                  "path": "/api/schedules/1234/attendance"
+                                                }
+                                                """
+                                    )
+                            })
+            )
     })
     @Parameters({
             @Parameter(name = "schedule_id", description = "출석 체크할 일정의 ID", required = true, example = "1234")

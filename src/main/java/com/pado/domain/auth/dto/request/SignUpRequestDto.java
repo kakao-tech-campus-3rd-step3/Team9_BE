@@ -1,5 +1,8 @@
 package com.pado.domain.auth.dto.request;
 
+import com.pado.domain.shared.entity.Category;
+import com.pado.domain.shared.entity.Region;
+import com.pado.domain.user.entity.Gender;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -31,16 +34,17 @@ public record SignUpRequestDto(
         String nickname,
 
         @Schema(description = "성별", example = "MALE")
-        @NotBlank(message = "성별은 필수 입력 항목입니다.")
-        String gender,
+        @NotNull(message = "성별은 필수 입력 항목입니다.")
+        Gender gender,
 
-        @Schema(description = "관심 분야 목록", example = "[\"Java\", \"Spring\"]")
+        @Schema(description = "관심 분야 목록", example = "[\"어학\", \"취업\"]")
         @NotNull(message = "관심 분야는 null일 수 없습니다.")
         @Size(min = 1, message = "관심 분야를 하나 이상 선택해주세요.")
-        List<String> interests,
+        List<Category> interests,
 
         @Schema(description = "활동 지역", example = "서울")
-        @NotBlank(message = "활동 지역은 필수 입력 항목입니다.")
-        String region
+        @NotNull(message = "활동 지역은 필수 입력 항목입니다.")
+        Region region
 ) {
+
 }

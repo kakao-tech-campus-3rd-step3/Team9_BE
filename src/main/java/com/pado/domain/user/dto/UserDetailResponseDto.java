@@ -1,5 +1,6 @@
 package com.pado.domain.user.dto;
 
+import com.pado.domain.shared.entity.Region;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
@@ -16,6 +17,6 @@ public record UserDetailResponseDto(
         List<String> interests,
 
         @Schema(description = "활동 지역", example = "서울")
-        String location
+        Region location
 ) {
 }

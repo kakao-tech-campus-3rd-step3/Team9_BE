@@ -1,5 +1,6 @@
 package com.pado.domain.material.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
@@ -14,6 +15,7 @@ public record MaterialListResponseDto(
         @Schema(description = "페이지 당 자료 수", example = "10")
         int size,
 
-        @Schema(description = "다음 페이지 존재 여부 (무한 스크롤)", example = "true")
-        boolean has_next
+        @JsonProperty("has_next")
+        @Schema(name = "has_next", description = "다음 페이지 존재 여부 (무한 스크롤)", example = "true")
+        boolean hasNext
 ) {}

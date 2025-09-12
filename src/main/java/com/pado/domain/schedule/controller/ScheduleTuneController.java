@@ -3,8 +3,6 @@ package com.pado.domain.schedule.controller;
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
 import com.pado.domain.schedule.dto.request.ScheduleTuneParticipantRequestDto;
 import com.pado.domain.schedule.dto.response.*;
-import com.pado.global.swagger.annotation.schedule.Api400InvalidCandidateDatesError;
-import com.pado.global.swagger.annotation.schedule.Api400InvalidStartTimeError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
@@ -33,7 +31,6 @@ public class ScheduleTuneController {
 
     // TODO: 서비스 레이어 종속성 주입
 
-    @Api400InvalidStartTimeError
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
     @Operation(
@@ -110,7 +107,6 @@ public class ScheduleTuneController {
         return ResponseEntity.ok(mockResponse);
     }
 
-    @Api400InvalidCandidateDatesError
     @Api403ForbiddenStudyMemberOnlyError
     @Api404TuningScheduleNotFoundError
     @Operation(
@@ -135,7 +131,6 @@ public class ScheduleTuneController {
         return ResponseEntity.ok(new ScheduleTuneParticipantResponseDto("일정 조율 참여 정보가 성공적으로 업데이트되었습니다."));
     }
 
-    @Api400InvalidStartTimeError
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404TuningScheduleNotFoundError
     @Operation(
