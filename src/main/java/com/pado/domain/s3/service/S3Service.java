@@ -1,9 +1,9 @@
 package com.pado.domain.s3.service;
 
-import com.pado.domain.s3.dto.DownloadPresignedUrlRequestDto;
-import com.pado.domain.s3.dto.DownloadPresignedUrlResponseDto;
-import com.pado.domain.s3.dto.UploadPreSignedUrlRequestDto;
-import com.pado.domain.s3.dto.UploadPreSignedUrlResponseDto;
+import com.pado.domain.s3.dto.DownloadFilePresignedUrlRequestDto;
+import com.pado.domain.s3.dto.DownloadFilePresignedUrlResponseDto;
+import com.pado.domain.s3.dto.UploadFilePreSignedUrlRequestDto;
+import com.pado.domain.s3.dto.UploadFilePreSignedUrlResponseDto;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -34,16 +34,16 @@ public class S3Service {
     private String bucketName;
 
     // 업로드용
-    public UploadPreSignedUrlResponseDto createUploadPresignedUrl(UploadPreSignedUrlRequestDto request) {
+    public UploadFilePreSignedUrlResponseDto createUploadPresignedUrl(UploadFilePreSignedUrlRequestDto request) {
         String fileName = request.name();
         String key = generateFileKey(fileName);
         String presignedUrl = generatePresignedUploadUrl(key);
 
-        return new UploadPreSignedUrlResponseDto(presignedUrl, key);
+        return new UploadFilePreSignedUrlResponseDto(presignedUrl, key);
     }
 
     // 다운로드용
-    public DownloadPresignedUrlResponseDto createDownloadPresignedUrl(DownloadPresignedUrlRequestDto request) {
+    public DownloadFilePresignedUrlResponseDto createDownloadPresignedUrl(DownloadFilePresignedUrlRequestDto request) {
         String fileName = request.fileName();
         String fileKey = request.fileKey();
 
@@ -54,7 +54,7 @@ public class S3Service {
 
         String presignedUrl = generatePresignedDownloadUrl(fileName, fileKey);
 
-        return new DownloadPresignedUrlResponseDto(presignedUrl);
+        return new DownloadFilePresignedUrlResponseDto(presignedUrl);
     }
 
     //파일 업로드용 Presigned URL 생성 (15분 유효)

@@ -3,7 +3,7 @@ package com.pado.domain.s3.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-public record DownloadPresignedUrlResponseDto(
+public record DownloadFilePresignedUrlResponseDto(
         @JsonProperty("presigned_url")
         @Schema(
                 name = "presigned_url",
