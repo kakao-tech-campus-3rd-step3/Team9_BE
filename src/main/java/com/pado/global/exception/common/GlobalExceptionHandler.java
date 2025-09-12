@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Collections;
@@ -30,11 +31,23 @@ public class GlobalExceptionHandler {
     }
 
     // DTO 검증 실패 (@Valid)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalid(MethodArgumentNotValidException ex, WebRequest req) {
-        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(GlobalExceptionHandler::formatFieldError)
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponseDto> handleHandlerMethodValidation(
+            HandlerMethodValidationException ex, WebRequest req) {
+
+        List<String> errors = ex.getParameterValidationResults().stream()
+                .flatMap(result -> {
+                    // 파라미터 이름 확보 (컴파일 옵션에 따라 null일 수도 있음)
+                    String paramName = result.getMethodParameter().getParameterName();
+                    if (paramName == null) {
+                        paramName = "arg" + result.getMethodParameter().getParameterIndex();
+                    }
+                    String finalParamName = paramName;
+                    return result.getResolvableErrors().stream()
+                            .map(err -> finalParamName + ": " + err.getDefaultMessage());
+                })
                 .toList();
+
         ErrorCode code = ErrorCode.INVALID_INPUT;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
         return ResponseEntity.status(code.status).body(body);

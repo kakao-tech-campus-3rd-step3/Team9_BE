@@ -75,7 +75,9 @@ dependencies {
 
 	// deploy
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
+  
+    //mail
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
 }
 

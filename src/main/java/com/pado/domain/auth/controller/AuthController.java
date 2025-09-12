@@ -77,9 +77,7 @@ public class AuthController {
             @Size(min = 2, max = 10, message = "닉네임은 2자 이상 10자 이하로 입력해주세요.")
             String nickname
     ) {
-        // TODO: 닉네임 중복 확인 로직 구현
-        boolean isAvailable = !nickname.equals("중복닉네임");
-        return ResponseEntity.ok(new NicknameCheckResponseDto(isAvailable));
+        return ResponseEntity.ok(authService.checkNickname(nickname));
     }
 
     @Operation(summary = "회원가입", description = "이메일, 비밀번호, 닉네임, 성별, 관심 분야, 지역 정보를 입력 받아 회원 계정을 생성합니다.")
@@ -170,8 +168,7 @@ public class AuthController {
     })
     @PostMapping("/email/send")
     public ResponseEntity<EmailVerificationResponseDto> sendVerificationEmail(@Valid @RequestBody EmailSendRequestDto request) {
-        // TODO: 인증번호 전송 로직 구현
-        return ResponseEntity.ok(new EmailVerificationResponseDto(true, "인증번호가 성공적으로 전송되었습니다."));
+        return ResponseEntity.ok(authService.emailSend(request));
     }
 
     @NoApi409Conflict
@@ -198,7 +195,6 @@ public class AuthController {
     })
     @PostMapping("/email/verify")
     public ResponseEntity<EmailVerificationResponseDto> verifyEmailCode(@Valid @RequestBody EmailVerifyRequestDto request) {
-        // TODO: 인증번호 확인 로직 구현
-        return ResponseEntity.ok(new EmailVerificationResponseDto(true, "이메일 인증이 완료되었습니다."));
+        return ResponseEntity.ok(authService.emailVerify(request));
     }
 }
