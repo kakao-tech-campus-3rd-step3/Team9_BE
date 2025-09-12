@@ -1,9 +1,6 @@
 package com.pado.domain.s3.controller;
 
-import com.pado.domain.s3.dto.DownloadFilePresignedUrlRequestDto;
-import com.pado.domain.s3.dto.DownloadFilePresignedUrlResponseDto;
-import com.pado.domain.s3.dto.UploadFilePreSignedUrlRequestDto;
-import com.pado.domain.s3.dto.UploadFilePreSignedUrlResponseDto;
+import com.pado.domain.s3.dto.*;
 import com.pado.domain.s3.service.S3Service;
 import com.pado.global.swagger.annotation.common.NoApi409Conflict;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,12 +31,26 @@ public class S3Controller {
     @Operation(summary = "파일 데이터 저장 임시 url 발급", description = "자료 파일을 S3에 직접 업로드하기 위한 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
-            content = @Content(schema = @Schema(implementation = UploadFilePreSignedUrlResponseDto.class))))
+            content = @Content(schema = @Schema(implementation = UploadPreSignedUrlResponseDto.class))))
     @PostMapping("/upload/files")
-    public ResponseEntity<UploadFilePreSignedUrlResponseDto> createUploadFilePreSignedUrl(
+    public ResponseEntity<UploadPreSignedUrlResponseDto> createUploadFilePreSignedUrl(
             @Valid @RequestBody UploadFilePreSignedUrlRequestDto request
     ) {
-        UploadFilePreSignedUrlResponseDto response = s3Service.createUploadPresignedUrl(request);
+        UploadPreSignedUrlResponseDto response = s3Service.createUploadPresignedUrl(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+    }
+
+    @NoApi409Conflict
+    @Operation(summary = "사진 데이터 저장 임시 url 발급", description = "사진 파일을 S3에 직접 업로드하기 위한 임시 url 주소를 받아옵니다.",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
+            content = @Content(schema = @Schema(implementation = UploadPreSignedUrlResponseDto.class))))
+    @PostMapping("/upload/photos")
+    public ResponseEntity<UploadPreSignedUrlResponseDto> createUploadPhotoPreSignedUrl(
+            @Valid @RequestBody UploadPhotoPresignedUrlRequestDto request
+    ) {
+        UploadPreSignedUrlResponseDto response = s3Service.createImagePresignedUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
     }
@@ -48,12 +59,26 @@ public class S3Controller {
     @Operation(summary = "파일 데이터 다운로드 임시 url 발급", description = "S3에 저장된 파일들을 가져오기 위해 임시 url 주소를 받아옵니다.",
             security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
-            content = @Content(schema = @Schema(implementation = DownloadFilePresignedUrlResponseDto.class))))
+            content = @Content(schema = @Schema(implementation = DownloadPresignedUrlResponseDto.class))))
     @PostMapping("/download/files")
-    public ResponseEntity<DownloadFilePresignedUrlResponseDto> createDownloadFilePreSignedUrl(
+    public ResponseEntity<DownloadPresignedUrlResponseDto> createDownloadFilePreSignedUrl(
             @Valid @RequestBody DownloadFilePresignedUrlRequestDto request
     ) {
-        DownloadFilePresignedUrlResponseDto response = s3Service.createDownloadPresignedUrl(request);
+        DownloadPresignedUrlResponseDto response = s3Service.createDownloadPresignedUrl(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+    }
+
+    @NoApi409Conflict
+    @Operation(summary = "사진 데이터 다운로드 임시 url 발급", description = "S3에 저장된 사진들을 가져오기 위해 임시 url 주소를 받아옵니다.",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses(value = @ApiResponse(responseCode = "200", description = "URL 발급 성공",
+            content = @Content(schema = @Schema(implementation = DownloadPresignedUrlResponseDto.class))))
+    @PostMapping("/download/photos")
+    public ResponseEntity<DownloadPresignedUrlResponseDto> createDownloadPhotoPreSignedUrl(
+            @Valid @RequestBody DownloadPhotoPresignedUrlRequestDto request
+    ) {
+        DownloadPresignedUrlResponseDto response = s3Service.createDownloadPhotoPresignedUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
     }
