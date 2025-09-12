@@ -52,16 +52,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(code.status).body(body);
     }
 
-//    @ExceptionHandler(HandlerMethodValidationException.class)
-//    public ResponseEntity<ErrorResponseDto> handleValidation(HandlerMethodValidationException ex, WebRequest req) {
-//        List<String> errors = ex.getParameterValidationResults().stream()
-//                .map(GlobalExceptionHandler::formatFieldError)
-//                .toList();
-//        ErrorCode code = ErrorCode.INVALID_INPUT;
-//        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
-//        return ResponseEntity.status(code.status).body(body);
-//    }
-
     // 파라미터 유효성 검증 실패 (@RequestParam, @PathVariable)
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleConstraintViolation(ConstraintViolationException ex, WebRequest req) {
