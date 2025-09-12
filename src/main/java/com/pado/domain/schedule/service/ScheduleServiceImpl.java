@@ -1,8 +1,14 @@
 package com.pado.domain.schedule.service;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
+import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
+import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.schedule.repository.ScheduleRepository;
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,5 +33,32 @@ public class ScheduleServiceImpl implements ScheduleService {
             .build();
 
         scheduleRepository.save(schedule);
+    }
+
+    @Override
+    public List<ScheduleResponseDto> findAllSchedulesByStudyId(Long studyId) {
+        List<Schedule> schedules = scheduleRepository.findAllByStudyId(studyId);
+
+        return schedules.stream()
+            .map(schedule -> new ScheduleResponseDto(
+                schedule.getId(),
+                schedule.getTitle(),
+                schedule.getStartTime(),
+                schedule.getEndTime()))
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public ScheduleDetailResponseDto findScheduleDetailById(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        return new ScheduleDetailResponseDto(
+            schedule.getId(),
+            schedule.getTitle(),
+            schedule.getDescription(),
+            schedule.getStartTime(),
+            schedule.getEndTime()
+        );
     }
 }

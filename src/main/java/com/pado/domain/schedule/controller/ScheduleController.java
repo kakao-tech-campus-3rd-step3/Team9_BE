@@ -35,58 +35,29 @@ public class ScheduleController {
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
-    @Operation(
-        summary = "스터디 전체 일정 조회",
-        description = "스터디에 등록된 모든 일정을 조회합니다. (스터디 멤버만 가능)"
-    )
-    @ApiResponse(
-        responseCode = "200", description = "일정 목록 조회 성공",
-        content = @Content(schema = @Schema(implementation = ScheduleResponseDto.class))
-    )
+    @Operation(summary = "스터디 전체 일정 조회", description = "스터디에 등록된 모든 일정을 조회합니다. (스터디 멤버만 가능)")
+    @ApiResponse(responseCode = "200", description = "일정 목록 조회 성공", content = @Content(schema = @Schema(implementation = ScheduleResponseDto.class)))
     @Parameters({
-        @Parameter(name = "study_id", description = "일정을 조회할 스터디의 ID", required = true, example = "1")
-    })
+        @Parameter(name = "study_id", description = "일정을 조회할 스터디의 ID", required = true, example = "1")})
     @GetMapping("/studies/{study_id}/schedules")
     public ResponseEntity<List<ScheduleResponseDto>> getSchedules(
-        @PathVariable("study_id") Long studyId
-    ) {
-        // TODO: 스터디 전체 일정 조회 로직 구현
-        List<ScheduleResponseDto> mockSchedules = List.of(
-            new ScheduleResponseDto(1234L, "2차 스터디 모임", LocalDateTime.of(2025, 9, 3, 10, 0),
-                LocalDateTime.of(2025, 9, 3, 12, 0)),
-            new ScheduleResponseDto(5678L, "3차 스터디 모임", LocalDateTime.of(2025, 9, 10, 14, 0),
-                LocalDateTime.of(2025, 9, 10, 16, 0))
-        );
-        return ResponseEntity.ok(mockSchedules);
+        @PathVariable("study_id") Long studyId) {
+        List<ScheduleResponseDto> schedules = scheduleService.findAllSchedulesByStudyId(studyId);
+        return ResponseEntity.ok(schedules);
     }
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404ScheduleNotFoundError
-    @Operation(
-        summary = "개별 일정 세부 조회",
-        description = "지정된 ID를 가진 일정의 상세 정보를 조회합니다. (스터디 멤버만 가능)"
-    )
-    @ApiResponse(
-        responseCode = "200", description = "일정 상세 정보 조회 성공",
-        content = @Content(schema = @Schema(implementation = ScheduleDetailResponseDto.class))
-    )
+    @Operation(summary = "개별 일정 세부 조회", description = "지정된 ID를 가진 일정의 상세 정보를 조회합니다. (스터디 멤버만 가능)")
+    @ApiResponse(responseCode = "200", description = "일정 상세 정보 조회 성공", content = @Content(schema = @Schema(implementation = ScheduleDetailResponseDto.class)))
     @Parameters({
-        @Parameter(name = "schedule_id", description = "조회할 일정의 ID", required = true, example = "1234")
-    })
+        @Parameter(name = "schedule_id", description = "조회할 일정의 ID", required = true, example = "1234")})
     @GetMapping("/schedules/{schedule_id}")
     public ResponseEntity<ScheduleDetailResponseDto> getScheduleDetail(
-        @PathVariable("schedule_id") Long scheduleId
-    ) {
-        // TODO: 개별 일정 세부 조회 로직 구현
-        ScheduleDetailResponseDto mockResponse = new ScheduleDetailResponseDto(
-            1234L,
-            "2차 스터디 모임",
-            "스프링 웹 강의를 듣고 질의응답 시간을 가집니다. 추가적으로 개인 과제에 대한 코드 리뷰도 진행할 예정입니다.",
-            LocalDateTime.of(2025, 9, 3, 10, 0),
-            LocalDateTime.of(2025, 9, 3, 12, 0)
-        );
-
-        return ResponseEntity.ok(mockResponse);
+        @PathVariable("schedule_id") Long scheduleId) {
+        ScheduleDetailResponseDto scheduleDetail = scheduleService.findScheduleDetailById(
+            scheduleId);
+        return ResponseEntity.ok(scheduleDetail);
     }
 
     @Api403ForbiddenStudyLeaderOnlyError
