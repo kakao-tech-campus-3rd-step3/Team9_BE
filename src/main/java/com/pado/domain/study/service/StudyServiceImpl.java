@@ -44,7 +44,7 @@ public class StudyServiceImpl implements StudyService {
                 .studyTime(requestDto.study_time())
                 .region(requestDto.region())
                 .maxMembers(requestDto.max_members())
-                .imageUrl(requestDto.image_url())
+                .fileKey(requestDto.file_key())
                 .build();
 
         newStudy.addInterests(requestDto.interests());
@@ -91,7 +91,7 @@ public class StudyServiceImpl implements StudyService {
                 .collect(Collectors.toList());
 
         return new StudyDetailResponseDto(
-                study.getImageUrl(),
+                study.getFileKey(),
                 study.getTitle(),
                 study.getDescription(),
                 study.getDetailDescription(),

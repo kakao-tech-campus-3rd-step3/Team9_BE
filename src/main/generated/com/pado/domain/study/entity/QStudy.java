@@ -33,9 +33,9 @@ public class QStudy extends EntityPathBase<Study> {
 
     public final StringPath detailDescription = createString("detailDescription");
 
-    public final NumberPath<Long> id = createNumber("id", Long.class);
+    public final StringPath fileKey = createString("fileKey");
 
-    public final StringPath imageUrl = createString("imageUrl");
+    public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final ListPath<StudyCategory, QStudyCategory> interests = this.<StudyCategory, QStudyCategory>createList("interests", StudyCategory.class, QStudyCategory.class, PathInits.DIRECT2);
 

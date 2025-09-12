@@ -47,7 +47,7 @@ public class Study extends AuditingEntity {
     private Integer maxMembers;
 
     @Column(length = 500)
-    private String imageUrl;
+    private String fileKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
