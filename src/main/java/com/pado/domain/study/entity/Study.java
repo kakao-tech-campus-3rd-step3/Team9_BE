@@ -9,13 +9,17 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@Table(name = "study")
+@Table(name = "study", indexes = {
+        @Index(name = "idx_study_status_created_at", columnList = "status, createdAt"),
+        @Index(name = "idx_study_region", columnList = "region")
+})
 public class Study extends AuditingEntity {
 
     @Id
@@ -59,10 +63,29 @@ public class Study extends AuditingEntity {
     @Builder.Default
     private List<String> conditions = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "study_category", joinColumns = @JoinColumn(name = "study_id"))
-    @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false, length = 50)
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Category> interests = new ArrayList<>();
+    private List<StudyCategory> interests = new ArrayList<>();
+
+    public void addInterests(List<Category> categories) {
+        this.interests.clear();
+        if (categories != null) {
+            List<StudyCategory> newInterests = categories.stream()
+                    .map(category -> StudyCategory
+                            .builder()
+                            .study(this)
+                            .category(category)
+                            .build()
+                    )
+                    .collect(Collectors.toList());
+            this.interests.addAll(newInterests);
+        }
+    }
+
+    public void addConditions(List<String> conditions) {
+        this.conditions.clear();
+        if (conditions != null) {
+            this.conditions.addAll(conditions);
+        }
+    }
 }
