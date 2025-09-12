@@ -89,7 +89,7 @@ class StudyServiceImplTest {
                 () -> assertThat(savedStudy.getRegion()).isEqualTo(dto.region()),
                 () -> assertThat(savedStudy.getStudyTime()).isEqualTo(dto.study_time()),
                 () -> assertThat(savedStudy.getMaxMembers()).isEqualTo(dto.max_members()),
-                () -> assertThat(savedStudy.getImageUrl()).isEqualTo(dto.image_url()),
+                () -> assertThat(savedStudy.getFileKey()).isEqualTo(dto.file_key()),
                 () -> assertThat(savedStudy.getLeader()).isEqualTo(user),
 
                 () -> assertThat(savedStudy.getInterests()).hasSize(2),
@@ -162,7 +162,7 @@ class StudyServiceImplTest {
 
         Study mockStudy = Study.builder()
                 .id(100L)
-                .imageUrl("https://test.com/image.jpg")
+                .fileKey("https://test.com/image.jpg")
                 .title("테스트 스터디")
                 .description("테스트 설명")
                 .detailDescription("상세 설명")
@@ -182,7 +182,7 @@ class StudyServiceImplTest {
 
         // then
         assertAll(
-                () -> assertThat(result.image_url()).isEqualTo(mockStudy.getImageUrl()),
+                () -> assertThat(result.file_key()).isEqualTo(mockStudy.getFileKey()),
                 () -> assertThat(result.title()).isEqualTo(mockStudy.getTitle()),
                 () -> assertThat(result.description()).isEqualTo(mockStudy.getDescription()),
                 () -> assertThat(result.detail_description()).isEqualTo(mockStudy.getDetailDescription()),
