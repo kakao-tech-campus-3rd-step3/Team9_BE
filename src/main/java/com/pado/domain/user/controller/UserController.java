@@ -7,6 +7,7 @@ import com.pado.domain.user.service.UserService;
 import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.swagger.annotation.user.Api404UserNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -32,7 +33,7 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = UserSimpleResponseDto.class))
     )
     @GetMapping
-    public ResponseEntity<UserSimpleResponseDto> getSimpleUserInfo(@CurrentUser User user) {
+    public ResponseEntity<UserSimpleResponseDto> getSimpleUserInfo(@Parameter(hidden = true) @CurrentUser User user) {
         return ResponseEntity.ok(userService.getUserSimple(user));
     }
 
@@ -43,7 +44,7 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = UserDetailResponseDto.class))
     )
     @GetMapping("/detail")
-    public ResponseEntity<UserDetailResponseDto> getDetailUserInfo(@CurrentUser User user) {
+    public ResponseEntity<UserDetailResponseDto> getDetailUserInfo(@Parameter(hidden = true) @CurrentUser User user) {
         return ResponseEntity.ok(userService.getUserDetail(user.getId()));
     }
 }
