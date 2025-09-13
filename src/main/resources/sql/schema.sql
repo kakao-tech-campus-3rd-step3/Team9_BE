@@ -58,10 +58,11 @@ CREATE INDEX idx_study_status_created_at ON study (status, created_at);
 CREATE INDEX idx_study_region ON study (region);
 
 CREATE TABLE study_condition (
-     study_id BIGINT NOT NULL,
-     content VARCHAR(500) NOT NULL,
-     PRIMARY KEY (study_id, content),
-     CONSTRAINT fk_study_condition_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    CONSTRAINT uk_study_condition UNIQUE (study_id, content),
+    CONSTRAINT fk_study_condition_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE
 );
 
 CREATE TABLE study_category (
