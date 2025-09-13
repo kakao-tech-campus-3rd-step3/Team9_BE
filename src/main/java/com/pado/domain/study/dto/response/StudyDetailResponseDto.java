@@ -8,8 +8,8 @@ import java.util.List;
 
 @Schema(description = "스터디 상세 정보 조회 응답 DTO")
 public record StudyDetailResponseDto(
-        @Schema(description = "스터디 대표 이미지 URL", example = "https://pado-image.com/1")
-        String image_url,
+        @Schema(description = "스터디 대표 이미지 파일 키 (S3에 저장된 객체 경로)", example = "study/12345/main.png")
+        String file_key,
 
         @Schema(description = "스터디 제목", example = "스프링 스터디")
         String title,

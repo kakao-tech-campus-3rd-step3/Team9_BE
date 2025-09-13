@@ -31,3 +31,74 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 
 CREATE INDEX IF NOT EXISTS idx_email_verifications_email
     ON email_verifications (email);
+
+DROP TABLE IF EXISTS study_member;
+DROP TABLE IF EXISTS study_application;
+DROP TABLE IF EXISTS study_category;
+DROP TABLE IF EXISTS study_condition;
+DROP TABLE IF EXISTS study;
+
+CREATE TABLE study (
+   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+   leader_id BIGINT NOT NULL,
+   title VARCHAR(100) NOT NULL,
+   description VARCHAR(200) NOT NULL,
+   detail_description TEXT,
+   study_time VARCHAR(100),
+   max_members INTEGER NOT NULL,
+   file_key VARCHAR(500),
+   region VARCHAR(50) NOT NULL,
+   status VARCHAR(50) NOT NULL DEFAULT 'RECRUITING',
+   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+   CONSTRAINT fk_study_leader FOREIGN KEY (leader_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_study_status_created_at ON study (status, created_at);
+CREATE INDEX idx_study_region ON study (region);
+
+CREATE TABLE study_condition (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    CONSTRAINT uk_study_condition UNIQUE (study_id, content),
+    CONSTRAINT fk_study_condition_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE
+);
+
+CREATE TABLE study_category (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    CONSTRAINT uk_study_category UNIQUE (study_id, category),
+    CONSTRAINT fk_study_category_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_study_category_study_id ON study_category (study_id);
+CREATE INDEX idx_study_category_category ON study_category (category);
+
+CREATE TABLE study_application (
+   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+   study_id BIGINT NOT NULL,
+   user_id BIGINT NOT NULL,
+   status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+   message VARCHAR(500),
+   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+   CONSTRAINT uk_study_application UNIQUE (study_id, user_id),
+   CONSTRAINT fk_study_application_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE,
+   CONSTRAINT fk_study_application_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE study_member (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  study_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'MEMBER',
+  message VARCHAR(500),
+  rank_point INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uk_study_member_study_user UNIQUE (study_id, user_id),
+  CONSTRAINT fk_study_member_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE,
+  CONSTRAINT fk_study_member_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);

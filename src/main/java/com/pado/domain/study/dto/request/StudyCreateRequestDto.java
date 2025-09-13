@@ -45,6 +45,6 @@ public record StudyCreateRequestDto(
         @Schema(description = "스터디 참여 조건", example = "[\"해당 분야에 대한 기본적인 관심\", \"정기적인 참여 가능\", \"적극적인 소통과 협력\"]")
         List<String> conditions,
 
-        @Schema(description = "스터디 대표 이미지 URL", example = "https://pado-image.com/new-study-image.jpg")
-        String image_url
+        @Schema(description = "스터디 대표 이미지 파일 키 (S3에 저장된 객체 경로)", example = "study/12345/main.png")
+        String file_key
 ) {}

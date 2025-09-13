@@ -31,13 +31,17 @@ public class StudyMember extends AuditingEntity {
     private StudyMemberRole role;
 
     @Column(length = 500)
-    private String resolution;
+    private String message;
+
+    @Column(name = "rank_point", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer rankPoint;
 
     @Builder
-    public StudyMember(Study study, User user, StudyMemberRole role, String resolution) {
+    public StudyMember(Study study, User user, StudyMemberRole role, String message, Integer rankPoint) {
         this.study = study;
         this.user = user;
         this.role = role;
-        this.resolution = resolution;
+        this.message = message;
+        this.rankPoint = (rankPoint != null) ? rankPoint : 0;
     }
 }

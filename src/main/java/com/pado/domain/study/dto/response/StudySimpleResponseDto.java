@@ -8,8 +8,8 @@ public record StudySimpleResponseDto(
         @Schema(description = "스터디 ID", example = "1")
         Long id,
 
-        @Schema(description = "스터디 대표 이미지 URL", example = "https://pado-image.com/1")
-        String image_url,
+        @Schema(description = "스터디 대표 이미지 파일 키 (S3에 저장된 객체 경로)", example = "study/12345/main.png")
+        String file_key,
 
         @Schema(description = "스터디 제목", example = "스프링 스터디")
         String title,
@@ -20,7 +20,7 @@ public record StudySimpleResponseDto(
         public static StudySimpleResponseDto from(Study study) {
                 return new StudySimpleResponseDto(
                         study.getId(),
-                        study.getImageUrl(),
+                        study.getFileKey(),
                         study.getTitle(),
                         study.getDescription()
                 );
