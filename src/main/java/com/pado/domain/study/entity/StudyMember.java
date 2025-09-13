@@ -33,11 +33,15 @@ public class StudyMember extends AuditingEntity {
     @Column(length = 500)
     private String message;
 
+    @Column(name = "rank_point", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer rankPoint;
+
     @Builder
-    public StudyMember(Study study, User user, StudyMemberRole role, String message) {
+    public StudyMember(Study study, User user, StudyMemberRole role, String message, Integer rankPoint) {
         this.study = study;
         this.user = user;
         this.role = role;
         this.message = message;
+        this.rankPoint = (rankPoint != null) ? rankPoint : 0;
     }
 }
