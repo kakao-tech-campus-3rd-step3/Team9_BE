@@ -7,6 +7,7 @@ import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
 import com.pado.domain.study.entity.Study;
+import com.pado.domain.study.entity.StudyCondition;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.study.repository.StudyMemberRepository;
@@ -96,8 +97,9 @@ class StudyServiceImplTest {
                 () -> assertThat(savedStudy.getInterests().get(0).getCategory()).isEqualTo(Category.PROGRAMMING),
                 () -> assertThat(savedStudy.getInterests().get(1).getCategory()).isEqualTo(Category.LANGUAGE),
 
-                () -> assertThat(savedStudy.getConditions()).hasSize(1),
-                () -> assertThat(savedStudy.getConditions().get(0)).isEqualTo("열심히 하실 분만")
+                () -> assertThat(savedStudy.getConditions())
+                        .extracting(StudyCondition::getContent)
+                        .containsExactly("열심히 하실 분만")
         );
     }
 
