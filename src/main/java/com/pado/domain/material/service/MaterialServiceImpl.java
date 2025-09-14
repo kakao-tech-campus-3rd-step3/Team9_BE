@@ -12,6 +12,10 @@ import com.pado.domain.material.entity.MaterialCategory;
 import com.pado.domain.material.event.MaterialDeletedEvent;
 import com.pado.domain.material.repository.FileRepository;
 import com.pado.domain.material.repository.MaterialRepository;
+import com.pado.domain.study.entity.Study;
+import com.pado.domain.study.repository.StudyMemberRepository;
+import com.pado.domain.study.repository.StudyRepository;
+import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import com.pado.domain.s3.service.S3Service;
@@ -32,17 +36,24 @@ public class MaterialServiceImpl implements MaterialService {
 
     private final MaterialRepository materialRepository;
     private final FileRepository fileRepository;
+    private final StudyMemberRepository studyMemberRepository;
+    private final StudyRepository studyRepository;
     private final S3Service s3Service;
     private final ApplicationEventPublisher eventPublisher;
 
     // 자료 생성
     @Transactional
     @Override
-    public MaterialDetailResponseDto createMaterial(Long studyId, MaterialRequestDto request) {
-        // TODO: 토큰을 통해 실제 사용자 ID 가져오기
-        Long userId = getCurrentUserId(); // 임시 메서드
+    public MaterialDetailResponseDto createMaterial(User user, Long studyId, MaterialRequestDto request) {
 
-        Material material = new Material(request.title(), request.category(), request.week(), request.content(), studyId, userId);
+        Study study = studyRepository.findById(studyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
+        if (!studyMemberRepository.existsByStudyAndUser(study, user)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
+
+        Material material = new Material(request.title(), request.category(), request.week(), request.content(), study, user);
 
         Material savedMaterial = materialRepository.save(material);
 
@@ -59,10 +70,16 @@ public class MaterialServiceImpl implements MaterialService {
 
     // 자료 상세조회
     @Override
-    public MaterialDetailResponseDto findMaterialById(Long materialId) {
+    public MaterialDetailResponseDto findMaterialById(User user, Long materialId) {
 
         Material material = materialRepository.findById(materialId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND));
+
+        Study study = material.getStudy();
+
+        if (!studyMemberRepository.existsByStudyAndUser(study, user)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
 
         return convertToDetailResponseDto(material);
     }
@@ -70,11 +87,19 @@ public class MaterialServiceImpl implements MaterialService {
     // 자료 목록 조회
     @Override
     public MaterialListResponseDto findAllMaterials(
+            User user,
             Long studyId,
             List<String> categories,
             List<String> weeks,
             String keyword,
             Pageable pageable) {
+
+        Study study = studyRepository.findById(studyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
+        if (!studyMemberRepository.existsByStudyAndUser(study, user)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
 
         Page<Material> materialPage;
         Optional<List<MaterialCategory>> materialCategoriesOpt = Optional.empty();
@@ -119,14 +144,12 @@ public class MaterialServiceImpl implements MaterialService {
     // 자료 수정
     @Transactional
     @Override
-    public MaterialDetailResponseDto updateMaterial(Long materialId, MaterialRequestDto request) {
-        // TODO: 토큰을 통해 실제 사용자 ID 가져오기
-        Long userId = getCurrentUserId(); // 임시
+    public MaterialDetailResponseDto updateMaterial(User user, Long materialId, MaterialRequestDto request) {
 
         Material material = materialRepository.findById(materialId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND));
 
-        if (!material.getUserId().equals(userId)) {
+        if (!material.isOwnedBy(user)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_MATERIAL_ACCESS);
         }
 
@@ -144,10 +167,9 @@ public class MaterialServiceImpl implements MaterialService {
     // 자료 삭제
     @Transactional
     @Override
-    public void deleteMaterial(List<Long> ids) {
-        Long userId = getCurrentUserId();
+    public void deleteMaterial(User user, List<Long> ids) {
 
-        List<Material> materials = validateMaterialsExistAndAccess(ids, userId);
+        List<Material> materials = validateMaterialsExistAndAccess(ids, user);
 
         // 삭제할 파일 키 수집
         List<String> fileKeys = new ArrayList<>();
@@ -208,7 +230,7 @@ public class MaterialServiceImpl implements MaterialService {
     }
 
     // 자료 삭제 시, 자료가 존재하는지와 해당 자료가 본인이 작성한 글인지 검사하는 메서드
-    private List<Material> validateMaterialsExistAndAccess(List<Long> ids, Long userId) {
+    private List<Material> validateMaterialsExistAndAccess(List<Long> ids, User user) {
         List<Material> materials = materialRepository.findByIdIn(ids);
 
         if (materials.size() != ids.size()) {
@@ -219,7 +241,7 @@ public class MaterialServiceImpl implements MaterialService {
         materials.forEach(
                 material ->
                 {
-                    if (!material.getUserId().equals(userId)) {
+                    if (!material.isOwnedBy(user)) {
                         throw new BusinessException(ErrorCode.FORBIDDEN_MATERIAL_ACCESS);
                     }
                 }
@@ -247,7 +269,7 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getMaterialCategory().name,
                 material.getWeek(),
                 material.getContent(),
-                material.getUserId(),
+                material.getUser().getId(),
                 "임시 닉네임",
                 material.getCreatedAt(),
                 material.getUpdatedAt(),
@@ -266,7 +288,7 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getTitle(),
                 material.getMaterialCategory().name,
                 material.getWeek(),
-                material.getUserId(),
+                material.getUser().getId(),
                 "임시 닉네임",
                 dataUrls,
                 material.getCreatedAt()

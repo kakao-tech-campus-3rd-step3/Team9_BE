@@ -33,8 +33,4 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     );
 
     List<Material> findByIdIn(List<Long> ids);
-    
-    boolean existsByIdAndUserId(Long id, Long userId);
-    
-    boolean existsByIdAndStudyId(Long materialId, Long studyId);
 }
