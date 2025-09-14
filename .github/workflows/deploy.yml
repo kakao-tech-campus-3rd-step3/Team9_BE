@@ -156,33 +156,35 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -euo pipefail
-            DOCKER_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            DOCKER_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}'
             APP_NAME=pado-app
-            IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
+            IMAGE_TAG='${{ steps.vars.outputs.sha_short }}'
             IMAGE="$DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG"
             PORT=18080
             NAME="pado-pr-${{ github.run_id }}"
 
             echo "Pull $IMAGE and run on localhost:${PORT} ..."
             sudo docker pull "$IMAGE"
-            sudo docker rm -f "$NAME" || true
+            sudo docker rm -f "$NAME" 2>/dev/null || true
 
             NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
               --add-host host.docker.internal:host-gateway \
               -e SPRING_PROFILES_ACTIVE=prod \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS }} \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              # Staging DB 권장: 운영 DB 보호 목적
-              # -e SPRING_DATASOURCE_URL=${{ secrets.STAGING_DB_URL }} \
+              -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+              -e JWT_ACCESS_EXP_SECONDS='${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}' \
+              -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
+              -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
+              -e SPRING_MAIL_HOST='${{ secrets.MAIL_HOST }}' \
+              -e SPRING_MAIL_PORT='${{ secrets.MAIL_PORT }}' \
+              -e SPRING_MAIL_USERNAME='${{ secrets.MAIL_USERNAME }}' \
+              -e SPRING_MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}' \
               "$IMAGE")
 
             if [ -z "$NEW_ID" ]; then
               echo "docker run failed"; exit 1
             fi
 
-            HEALTH=http://127.0.0.1:${PORT}/actuator/health
+            HEALTH="http://127.0.0.1:${PORT}/actuator/health"
             for i in $(seq 1 12); do
               echo "PR EC2 health check #$i ..."
               if curl -s --fail "$HEALTH" | grep -q '"status":"UP"'; then OK=true; break; fi
@@ -202,6 +204,7 @@ jobs:
             sudo docker rm -f "$NAME" || true
             echo "PR EC2 smoke passed."
 
+
   build-and-deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     needs: [ test ]
@@ -210,8 +213,6 @@ jobs:
     concurrency:
       group: deploy-develop
       cancel-in-progress: true
-    # 환경 승인 게이트 사용 시 주석 해제
-    # environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
