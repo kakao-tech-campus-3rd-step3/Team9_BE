@@ -74,6 +74,7 @@ jobs:
           set -euo pipefail
           docker run -d --name pado-smoke -p 18080:8080 \
             -e SPRING_PROFILES_ACTIVE=dev \
+            -e MANAGEMENT_HEALTH_MAIL_ENABLED=false \
             pado-app:${{ github.sha }}
       - name: Wait for health (status:UP)
         run: |
