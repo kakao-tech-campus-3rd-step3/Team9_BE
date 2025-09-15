@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 CREATE INDEX IF NOT EXISTS idx_email_verifications_email
     ON email_verifications (email);
 
+DROP TABLE IF EXISTS material_file;
+DROP TABLE IF EXISTS material;
 DROP TABLE IF EXISTS study_member;
 DROP TABLE IF EXISTS study_application;
 DROP TABLE IF EXISTS study_category;
@@ -101,4 +103,26 @@ CREATE TABLE study_member (
   CONSTRAINT uk_study_member_study_user UNIQUE (study_id, user_id),
   CONSTRAINT fk_study_member_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE,
   CONSTRAINT fk_study_member_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE material (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    material_category VARCHAR(50) NOT NULL,
+    week INT COMMENT,
+    content TEXT NOT NULL,
+    user_id BIGINT NOT NULL,
+    study_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_material_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_material_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE
+);
+
+CREATE TABLE material_file (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    file_key VARCHAR(255) NOT NULL,
+    material_id BIGINT NOT NULL,
+    CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
 );
