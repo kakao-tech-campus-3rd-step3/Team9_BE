@@ -8,7 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Entity
-@Table(name = "file")
+@Table(name = "material_file")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class File {
 
