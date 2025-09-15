@@ -4,6 +4,9 @@ import com.pado.domain.attendance.dto.AttendanceListResponseDto;
 import com.pado.domain.attendance.dto.AttendanceStatusDto;
 import com.pado.domain.attendance.dto.AttendanceStatusResponseDto;
 import com.pado.domain.attendance.dto.MemberAttendanceDto;
+import com.pado.domain.attendance.service.AttendanceService;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
 import com.pado.global.swagger.annotation.schedule.Api404ScheduleNotFoundError;
@@ -30,8 +33,7 @@ import java.util.List;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class AttendanceController {
-
-    // TODO: 서비스 레이어 종속성 주입
+    private final AttendanceService attendanceService;
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
@@ -133,9 +135,9 @@ public class AttendanceController {
     })
     @PostMapping("/schedules/{schedule_id}/attendance")
     public ResponseEntity<AttendanceStatusResponseDto> checkAttendance(
-            @PathVariable("schedule_id") Long scheduleId
+            @PathVariable("schedule_id") Long scheduleId,
+            @Parameter(hidden = true) @CurrentUser User user
     ) {
-        // TODO: 출석 체크 로직 구현
-        return ResponseEntity.ok(new AttendanceStatusResponseDto(true));
+        return ResponseEntity.ok(attendanceService.checkIn(scheduleId, user));
     }
 }
