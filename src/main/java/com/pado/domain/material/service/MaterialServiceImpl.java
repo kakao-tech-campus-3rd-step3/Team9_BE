@@ -250,12 +250,6 @@ public class MaterialServiceImpl implements MaterialService {
         return materials;
     }
 
-    // 유저의 ID를 가져오는 메서드
-    private Long getCurrentUserId() {
-        // TODO: 토큰을 통해 실제 사용자 ID 가져오기
-        return 1L;
-    }
-
     // 자료 상세 조회 DTO 변환 메서드
     private MaterialDetailResponseDto convertToDetailResponseDto(Material material) {
         List<File> files = fileRepository.findByMaterialId(material.getId());
@@ -270,7 +264,7 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getWeek(),
                 material.getContent(),
                 material.getUser().getId(),
-                "임시 닉네임",
+                material.getUser().getNickname(),
                 material.getCreatedAt(),
                 material.getUpdatedAt(),
                 fileResponseDtos
@@ -289,7 +283,7 @@ public class MaterialServiceImpl implements MaterialService {
                 material.getMaterialCategory().name,
                 material.getWeek(),
                 material.getUser().getId(),
-                "임시 닉네임",
+                material.getUser().getNickname(),
                 dataUrls,
                 material.getCreatedAt()
         );
