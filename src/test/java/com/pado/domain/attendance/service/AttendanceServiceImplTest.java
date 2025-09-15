@@ -5,6 +5,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.then;
 import com.pado.domain.attendance.dto.AttendanceStatusResponseDto;
 import com.pado.domain.attendance.entity.Attendance;
 import com.pado.domain.attendance.repository.AttendanceRepository;
@@ -46,56 +47,38 @@ class AttendanceServiceImplTest {
     @Mock
     private StudyMemberRepository studyMemberRepository;
 
-    @Test
-    @DisplayName("출석 성공")
-    void 출석_성공_여부() {
-        User user = User.builder()
+    private User testUser(Long id) {
+        User u = User.builder()
                 .email("test@test.com")
                 .passwordHash("hashed")
                 .nickname("tester")
                 .region(Region.SEOUL)
                 .gender(Gender.MALE)
                 .build();
+        ReflectionTestUtils.setField(u, "id", id);
+        return u;
+    }
 
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Schedule schedule = Schedule.builder()
-                .studyId(100L)
+    private Schedule testSchedule(Long studyId) {
+        return Schedule.builder()
+                .studyId(studyId)
                 .title("스터디 일정")
-                .description("스터디 설명")
+                .description("설명")
                 .startTime(LocalDateTime.now())
                 .endTime(LocalDateTime.now().plusHours(2))
                 .build();
+    }
 
-        Study study = Study.builder().id(100L).build();
-
-        given(scheduleRepository.findById(schedule.getId())).willReturn(Optional.of(schedule));
-        given(studyRepository.findById(100L)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
-        given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
-
-        // when
-        AttendanceStatusResponseDto response = attendanceService.checkIn(schedule.getId(), user);
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.status()).isTrue();
-        verify(attendanceRepository, times(1)).save(any(Attendance.class));
+    private Study testStudy(Long id) {
+        return Study.builder().id(id).build();
     }
 
     @Test
     @DisplayName("스케줄이 없으면 예외 발생")
     void 스케줄_없을_때_예외() {
+        Long userId = 10L;
         Long scheduleId = 1L;
-        User user = User.builder()
-                .email("test@test.com")
-                .passwordHash("hashed")
-                .nickname("tester")
-                .region(Region.SEOUL)
-                .gender(Gender.MALE)
-                .build();
-
-        ReflectionTestUtils.setField(user, "id", 10L);
+        User user = testUser(userId);
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.empty());
 
@@ -109,27 +92,15 @@ class AttendanceServiceImplTest {
     @DisplayName("스터디가 없으면 예외 발생")
     void 스터디_없을_때_예외() {
         // given
+        Long userId = 10L;
         Long scheduleId = 1L;
-        User user = User.builder()
-                .email("test@test.com")
-                .passwordHash("hashed")
-                .nickname("tester")
-                .region(Region.SEOUL)
-                .gender(Gender.MALE)
-                .build();
+        Long studyId = 100L;
+        User user = testUser(userId);
+        Schedule schedule = testSchedule(studyId);
 
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Schedule schedule = Schedule.builder()
-                .studyId(100L)
-                .title("스터디 일정")
-                .description("스터디 설명")
-                .startTime(LocalDateTime.now())
-                .endTime(LocalDateTime.now().plusHours(2))
-                .build();
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(studyRepository.findById(100L)).willReturn(Optional.empty());
+        given(studyRepository.findById(studyId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
@@ -139,24 +110,17 @@ class AttendanceServiceImplTest {
 
     @Test
     @DisplayName("스터디 멤버가 아니면 예외 발생")
-    void 스터디_맴버_아닐_때_예외() {
+    void 스터디_멤버_아닐_때_예외() {
         // given
+        Long userId = 10L;
         Long scheduleId = 1L;
-        User user = User.builder()
-                .email("test@test.com")
-                .passwordHash("hashed")
-                .nickname("tester")
-                .region(Region.SEOUL)
-                .gender(Gender.MALE)
-                .build();
-
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Schedule schedule = Schedule.builder().studyId(100L).build();
-        Study study = Study.builder().id(100L).build();
+        Long studyId = 100L;
+        User user = testUser(userId);
+        Schedule schedule = testSchedule(studyId);
+        Study study = testStudy(studyId);
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(studyRepository.findById(100L)).willReturn(Optional.of(study));
+        given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
         given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(false);
 
         // when & then
@@ -169,22 +133,15 @@ class AttendanceServiceImplTest {
     @DisplayName("이미 출석한 경우 예외 발생")
     void 이미_출석했을_때_예외() {
         // given
+        Long userId = 10L;
         Long scheduleId = 1L;
-        User user = User.builder()
-                .email("test@test.com")
-                .passwordHash("hashed")
-                .nickname("tester")
-                .region(Region.SEOUL)
-                .gender(Gender.MALE)
-                .build();
-
-        ReflectionTestUtils.setField(user, "id", 10L);
-
-        Schedule schedule = Schedule.builder().studyId(100L).build();
-        Study study = Study.builder().id(100L).build();
+        Long studyId = 100L;
+        User user = testUser(userId);
+        Schedule schedule = testSchedule(studyId);
+        Study study = testStudy(studyId);
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(studyRepository.findById(100L)).willReturn(Optional.of(study));
+        given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
         given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(true);
 
@@ -192,5 +149,73 @@ class AttendanceServiceImplTest {
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(ErrorCode.ALREADY_CHECKED_IN.message);
+    }
+
+    @Test
+    @DisplayName("출석 성공")
+    void 출석_성공_여부() {
+        Long userId = 10L;
+        Long scheduleId = 1L;
+        Long studyId = 100L;
+        User user = testUser(userId);
+        Schedule schedule = testSchedule(studyId);
+        Study study = testStudy(studyId);
+
+        given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
+        given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
+        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
+
+        // when
+        AttendanceStatusResponseDto response = attendanceService.checkIn(scheduleId, user);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isTrue();
+        then(attendanceRepository).should(times(1)).save(any(Attendance.class));
+    }
+
+    @Test
+    @DisplayName("출석한 경우 개별 출석 여부 확인")
+    void 개별_출석_확인_출석(){
+        // given
+        Long userId = 10L;
+        Long scheduleId = 1L;
+        Long studyId = 100L;
+        User user = testUser(userId);
+        Schedule schedule = testSchedule(studyId);
+        Study study = testStudy(studyId);
+
+        given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
+        given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
+        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(true);
+
+        AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user);
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isTrue();
+        then(attendanceRepository).should(times(0)).save(any(Attendance.class));
+    }
+
+    @Test
+    @DisplayName("미출석한 경우 개별 출석 여부 확인")
+    void 개별_출석_확인_미출석(){
+        // given
+        Long userId = 10L;
+        Long scheduleId = 1L;
+        Long studyId = 100L;
+        User user = testUser(userId);
+        Schedule schedule = testSchedule(studyId);
+        Study study = testStudy(studyId);
+
+        given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
+        given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
+        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
+
+        AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user);
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isFalse();
+        then(attendanceRepository).should(times(0)).save(any(Attendance.class));
     }
 }

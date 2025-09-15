@@ -92,13 +92,10 @@ public class AttendanceController {
     @GetMapping("/studies/{study_id}/attendance/{schedule_id}")
     public ResponseEntity<AttendanceStatusResponseDto> getIndividualAttendanceStatus(
             @PathVariable("study_id") Long studyId,
-            @PathVariable("schedule_id") Long scheduleId
+            @PathVariable("schedule_id") Long scheduleId,
+            @CurrentUser User user
     ) {
-        // TODO: 개별 참여 현황 조회 로직 구현
-        boolean hasAttended = true;
-        AttendanceStatusResponseDto mockResponse = new AttendanceStatusResponseDto(hasAttended);
-
-        return ResponseEntity.ok(mockResponse);
+        return ResponseEntity.ok(attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user));
     }
 
     @Api403ForbiddenStudyMemberOnlyError

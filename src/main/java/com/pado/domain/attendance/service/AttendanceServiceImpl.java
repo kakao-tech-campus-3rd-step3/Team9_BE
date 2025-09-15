@@ -23,8 +23,28 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final StudyRepository studyRepository;
 
     @Override
+    public AttendanceStatusResponseDto getIndividualAttendanceStatus(Long studyId, Long scheduleId, User user) {
+        Schedule schedule = checkException(scheduleId, user);
+        return new AttendanceStatusResponseDto(attendanceRepository.existsByScheduleAndUser(schedule, user));
+    }
+
+    @Override
     public AttendanceStatusResponseDto checkIn(Long scheduleId, User user) {
-        //스케줄 검증
+        Schedule schedule = checkException(scheduleId, user);
+
+        // 출석 여부 확인
+        if(attendanceRepository.existsByScheduleAndUser(schedule, user)) {
+            throw new BusinessException(ErrorCode.ALREADY_CHECKED_IN);
+        }
+
+        Attendance attendance = Attendance.createCheckIn(schedule, user);
+        attendanceRepository.save(attendance);
+
+        return new AttendanceStatusResponseDto(true);
+    }
+
+    private Schedule checkException(Long scheduleId, User user){
+        // 스케줄 검증
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
 
@@ -37,14 +57,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
 
-        // 출석 여부 확인
-        if(attendanceRepository.existsByScheduleAndUser(schedule, user)) {
-            throw new BusinessException(ErrorCode.ALREADY_CHECKED_IN);
-        }
-
-        Attendance attendance = Attendance.createCheckIn(schedule, user);
-        attendanceRepository.save(attendance);
-
-        return new AttendanceStatusResponseDto(true);
+        return schedule;
     }
+
 }
