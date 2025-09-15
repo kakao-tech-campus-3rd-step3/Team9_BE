@@ -1,0 +1,87 @@
+package com.pado.domain.material.repository;
+
+import com.pado.domain.material.entity.Material;
+import com.pado.domain.material.entity.MaterialCategory;
+import com.pado.domain.material.entity.QMaterial;
+import com.pado.domain.user.entity.QUser;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Repository
+@RequiredArgsConstructor
+public class MaterialRepositoryCustomImpl implements MaterialRepositoryCustom{
+
+    private final JPAQueryFactory queryFactory;
+    private final QMaterial material = QMaterial.material;
+    private final QUser user = QUser.user;
+
+    @Override
+    public Page<Material> findByStudyIdWithFiltersAndKeyword(
+            Long studyId,
+            List<MaterialCategory> categories,
+            List<String> weeks,
+            String keyword,
+            Pageable pageable) {
+
+        List<Material> content = queryFactory
+                .selectFrom(material)
+                .join(material.user, user).fetchJoin()
+                .where(
+                        material.study.id.eq(studyId),
+                        categoriesIn(categories),
+                        weeksIn(weeks),
+                        keywordContains(keyword)
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .orderBy(material.createdAt.desc())
+                .fetch();
+
+        Long total = queryFactory
+                .select(material.count())
+                .from(material)
+                .where(
+                        material.study.id.eq(studyId),
+                        categoriesIn(categories),
+                        weeksIn(weeks),
+                        keywordContains(keyword)
+                )
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total != null ? total : 0L);
+    }
+
+    private BooleanExpression categoriesIn(List<MaterialCategory> categories) {
+        return (categories != null && !categories.isEmpty()) ? material.materialCategory.in(categories) : null;
+    }
+
+    private BooleanExpression weeksIn(List<String> weeks) {
+        if (weeks == null || weeks.isEmpty()) {
+            return null;
+        }
+        List<Integer> weekInts = weeks.stream()
+                .map(Integer::parseInt)
+                .collect(Collectors.toList());
+
+        return material.materialCategory.eq(MaterialCategory.LEARNING).and(material.week.in(weekInts))
+                .or(material.materialCategory.ne(MaterialCategory.LEARNING));
+    }
+
+    private BooleanExpression keywordContains(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return null;
+        }
+        return material.title.containsIgnoreCase(keyword)
+                .or(material.content.containsIgnoreCase(keyword));
+    }
+
+}
