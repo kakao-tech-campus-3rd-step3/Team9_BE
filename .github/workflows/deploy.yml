@@ -148,7 +148,7 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:${{ steps.vars.outputs.sha_short }}
 
-      - name: EC2 remote smoke on temp port
+      - name: EC2 remote smoke on temp port (env-file)
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -162,35 +162,44 @@ jobs:
             IMAGE="$DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG"
             PORT=18080
             NAME="pado-pr-${{ github.run_id }}"
-
+            
             echo "Pull $IMAGE and run on localhost:${PORT} ..."
             sudo docker pull "$IMAGE"
             sudo docker rm -f "$NAME" 2>/dev/null || true
-
+            
+            # Create PR env file on remote (prevent expansion with quoted heredoc)
+            cat > /tmp/pado-pr.env <<'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}
+            EOF
+            
             NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
               --add-host host.docker.internal:host-gateway \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
-              -e JWT_ACCESS_EXP_SECONDS='${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}' \
-              -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
-              -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
-              -e SPRING_MAIL_HOST='${{ secrets.MAIL_HOST }}' \
-              -e SPRING_MAIL_PORT='${{ secrets.MAIL_PORT }}' \
-              -e SPRING_MAIL_USERNAME='${{ secrets.MAIL_USERNAME }}' \
-              -e SPRING_MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}' \
+              --env-file /tmp/pado-pr.env \
               "$IMAGE")
-
+            
             if [ -z "$NEW_ID" ]; then
-              echo "docker run failed"; exit 1
+              echo "docker run failed"
+              sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
+              exit 1
             fi
-
+            
             HEALTH="http://127.0.0.1:${PORT}/actuator/health"
             for i in $(seq 1 12); do
               echo "PR EC2 health check #$i ..."
               if curl -s --fail "$HEALTH" | grep -q '"status":"UP"'; then OK=true; break; fi
               sleep 5
             done
-
+            
             if [ "${OK:-false}" != true ]; then
               echo "--- Health response ---"
               curl -s "$HEALTH" || true
@@ -198,10 +207,12 @@ jobs:
               echo "--- Logs ---"
               sudo docker logs "$NAME" || true
               sudo docker rm -f "$NAME" || true
+              sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
               exit 1
             fi
-
+            
             sudo docker rm -f "$NAME" || true
+            sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
             echo "PR EC2 smoke passed."
 
   build-and-deploy:
