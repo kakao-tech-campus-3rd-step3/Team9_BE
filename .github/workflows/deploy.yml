@@ -74,7 +74,6 @@ jobs:
           set -euo pipefail
           docker run -d --name pado-smoke -p 18080:8080 \
             -e SPRING_PROFILES_ACTIVE=dev \
-            -e MANAGEMENT_HEALTH_MAIL_ENABLED=false \
             pado-app:${{ github.sha }}
       - name: Wait for health (status:UP)
         run: |
@@ -149,7 +148,7 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:${{ steps.vars.outputs.sha_short }}
 
-      - name: EC2 remote smoke on temp port
+      - name: EC2 remote smoke on temp port (env-file)
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -163,37 +162,44 @@ jobs:
             IMAGE="$DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG"
             PORT=18080
             NAME="pado-pr-${{ github.run_id }}"
-
+            
             echo "Pull $IMAGE and run on localhost:${PORT} ..."
             sudo docker pull "$IMAGE"
             sudo docker rm -f "$NAME" 2>/dev/null || true
-
+            
+            # Create PR env file on remote (prevent expansion with quoted heredoc)
+            cat > /tmp/pado-pr.env <<'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}
+            EOF
+            
             NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
               --add-host host.docker.internal:host-gateway \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
-              -e JWT_ACCESS_EXP_SECONDS='${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}' \
-              -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
-              -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
-              -e AWS_ACCESS_KEY='${{ secrets.AWS_ACCESS_KEY }}' \
-              -e AWS_SECRET_KEY='${{ secrets.AWS_SECRET_KEY }}' \
-              -e SPRING_MAIL_HOST='${{ secrets.MAIL_HOST }}' \
-              -e SPRING_MAIL_PORT='${{ secrets.MAIL_PORT }}' \
-              -e SPRING_MAIL_USERNAME='${{ secrets.MAIL_USERNAME }}' \
-              -e SPRING_MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}' \
+              --env-file /tmp/pado-pr.env \
               "$IMAGE")
-
+            
             if [ -z "$NEW_ID" ]; then
-              echo "docker run failed"; exit 1
+              echo "docker run failed"
+              sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
+              exit 1
             fi
-
+            
             HEALTH="http://127.0.0.1:${PORT}/actuator/health"
             for i in $(seq 1 12); do
               echo "PR EC2 health check #$i ..."
               if curl -s --fail "$HEALTH" | grep -q '"status":"UP"'; then OK=true; break; fi
               sleep 5
             done
-
+            
             if [ "${OK:-false}" != true ]; then
               echo "--- Health response ---"
               curl -s "$HEALTH" || true
@@ -201,12 +207,13 @@ jobs:
               echo "--- Logs ---"
               sudo docker logs "$NAME" || true
               sudo docker rm -f "$NAME" || true
+              sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
               exit 1
             fi
-
+            
             sudo docker rm -f "$NAME" || true
+            sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
             echo "PR EC2 smoke passed."
-
 
   build-and-deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
@@ -254,7 +261,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:${{ steps.vars.outputs.sha_short }}
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:latest
 
-      - name: Deploy to EC2 (Blue/Green)
+      - name: Deploy to EC2 (Blue/Green) with env-file
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -280,26 +287,31 @@ jobs:
               sudo docker rm -f "$NEW_NAME"
             fi
 
+            cat > /tmp/pado.env <<'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS }}
+            EOF
+            
             NEW_CONTAINER_ID=$(sudo docker run -d --name "$NEW_NAME" -p ${TARGET_PORT}:8080 \
               --add-host host.docker.internal:host-gateway \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }} \
-              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-              -e MAIL_HOST=${{ secrets.MAIL_HOST }} \
-              -e MAIL_PORT=${{ secrets.MAIL_PORT }} \
-              -e MAIL_USERNAME=${{ secrets.MAIL_USERNAME }} \
-              -e MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS }} \
+              --env-file /tmp/pado.env \
               "$IMAGE")
-
+            
             if [ -z "$NEW_CONTAINER_ID" ]; then
               echo "ERROR: docker run did not return a container ID"
+              sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true
               exit 1
             fi
-
+            
             echo "Started $NEW_NAME ($NEW_CONTAINER_ID) on :$TARGET_PORT. Health check..."
             HEALTH_CHECK_URL="http://127.0.0.1:${TARGET_PORT}/actuator/health"
             for i in $(seq 1 12); do
@@ -309,18 +321,18 @@ jobs:
               fi
               sleep 5
             done
-
+            
             if [ "${HEALTH_OK:-false}" = true ]; then
               sudo sed -i "s/server 127.0.0.1:.*/server 127.0.0.1:${TARGET_PORT};/" "$NGINX_CONF_PATH"
               sudo nginx -t && sudo systemctl reload nginx
-
+            
               if [ -n "$CURRENT_PORT" ]; then
                 OLD_ID=$(sudo docker ps -q --filter "publish=${CURRENT_PORT}")
-                if [ -n "$OLD_ID" ]; then
-                  sudo docker rm -f "$OLD_ID"
-                fi
+                  if [ -n "$OLD_ID" ]; then
+                    sudo docker rm -f "$OLD_ID"
+                  fi
               fi
-
+            
               sudo docker image prune -f
               echo "Deployment complete."
             else
@@ -330,5 +342,8 @@ jobs:
               echo "--- Container logs ($NEW_NAME) ---"
               sudo docker logs "$NEW_NAME" || true
               sudo docker rm -f "$NEW_NAME" || true
+              sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true
               exit 1
             fi
+
+            sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true
