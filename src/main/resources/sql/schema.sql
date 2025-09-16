@@ -102,3 +102,15 @@ CREATE TABLE study_member (
   CONSTRAINT fk_study_member_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE,
   CONSTRAINT fk_study_member_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
+
+CREATE TABLE attendance (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    schedule_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    status BOOLEAN NOT NULL,
+    check_in_time TIMESTAMP NULL,
+    CONSTRAINT fk_attendance_schedule FOREIGN KEY (schedule_id)
+        REFERENCES schedule (id) ON DELETE CASCADE,
+    CONSTRAINT fk_attendance_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE
+);
