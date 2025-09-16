@@ -18,7 +18,6 @@ import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
-import com.pado.domain.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -38,7 +37,6 @@ public class MaterialServiceImpl implements MaterialService {
     private final FileRepository fileRepository;
     private final StudyMemberRepository studyMemberRepository;
     private final StudyRepository studyRepository;
-    private final S3Service s3Service;
     private final ApplicationEventPublisher eventPublisher;
 
     // 자료 생성
@@ -190,7 +188,7 @@ public class MaterialServiceImpl implements MaterialService {
 
     // 파일 엔티티 생성 메서드
     private File createFileEntity(FileRequestDto fileDto, Material material) {
-        File file = new File(fileDto.name(), fileDto.key());
+        File file = new File(fileDto.name(), fileDto.key(), fileDto.size());
         file.setMaterial(material);
         return file;
     }
@@ -254,7 +252,7 @@ public class MaterialServiceImpl implements MaterialService {
     private MaterialDetailResponseDto convertToDetailResponseDto(Material material) {
         List<File> files = fileRepository.findByMaterialId(material.getId());
         List<FileResponseDto> fileResponseDtos = files.stream()
-                .map(file -> new FileResponseDto(file.getId(), file.getName(), file.getFileKey()))
+                .map(file -> new FileResponseDto(file.getId(), file.getName(), file.getFileKey(), file.getSize()))
                 .collect(Collectors.toList());
 
         return new MaterialDetailResponseDto(

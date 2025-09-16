@@ -11,6 +11,9 @@ public record FileResponseDto(
         String name,
 
         @Schema(description = "파일 다운로드, 삭제 시 사용되는 키")
-        String key
+        String key,
+
+        @Schema(description = "파일 크기 (단위: bytes)", example = "1024")
+        Long size
 ) {
 }

@@ -123,6 +123,7 @@ CREATE TABLE material_file (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     file_key VARCHAR(255) NOT NULL,
+    size BIGINT NOT NULL,
     material_id BIGINT NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
 );
