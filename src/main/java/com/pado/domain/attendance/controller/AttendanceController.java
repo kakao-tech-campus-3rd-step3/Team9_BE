@@ -52,27 +52,7 @@ public class AttendanceController {
     public ResponseEntity<AttendanceListResponseDto> getFullAttendance(
             @PathVariable("study_id") Long studyId
     ) {
-        // TODO: 전체 참여 현황 조회 로직 구현
-        List<MemberAttendanceDto> mockMembers = Arrays.asList(
-                new MemberAttendanceDto(
-                        "리더유저",
-                        "https://pado-image.com/user/1",
-                        List.of(
-                                new AttendanceStatusDto(true, LocalDateTime.of(2025, 9, 1, 10, 0)),
-                                new AttendanceStatusDto(false, LocalDateTime.of(2025, 9, 8, 10, 0))
-                        )
-                ),
-                new MemberAttendanceDto(
-                        "참여자1",
-                        "https://pado-image.com/user/2",
-                        List.of(
-                                new AttendanceStatusDto(true, LocalDateTime.of(2025, 9, 1, 10, 0)),
-                                new AttendanceStatusDto(true, LocalDateTime.of(2025, 9, 8, 10, 0))
-                        )
-                )
-        );
-        AttendanceListResponseDto mockResponse = new AttendanceListResponseDto(mockMembers);
-        return ResponseEntity.ok(mockResponse);
+        return ResponseEntity.ok(attendanceService.getFullAttendance(studyId));
     }
 
     @Api403ForbiddenStudyMemberOnlyError
@@ -93,7 +73,7 @@ public class AttendanceController {
     public ResponseEntity<AttendanceStatusResponseDto> getIndividualAttendanceStatus(
             @PathVariable("study_id") Long studyId,
             @PathVariable("schedule_id") Long scheduleId,
-            @CurrentUser User user
+            @Parameter(hidden = true) @CurrentUser User user
     ) {
         return ResponseEntity.ok(attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user));
     }
