@@ -37,14 +37,6 @@ public class Attendance {
     @Column(name = "check_in_time")
     private LocalDateTime checkInTime;
 
-    @Builder
-    public Attendance(Schedule schedule, User user, boolean status, LocalDateTime checkInTime) {
-        this.schedule = schedule;
-        this.user = user;
-        this.status = status;
-        this.checkInTime = checkInTime;
-    }
-
     public static Attendance createCheckIn(Schedule schedule, User user) {
         return Attendance.builder()
                 .schedule(schedule)
