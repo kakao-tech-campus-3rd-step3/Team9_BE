@@ -2,10 +2,31 @@ package com.pado.domain.study.repository;
 
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
+import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> {
     long countByStudy(Study study);
     boolean existsByStudyAndUser(Study study, User user);
+
+    @Query("""
+        select sm
+        from StudyMember sm
+        join fetch sm.user u
+        where sm.study = :study
+    """)
+    List<StudyMember> findByStudyWithUser(@Param("study") Study study);
+
+    @Query("""
+        select u.id
+        from StudyMember sm
+        join sm.user u
+        where sm.role = :role and sm.study = :study
+    """)
+    Long findLeaderUserIdByStudy(@Param("study") Study study, @Param("role") StudyMemberRole role);
 }
