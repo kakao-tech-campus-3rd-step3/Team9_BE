@@ -32,29 +32,24 @@ public class MaterialRepositoryCustomImpl implements MaterialRepositoryCustom{
             String keyword,
             Pageable pageable) {
 
+        BooleanExpression predicate = material.study.id.eq(studyId)
+                .and(categoriesIn(categories))
+                .and(weeksIn(weeks))
+                .and(keywordContains(keyword));
+
         List<Material> content = queryFactory
                 .selectFrom(material)
                 .join(material.user, user).fetchJoin()
-                .where(
-                        material.study.id.eq(studyId),
-                        categoriesIn(categories),
-                        weeksIn(weeks),
-                        keywordContains(keyword)
-                )
+                .where(predicate)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
-                .orderBy(material.createdAt.desc())
+                .orderBy(material.createdAt.desc(), material.id.desc())
                 .fetch();
 
         Long total = queryFactory
                 .select(material.count())
                 .from(material)
-                .where(
-                        material.study.id.eq(studyId),
-                        categoriesIn(categories),
-                        weeksIn(weeks),
-                        keywordContains(keyword)
-                )
+                .where(predicate)
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total != null ? total : 0L);
