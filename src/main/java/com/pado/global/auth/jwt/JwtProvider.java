@@ -34,6 +34,18 @@ public class JwtProvider {
                 .compact();
     }
 
+    public String generateRefreshToken(Long userId, String email) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(props.getRefreshExpSeconds());
+        return Jwts.builder()
+                .setSubject(String.valueOf(userId))
+                .claim("email", email)
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(exp))
+                .signWith(key(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     public void validate(String token) {
         try {
             Jwts.parserBuilder()
@@ -54,5 +66,18 @@ public class JwtProvider {
                 .parseClaimsJws(token)
                 .getBody();
         return Long.valueOf(claims.getSubject());
+    }
+
+    public String getEmail(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return String.valueOf(claims.get("email",  String.class));
+    }
+
+    public long getRefreshTtl() {
+        return props.getRefreshExpSeconds();
     }
 }
