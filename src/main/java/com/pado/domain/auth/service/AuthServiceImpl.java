@@ -7,7 +7,6 @@ import com.pado.domain.auth.dto.request.SignUpRequestDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
 import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
-import com.pado.domain.auth.dto.response.TokenWithRefreshResponseDto;
 import com.pado.domain.auth.infra.mail.MailClient;
 import com.pado.domain.auth.infra.redis.RedisEmailVerificationStore;
 import com.pado.domain.auth.infra.redis.RedisRefreshTokenStore;
