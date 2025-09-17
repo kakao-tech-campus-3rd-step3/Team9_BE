@@ -129,4 +129,15 @@ CREATE TABLE material_file (
     size BIGINT NOT NULL,
     material_id BIGINT NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
+
+CREATE TABLE attendance (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    schedule_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    status BOOLEAN NOT NULL,
+    check_in_time TIMESTAMP NULL,
+    CONSTRAINT fk_attendance_schedule FOREIGN KEY (schedule_id)
+        REFERENCES schedule (id) ON DELETE CASCADE,
+    CONSTRAINT fk_attendance_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE
 );

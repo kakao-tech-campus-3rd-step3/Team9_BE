@@ -12,7 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -55,6 +57,30 @@ public class User extends AuditingEntity {
         this.region = region;
         this.profileImageUrl = profileImageUrl;
         this.gender = gender;
+    }
+
+    public static User register(
+            String email,
+            String passwordHash,
+            String nickname,
+            Region region,
+            String profileImageUrl,
+            Gender gender,
+            Collection<Category> interests
+    ) {
+        User user = new User();
+        user.email = Objects.requireNonNull(email);
+        user.passwordHash = Objects.requireNonNull(passwordHash);
+        user.nickname = Objects.requireNonNull(nickname);
+        user.region = region;
+        user.profileImageUrl = profileImageUrl;
+        user.gender = gender;
+
+        for (Category c : interests) {
+            user.addInterest(c);
+        }
+
+        return user;
     }
 
     public void addInterest(Category category){
