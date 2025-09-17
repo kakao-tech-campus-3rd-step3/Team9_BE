@@ -30,6 +30,9 @@ public class S3Service {
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
+    @Value("${cloud.aws.s3.prefix}")
+    private String s3Prefix;
+
     // 파일 업로드용
     public UploadPreSignedUrlResponseDto createUploadPresignedUrl(UploadFilePreSignedUrlRequestDto request) {
         String fileName = request.name();
@@ -148,13 +151,13 @@ public class S3Service {
             extension = fileName.substring(fileName.lastIndexOf("."));
         }
 
-        return uuid + extension;
+        return s3Prefix + uuid + extension;
     }
 
     // 사진 다운로드 용 키 생성
     private String generateImageKey(String contentType) {
         String extension = getFileExtensionFromContentType(contentType);
-        return UUID.randomUUID().toString() + extension;
+        return s3Prefix + UUID.randomUUID().toString() + extension;
     }
 
 

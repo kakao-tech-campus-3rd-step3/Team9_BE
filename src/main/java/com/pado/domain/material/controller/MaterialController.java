@@ -4,6 +4,8 @@ import com.pado.domain.material.dto.request.MaterialRequestDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
 import com.pado.domain.material.service.MaterialService;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import com.pado.global.swagger.annotation.material.Api403ForbiddenMaterialOwnerOrLeaderError;
 import com.pado.global.swagger.annotation.material.Api404MaterialNotFoundError;
@@ -42,7 +44,7 @@ public class MaterialController {
     @Api404StudyNotFoundError
     @Operation(
             summary = "자료 업로드",
-            description = "S3에 파일 업로드 후, 자료 정보를 최종적으로 DB에 업로드합니다. (스터디 멤버만 가능)"
+            description = "S3에 파일 업로드 후, 자료 정보를 최종적으로 DB에 업로드합니다. (스터디 멤버만 가능, 토큰 필요)"
     )
     @ApiResponse(responseCode = "201", description = "학습 자료 업로드 성공")
     @Parameters({
@@ -50,10 +52,11 @@ public class MaterialController {
     })
     @PostMapping("/studies/{study_id}/materials")
     public ResponseEntity<MaterialDetailResponseDto> createMaterial(
+            @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody MaterialRequestDto request
     ) {
-        MaterialDetailResponseDto response = materialService.createMaterial(studyId, request);
+        MaterialDetailResponseDto response = materialService.createMaterial(user, studyId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -61,7 +64,7 @@ public class MaterialController {
     @Api404MaterialNotFoundError
     @Operation(
             summary = "자료 수정",
-            description = "이미 업로드된 학습 자료의 정보를 수정합니다. (자료 작성자만 가능)"
+            description = "이미 업로드된 학습 자료의 정보를 수정합니다. (자료 작성자만 가능, 토큰 필요)"
     )
     @ApiResponse(responseCode = "200", description = "자료 수정 성공")
     @Parameters({
@@ -69,10 +72,11 @@ public class MaterialController {
     })
     @PutMapping("/materials/{material_id}")
     public ResponseEntity<MaterialDetailResponseDto> updateMaterial(
+            @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable("material_id") Long materialId,
             @Valid @RequestBody MaterialRequestDto request
     ) {
-        MaterialDetailResponseDto response = materialService.updateMaterial(materialId, request);
+        MaterialDetailResponseDto response = materialService.updateMaterial(user, materialId, request);
         return ResponseEntity.ok(response);
     }
 
@@ -80,7 +84,7 @@ public class MaterialController {
     @Api404MaterialNotFoundError
     @Operation(
             summary = "자료 삭제",
-            description = "특정 학습 자료들을 삭제합니다. (자료 작성자만 가능)"
+            description = "특정 학습 자료들을 삭제합니다. (자료 작성자만 가능, 토큰 필요)"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "자료 삭제 성공"),
@@ -110,11 +114,12 @@ public class MaterialController {
     })
     @DeleteMapping("/materials")
     public ResponseEntity<Void> deleteMaterials(
+            @Parameter(hidden = true) @CurrentUser User user,
             @RequestParam("material_ids")
             @NotEmpty(message = "자료 ID 목록은 최소 한 개 이상 포함되어야 합니다.")
             List<Long> materialIds
     ) {
-        materialService.deleteMaterial(materialIds);
+        materialService.deleteMaterial(user, materialIds);
         return ResponseEntity.noContent().build();
     }
 
@@ -122,7 +127,7 @@ public class MaterialController {
     @Api404StudyNotFoundError
     @Operation(
             summary = "자료 목록 조회",
-            description = "업로드된 학습 자료 목록을 조회합니다. (스터디 멤버만 가능)"
+            description = "업로드된 학습 자료 목록을 조회합니다. (스터디 멤버만 가능, 토큰 필요)"
     )
     @ApiResponse(
             responseCode = "200", description = "자료 목록 조회 성공",
@@ -139,6 +144,7 @@ public class MaterialController {
     })
     @GetMapping("/studies/{study_id}/materials")
     public ResponseEntity<MaterialListResponseDto> getMaterials(
+            @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable("study_id") Long studyId,
             @RequestParam(required = false) List<String> category,
             @RequestParam(required = false) List<String> week,
@@ -146,6 +152,7 @@ public class MaterialController {
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         MaterialListResponseDto response = materialService.findAllMaterials(
+                user,
                 studyId,
                 category,
                 week,
@@ -157,7 +164,7 @@ public class MaterialController {
 
     @Operation(
             summary = "자료 상세 조회",
-            description = "특정 학습 자료의 상세 정보를 조회합니다."
+            description = "특정 학습 자료의 상세 정보를 조회합니다. (스터디 멤버만 가능, 토큰 필요)"
     )
     @ApiResponse(responseCode = "200", description = "자료 상세 조회 성공")
     @Api404MaterialNotFoundError
@@ -166,9 +173,10 @@ public class MaterialController {
     })
     @GetMapping("/materials/{material_id}")
     public ResponseEntity<MaterialDetailResponseDto> getMaterialDetail(
+            @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable("material_id") Long materialId
     ) {
-        MaterialDetailResponseDto response = materialService.findMaterialById(materialId);
+        MaterialDetailResponseDto response = materialService.findMaterialById(user, materialId);
         return ResponseEntity.ok(response);
     }
 }

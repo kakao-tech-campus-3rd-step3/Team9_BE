@@ -2,6 +2,7 @@ package com.pado.domain.material.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Schema(description = "파일 등록을 위한 첨부파일 정보")
 public record FileRequestDto(
@@ -17,5 +18,9 @@ public record FileRequestDto(
         String name,
 
         @Schema(description = "파일 키(업로드용 Presigned URL 발급 시 함께 받은 파일 키)")
-        String key
+        String key,
+
+        @Schema(description = "파일 크기(단위: bytes)", example = "1024")
+        @NotNull(message = "파일 크기는 필수입니다.")
+        Long size
 ) {}
