@@ -109,7 +109,7 @@ CREATE TABLE material (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     material_category VARCHAR(50) NOT NULL,
-    week INT COMMENT,
+    week INT,
     content TEXT NOT NULL,
     user_id BIGINT NOT NULL,
     study_id BIGINT NOT NULL,
@@ -119,10 +119,13 @@ CREATE TABLE material (
     CONSTRAINT fk_material_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE
 );
 
+CREATE INDEX idx_material_main_search
+    ON material(study_id, material_category, created_at DESC);
+
 CREATE TABLE material_file (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    file_key VARCHAR(255) NOT NULL,
+    file_key VARCHAR(255) NOT NULL UNIQUE,
     size BIGINT NOT NULL,
     material_id BIGINT NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
