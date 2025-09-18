@@ -1,9 +1,12 @@
 package com.pado.domain.schedule.controller;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
+import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.service.ScheduleService;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.swagger.annotation.schedule.Api404ScheduleNotFoundError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
@@ -59,6 +62,18 @@ public class ScheduleController {
         ScheduleDetailResponseDto scheduleDetail = scheduleService.findScheduleDetailById(
             scheduleId);
         return ResponseEntity.ok(scheduleDetail);
+    }
+
+    @Operation(summary = "내 스터디 월별 일정 조회", description = "로그인한 사용자가 속한 모든 스터디의 일정을 특정 연월 기준으로 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping("/schedules/me")
+    public ResponseEntity<List<ScheduleByDateResponseDto>> getMySchedules(
+            @Parameter(description = "조회할 연도", required = true, example = "2025") @RequestParam int year,
+            @Parameter(description = "조회할 월", required = true, example = "9") @RequestParam int month,
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        List<ScheduleByDateResponseDto> schedules = scheduleService.findMySchedulesByMonth(user.getId(), year, month);
+        return ResponseEntity.ok(schedules);
     }
 
     @Api403ForbiddenStudyLeaderOnlyError
