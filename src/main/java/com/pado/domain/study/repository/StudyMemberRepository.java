@@ -30,4 +30,8 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
         where sm.role = :role and sm.study = :study
     """)
     Long findLeaderUserIdByStudy(@Param("study") Study study, @Param("role") StudyMemberRole role);
+
+    List<StudyMember> findAllByStudyIdOrderByRankPointDesc(Long studyId);
+
+    boolean existsByStudyIdAndUserId(Long studyId, Long userId);
 }

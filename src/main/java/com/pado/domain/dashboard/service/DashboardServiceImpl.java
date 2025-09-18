@@ -10,6 +10,8 @@ import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +37,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     private StudyDashboardResponseDto getStudyDashboard(Long studyId, LocalDateTime now) {
         Study study = studyRepository.findById(studyId)
-                .orElseThrow(() -> new EntityNotFoundException("스터디를 찾을 수 없습니다. ID: " + studyId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
 
         LatestNoticeDto latestNotice = findLatestNotice(studyId);
         UpcomingScheduleDto upcomingSchedule = findUpcomingSchedule(studyId, now);
