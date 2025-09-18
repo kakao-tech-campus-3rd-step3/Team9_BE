@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> {
+    int countByStudyId(long studyId);
     long countByStudy(Study study);
     boolean existsByStudyAndUser(Study study, User user);
 

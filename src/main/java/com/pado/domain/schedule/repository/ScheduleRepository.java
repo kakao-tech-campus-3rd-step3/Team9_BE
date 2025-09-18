@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
@@ -23,4 +24,5 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
             @Param("userId") Long userId,
             @Param("periodStart") LocalDateTime periodStart,
             @Param("periodEnd") LocalDateTime periodEnd);
+    Optional<Schedule> findTopByStudyIdAndStartTimeAfterOrderByStartTimeAsc(Long studyId, LocalDateTime startTime);
 }
