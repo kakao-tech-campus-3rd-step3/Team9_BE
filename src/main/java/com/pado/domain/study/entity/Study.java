@@ -62,8 +62,11 @@ public class Study extends AuditingEntity {
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-
     private List<StudyCategory> interests = new ArrayList<>();
+
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<StudyMember> studyMembers = new ArrayList<>();
 
     public void addInterests(List<Category> categories) {
         this.interests.clear();

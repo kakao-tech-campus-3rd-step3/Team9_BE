@@ -3,6 +3,7 @@ package com.pado.domain.study.service;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
@@ -55,6 +56,17 @@ public class StudyServiceImpl implements StudyService {
 
         studyRepository.save(newStudy);
         studyMemberRepository.save(leaderMember);
+    }
+
+    public List<MyStudyResponseDto> findMyStudies(Long userId) {
+        List<Study> studies = studyRepository.findByUserId(userId);
+
+        return studies.stream()
+                .map(study -> new MyStudyResponseDto(
+                        study.getId(),
+                        study.getTitle()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override
