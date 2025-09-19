@@ -12,6 +12,8 @@ import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +30,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -111,8 +114,8 @@ class DashboardServiceImplTest {
         when(studyRepository.findById(999L)).thenReturn(Optional.empty());
 
         // when & then
-        assertThrows(EntityNotFoundException.class, () -> {
-            dashboardService.getStudyDashboard(999L);
-        });
+        assertThatThrownBy(() -> dashboardService.getStudyDashboard(999L))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.STUDY_NOT_FOUND);
     }
 }

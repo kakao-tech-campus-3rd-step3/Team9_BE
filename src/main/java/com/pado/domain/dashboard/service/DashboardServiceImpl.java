@@ -12,7 +12,6 @@ import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +30,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final StudyMemberRepository studyMemberRepository;
     private final AttendanceRepository attendanceRepository;
 
+    @Transactional(readOnly = true)
     public StudyDashboardResponseDto getStudyDashboard(Long studyId) {
         return getStudyDashboard(studyId, LocalDateTime.now());
     }

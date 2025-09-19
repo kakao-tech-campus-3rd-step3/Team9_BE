@@ -53,6 +53,8 @@ public class ScheduleServiceImpl implements ScheduleService {
         scheduleRepository.save(schedule);
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public List<ScheduleByDateResponseDto> findMySchedulesByMonth(Long userId, int year, int month) {
         // 1. 요청받은 달의 1일 찾기
         LocalDate firstDayOfMonth = LocalDate.of(year, month, 1);

@@ -1,6 +1,7 @@
 package com.pado.domain.material.repository;
 
 import com.pado.domain.dashboard.dto.LatestNoticeDto;
+import com.pado.domain.material.dto.response.RecentMaterialResponseDto;
 import com.pado.domain.material.entity.Material;
 import com.pado.domain.material.entity.MaterialCategory;
 import org.springframework.data.domain.Page;
@@ -19,4 +20,6 @@ public interface MaterialRepositoryCustom {
     );
 
     Optional<LatestNoticeDto> findRecentNoticeAsDto(Long studyId, MaterialCategory category);
+
+    List<RecentMaterialResponseDto> findRecentLearningMaterialsAsDto(Long studyId, int limit);
 }

@@ -3,6 +3,7 @@ package com.pado.domain.material.controller;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
+import com.pado.domain.material.dto.response.RecentMaterialResponseDto;
 import com.pado.domain.material.service.MaterialService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.annotation.CurrentUser;
@@ -178,5 +179,17 @@ public class MaterialController {
     ) {
         MaterialDetailResponseDto response = materialService.findMaterialById(user, materialId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/studies/{study_id}/material/recent")
+    @Operation(summary = "최신 학습 자료 목록 조회", description = "스터디의 최신 학습 자료 목록을 조회합니다.")
+    @Parameters({
+            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1")
+    })
+    public ResponseEntity<List<RecentMaterialResponseDto>> getRecentMaterials(
+            @PathVariable("study_id") Long studyId
+    ) {
+        List<RecentMaterialResponseDto> recentMaterials = materialService.findRecentLearningMaterials(studyId);
+        return ResponseEntity.ok(recentMaterials);
     }
 }

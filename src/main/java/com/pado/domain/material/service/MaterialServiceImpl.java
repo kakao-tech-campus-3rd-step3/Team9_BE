@@ -2,10 +2,7 @@ package com.pado.domain.material.service;
 
 import com.pado.domain.material.dto.request.FileRequestDto;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
-import com.pado.domain.material.dto.response.FileResponseDto;
-import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
-import com.pado.domain.material.dto.response.MaterialListResponseDto;
-import com.pado.domain.material.dto.response.MaterialSimpleResponseDto;
+import com.pado.domain.material.dto.response.*;
 import com.pado.domain.material.entity.File;
 import com.pado.domain.material.entity.Material;
 import com.pado.domain.material.entity.MaterialCategory;
@@ -16,12 +13,15 @@ import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
+import com.pado.domain.user.repository.UserRepository;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +38,9 @@ public class MaterialServiceImpl implements MaterialService {
     private final StudyMemberRepository studyMemberRepository;
     private final StudyRepository studyRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserRepository userRepository;
+
+    private static final int RECENT_MATERIAL_COUNT = 2;
 
     // 자료 생성
     @Transactional
@@ -184,6 +187,17 @@ public class MaterialServiceImpl implements MaterialService {
         if (!fileKeys.isEmpty()) {
             eventPublisher.publishEvent(new MaterialDeletedEvent(fileKeys));
         }
+    }
+
+    // 최신 자료 조회
+    @Transactional(readOnly = true)
+    @Override
+    public List<RecentMaterialResponseDto> findRecentLearningMaterials(Long studyId) {
+        if (!studyRepository.existsById(studyId)) {
+            throw new BusinessException(ErrorCode.STUDY_NOT_FOUND);
+        }
+
+        return materialRepository.findRecentLearningMaterialsAsDto(studyId, RECENT_MATERIAL_COUNT);
     }
 
     // 파일 엔티티 생성 메서드
