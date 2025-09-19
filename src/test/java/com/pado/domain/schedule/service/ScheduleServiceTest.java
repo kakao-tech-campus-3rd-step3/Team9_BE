@@ -1,6 +1,8 @@
 package com.pado.domain.schedule.service;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
+import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
+import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
@@ -23,7 +25,10 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -106,6 +111,56 @@ class ScheduleServiceTest {
             BusinessException exception = assertThrows(BusinessException.class,
                 () -> scheduleService.createSchedule(1L, request));
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+    }
+
+    @Nested
+    @DisplayName("월별 일정 조회")
+    class FindSchedulesByMonthTests {
+
+        @Test
+        @DisplayName("성공: 2025년 9월 조회 시, 8/31 ~ 10/11 사이의 일정을 정확히 반환한다.")
+        void findMySchedulesByMonth_Success() {
+            // given
+            Long userId = 1L;
+            int year = 2025;
+            int month = 9;
+
+            LocalDate expectedStartDate = LocalDate.of(2025, 8, 31);
+            LocalDate expectedEndDate = LocalDate.of(2025, 10, 11);
+            LocalDateTime expectedPeriodStart = expectedStartDate.atStartOfDay();
+            LocalDateTime expectedPeriodEnd = expectedEndDate.plusDays(1).atStartOfDay();
+
+            Schedule scheduleInPeriod = Schedule.builder().studyId(1L).title("9월 스터디").startTime(LocalDateTime.of(2025, 9, 15, 10, 0)).endTime(LocalDateTime.of(2025, 9, 15, 12, 0)).build();
+            ReflectionTestUtils.setField(scheduleInPeriod, "id", 101L);
+
+            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), eq(expectedPeriodStart), eq(expectedPeriodEnd)))
+                    .thenReturn(List.of(scheduleInPeriod));
+
+            // when
+            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId, year, month);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().title()).isEqualTo("9월 스터디");
+            assertThat(result.getFirst().schedule_id()).isEqualTo(101L);
+        }
+
+        @Test
+        @DisplayName("성공: 해당 기간에 일정이 없으면 빈 리스트를 반환한다.")
+        void findMySchedulesByMonth_WhenNoSchedules_ShouldReturnEmptyList() {
+            // given
+            Long userId = 1L;
+            int year = 2025;
+            int month = 11;
+
+            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), any(), any())).thenReturn(Collections.emptyList());
+
+            // when
+            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId, year, month);
+
+            // then
+            assertThat(result).isNotNull().isEmpty();
         }
     }
 

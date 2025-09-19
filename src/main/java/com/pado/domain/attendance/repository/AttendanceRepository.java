@@ -22,4 +22,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
         where s.studyId = :studyId
     """)
     List<Attendance> findAllByStudyIdWithScheduleAndUser(@Param("studyId") Long studyId);
+
+    int countByScheduleId(Long scheduleId);
 }
