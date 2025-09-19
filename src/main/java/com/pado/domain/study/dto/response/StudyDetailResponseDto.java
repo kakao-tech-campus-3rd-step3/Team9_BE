@@ -1,6 +1,10 @@
 package com.pado.domain.study.dto.response;
 
+import com.pado.domain.shared.entity.Category;
+import com.pado.domain.shared.entity.Region;
 import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.List;
 
 @Schema(description = "스터디 상세 정보 조회 응답 DTO")
 public record StudyDetailResponseDto(
@@ -17,11 +21,20 @@ public record StudyDetailResponseDto(
         String detail_description,
 
         @Schema(description = "스터디 관심 분야(카테고리) 목록", example = "[\"프로그래밍\", \"취업\"]")
-        String[] interests,
+        List<Category> interests,
+
+        @Schema(description = "스터디 지역", example = "서울")
+        Region region,
+
+        @Schema(description = "스터디 시간", example = "매주 토요일 오후 2시 - 4시")
+        String study_time,
+
+        @Schema(description = "스터디 참여 조건", example = "[\"해당 분야에 대한 기본적인 관심\", \"정기적인 참여 가능\"]")
+        List<String> conditions,
 
         @Schema(description = "현재 스터디원 수", example = "5")
-        int current_members,
+        Integer current_members,
 
         @Schema(description = "최대 스터디원 수", example = "10")
-        int max_members
+        Integer max_members
 ) {}

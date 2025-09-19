@@ -5,6 +5,11 @@ import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
 import com.pado.domain.study.dto.response.StudyMemberDetailDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.dto.response.UserDetailDto;
+import com.pado.domain.study.service.StudyMemberService;
+import com.pado.domain.study.service.StudyService;
+import com.pado.domain.user.entity.Gender;
+import com.pado.domain.user.entity.User;
+import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.global.exception.dto.ErrorResponseDto;
 import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyLeaderOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
@@ -32,7 +37,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StudyMemberController {
 
-    // TODO: 서비스 레이어 종속성 주입
+    private final StudyMemberService studyMemberService;
 
     @Api404StudyNotFoundError
     @Operation(summary = "스터디 참여 신청", description = "사용자가 스터디에 참여 신청을 보냅니다.")
@@ -44,10 +49,11 @@ public class StudyMemberController {
     })
     @PostMapping("/apply")
     public ResponseEntity<Void> applyToStudy(
+            @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable("study_id") Long studyId,
             @Valid @RequestBody StudyApplyRequestDto request
     ) {
-        // TODO: 스터디 참여 신청 로직 구현
+        studyMemberService.applyToStudy(user, studyId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -107,20 +113,25 @@ public class StudyMemberController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
-            @ApiResponse(responseCode = "400", description = "유효하지 않은 역할 값",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "역할 값 유효성 검사 실패 예시",
-                                    value = "{\"error_code\": \"INVALID_ROLE\", \"field\": \"role\", \"message\": \"유효하지 않은 역할 값입니다.\"}"
-                            ))),
             @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponseDto.class),
                             examples = @ExampleObject(
                                     name = "상태 변경 충돌 예시",
-                                    value = "{\"error_code\": \"INVALID_STATE_CHANGE\", \"field\": \"role\", \"message\": \"이미 스터디원인 사용자를 신청 대기 상태로 변경할 수 없습니다.\"}"
-                            )))
+                                    value = """
+                                        {
+                                          "code": "INVALID_STATE_CHANGE",
+                                          "message": "상태 변경이 유효하지 않습니다.",
+                                          "errors": [
+                                            "role: 이미 스터디원인 사용자를 신청 대기 상태로 변경할 수 없습니다."
+                                          ],
+                                          "timestamp": "2025-09-07T08:15:30.123Z",
+                                          "path": "/api/users/change-status"
+                                        }
+                                        """
+                            )
+                    )
+            )
     })
     @Parameters({
             @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
@@ -136,4 +147,3 @@ public class StudyMemberController {
         return ResponseEntity.ok().build();
     }
 }
-
