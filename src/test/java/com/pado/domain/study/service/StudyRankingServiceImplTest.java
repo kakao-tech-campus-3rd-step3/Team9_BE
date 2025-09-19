@@ -1,6 +1,7 @@
 package com.pado.domain.study.service;
 
 import com.pado.domain.study.dto.response.MyRankResponseDto;
+import com.pado.domain.study.dto.response.TotalRankingResponseDto;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.repository.StudyMemberRepository;
@@ -95,6 +96,34 @@ class StudyRankingServiceImplTest {
         assertThatThrownBy(() -> rankingService.getMyRank(1L, 99L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("사용자가 해당 스터디의 멤버가 아닙니다.");
+    }
+
+    @Test
+    void 스터디_전체_랭킹_조회_성공() {
+        // given
+        User user4 = User.builder().nickname("갈매기").build();
+        StudyMember m1 = StudyMember.builder().study(study).user(user1).rankPoint(1800).build();
+        StudyMember m2 = StudyMember.builder().study(study).user(user2).rankPoint(1500).build();
+        StudyMember m3 = StudyMember.builder().study(study).user(user3).rankPoint(1500).build();
+        StudyMember m4 = StudyMember.builder().study(study).user(user4).rankPoint(1300).build();
+
+        when(studyRepository.existsById(1L)).thenReturn(true);
+        when(studyMemberRepository.findAllByStudyIdOrderByRankPointDesc(1L))
+                .thenReturn(Arrays.asList(m1, m2, m3, m4));
+
+        // when
+        TotalRankingResponseDto result = rankingService.getTotalRanking(1L);
+
+        // then
+        assertThat(result.ranking()).hasSize(4);
+        assertThat(result.ranking().get(0).rank()).isEqualTo(1);
+        assertThat(result.ranking().get(0).userName()).isEqualTo("김민준");
+        assertThat(result.ranking().get(1).rank()).isEqualTo(2);
+        assertThat(result.ranking().get(1).userName()).isEqualTo("이수빈");
+        assertThat(result.ranking().get(2).rank()).isEqualTo(2);
+        assertThat(result.ranking().get(2).userName()).isEqualTo("파도타기");
+        assertThat(result.ranking().get(3).rank()).isEqualTo(4);
+        assertThat(result.ranking().get(3).userName()).isEqualTo("갈매기");
     }
 
 }
