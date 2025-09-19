@@ -15,6 +15,7 @@ import com.pado.domain.schedule.entity.ScheduleTuneStatus;
 import com.pado.domain.schedule.repository.ScheduleTuneParticipantRepository;
 import com.pado.domain.schedule.repository.ScheduleTuneRepository;
 import com.pado.domain.schedule.repository.ScheduleTuneSlotRepository;
+import com.pado.domain.schedule.util.BitMaskUtils;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.repository.StudyMemberRepository;
@@ -107,16 +108,13 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-
         List<ScheduleTune> list = scheduleTuneRepository
             .findByStudyIdAndStatusOrderByIdDesc(studyId, ScheduleTuneStatus.PENDING);
 
         List<ScheduleTuneResponseDto> result = new ArrayList<>(list.size());
         for (ScheduleTune t : list) {
-            LocalDateTime start = LocalDateTime.of(
-                t.getStartDate(), t.getAvailableStartTime());
-            LocalDateTime end = LocalDateTime.of(
-                t.getEndDate(), t.getAvailableEndTime());
+            LocalDateTime start = LocalDateTime.of(t.getStartDate(), t.getAvailableStartTime());
+            LocalDateTime end = LocalDateTime.of(t.getEndDate(), t.getAvailableEndTime());
             result.add(new ScheduleTuneResponseDto(t.getTitle(), start, end));
         }
         return result;
@@ -129,16 +127,21 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-
         ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
 
         List<ScheduleTuneParticipant> parts = scheduleTuneParticipantRepository.findByScheduleTuneId(
             tune.getId());
-
         List<ScheduleTuneParticipantDto> partDtos = new ArrayList<>(parts.size());
         for (ScheduleTuneParticipant p : parts) {
             partDtos.add(new ScheduleTuneParticipantDto(p.getId(), null, p.getCandidateNumber()));
+        }
+
+        List<ScheduleTuneSlot> slots = scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(
+            tune.getId());
+        List<Long> candidateDates = new ArrayList<>(slots.size());
+        for (ScheduleTuneSlot s : slots) {
+            candidateDates.add(BitMaskUtils.toUnsignedLong(s.getOccupancyBits()));
         }
 
         LocalDateTime availableStart = LocalDateTime.of(tune.getStartDate(),
@@ -149,7 +152,7 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         return new ScheduleTuneDetailResponseDto(
             tune.getTitle(),
             tune.getDescription(),
-            List.of(),
+            candidateDates,
             availableStart,
             availableEnd,
             partDtos
@@ -159,14 +162,52 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
     @Override
     public ScheduleTuneParticipantResponseDto participate(Long studyId, Long tuneId,
         ScheduleTuneParticipantRequestDto request) {
-        throw new BusinessException(ErrorCode.INVALID_INPUT, "participate API는 다음 단계에서 구현됩니다.");
+        User currentUser = getCurrentUser();
+        if (!studyMemberService.isStudyMember(currentUser, studyId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
+
+        ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
+        if (tune.getStatus() != ScheduleTuneStatus.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE, "이미 완료된 조율입니다.");
+        }
+
+        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId,
+                currentUser.getId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
+
+        ScheduleTuneParticipant participant = scheduleTuneParticipantRepository
+            .findByScheduleTuneIdAndStudyMemberId(tune.getId(), member.getId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT, "조율 참여 대상이 아닙니다."));
+
+        int bitIndex = BitMaskUtils.bitIndexFromCandidateNumber(participant.getCandidateNumber());
+        
+        List<ScheduleTuneSlot> slots = scheduleTuneSlotRepository
+            .findByScheduleTuneIdOrderBySlotIndexAscForUpdate(tune.getId());
+
+        if (request.candidateDates().size() != slots.size()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "candidate_dates 길이가 슬롯 수와 다릅니다.");
+        }
+
+        for (int i = 0; i < slots.size(); i++) {
+            ScheduleTuneSlot slot = slots.get(i);
+            boolean selected = request.candidateDates().get(i) != 0L;
+            byte[] bits = slot.getOccupancyBits();
+            BitMaskUtils.setBit(bits, bitIndex, selected);
+        }
+
+        participant.markVotedNow();
+        scheduleTuneParticipantRepository.save(participant);
+        scheduleTuneSlotRepository.saveAll(slots);
+
+        return new ScheduleTuneParticipantResponseDto("updated");
     }
 
     @Override
     public ScheduleCompleteResponseDto complete(Long tuneId, ScheduleCreateRequestDto request) {
         throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE, "complete API는 다음 단계에서 구현됩니다.");
     }
-    
 
     private List<ScheduleTuneSlot> buildSlots(
         ScheduleTune tune,

@@ -4,6 +4,7 @@ import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.user.entity.User;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,8 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     boolean existsByStudyAndUser(Study study, User user);
 
     List<StudyMember> findByStudyId(Long studyId);
+
+    Optional<StudyMember> findByStudyIdAndUserId(Long studyId, Long userId);
 
     @Query("""
             select sm
