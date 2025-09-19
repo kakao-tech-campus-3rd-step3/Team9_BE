@@ -58,11 +58,9 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
     public Long createScheduleTune(Long studyId, ScheduleTuneCreateRequestDto request) {
         User currentUser = getCurrentUser();
         Study study = findStudy(studyId);
-
         if (!studyMemberService.isStudyLeader(currentUser, study)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
-
         validateDateTimeWindow(request.startDate(), request.endDate(),
             request.availableStartTime(), request.availableEndTime());
 
@@ -77,10 +75,8 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
             .slotMinutes(30)
             .status(ScheduleTuneStatus.PENDING)
             .build();
-
         ScheduleTune saved = scheduleTuneRepository.save(tune);
 
-        // 멤버별 candidate_number 배정
         List<StudyMember> members = studyMemberRepository.findByStudyId(studyId);
         List<ScheduleTuneParticipant> participants = new ArrayList<>(members.size());
         long bit = 1L;
@@ -95,7 +91,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         }
         scheduleTuneParticipantRepository.saveAll(participants);
 
-        // 슬롯 생성
         int memberCount = participants.size();
         int bytes = Math.max(1, (memberCount + 7) / 8);
         List<ScheduleTuneSlot> slots = buildSlots(
@@ -117,7 +112,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-
         List<ScheduleTune> list =
             scheduleTuneRepository.findByStudyIdAndStatusOrderByIdDesc(studyId,
                 ScheduleTuneStatus.PENDING);
@@ -138,11 +132,9 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-
         ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
 
-        // 참가자 닉네임 채우기
         Study study = findStudy(studyId);
         Map<Long, String> nameByStudyMemberId = new HashMap<>();
         for (StudyMember sm : studyMemberRepository.findByStudyWithUser(study)) {
@@ -160,7 +152,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
             ));
         }
 
-        // 슬롯 OR 비트맵을 [binary_number]로 반환
         List<ScheduleTuneSlot> slots =
             scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(tune.getId());
         List<Long> candidateDates = new ArrayList<>(slots.size());
@@ -190,7 +181,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-
         ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
         if (tune.getStatus() != ScheduleTuneStatus.PENDING) {
@@ -207,7 +197,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
         int bitIndex = BitMaskUtils.bitIndexFromCandidateNumber(participant.getCandidateNumber());
 
-        // 슬롯 잠금 후 비트 갱신
         List<ScheduleTuneSlot> slots =
             scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAscForUpdate(
                 tune.getId());
@@ -232,7 +221,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
     @Override
     public ScheduleCompleteResponseDto complete(Long tuneId, ScheduleCreateRequestDto request) {
-        // 1) 튠 조회 및 리더 권한/상태 검증
         User currentUser = getCurrentUser();
         ScheduleTune tune = scheduleTuneRepository.findById(tuneId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
@@ -244,7 +232,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
             throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE, "이미 완료된 조율입니다.");
         }
 
-        // 2) 시간창 및 슬롯 경계 검증 (snake_case 접근자 사용)
         if (!request.end_time().isAfter(request.start_time())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "end_time은 start_time 이후여야 합니다.");
         }
@@ -272,7 +259,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 생성된 슬롯과 일치하지 않습니다.");
         }
 
-        // 3) 본 일정 생성
         Schedule schedule = Schedule.builder()
             .studyId(tune.getStudyId())
             .title(request.title())
@@ -282,13 +268,11 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
             .build();
         scheduleRepository.save(schedule);
 
-        // 4) 조율 데이터 삭제 (FK CASCADE로 participant/slot 함께 정리)
-        scheduleTuneRepository.delete(tune);
+        tune.complete();
+        scheduleTuneRepository.save(tune);
 
         return new ScheduleCompleteResponseDto(true);
     }
-
-    // ===== Helpers =====
 
     private List<ScheduleTuneSlot> buildSlots(
         ScheduleTune tune,
