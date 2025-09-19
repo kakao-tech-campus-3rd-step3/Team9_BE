@@ -30,7 +30,6 @@ public class DashboardServiceImpl implements DashboardService {
     private final StudyMemberRepository studyMemberRepository;
     private final AttendanceRepository attendanceRepository;
 
-    @Transactional(readOnly = true)
     public StudyDashboardResponseDto getStudyDashboard(Long studyId) {
         return getStudyDashboard(studyId, LocalDateTime.now());
     }

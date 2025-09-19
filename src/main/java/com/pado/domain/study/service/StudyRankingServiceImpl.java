@@ -24,7 +24,6 @@ public class StudyRankingServiceImpl implements StudyRankingService{
     private final StudyRepository studyRepository;
 
     @Override
-    @Transactional(readOnly = true)
     public MyRankResponseDto getMyRank(Long studyId, Long userId) {
         validateStudyExists(studyId);
         List<RankerResponseDto> totalRanking = getRankedStudyMembers(studyId);
@@ -37,7 +36,6 @@ public class StudyRankingServiceImpl implements StudyRankingService{
     }
 
     @Override
-    @Transactional(readOnly = true)
     public TotalRankingResponseDto getTotalRanking(Long studyId) {
         validateStudyExists(studyId);
 
