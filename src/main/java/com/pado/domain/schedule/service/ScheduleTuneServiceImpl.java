@@ -223,7 +223,8 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
     public ScheduleCompleteResponseDto complete(Long tuneId, ScheduleCreateRequestDto request) {
         User currentUser = getCurrentUser();
         ScheduleTune tune = scheduleTuneRepository.findById(tuneId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
+            .orElseThrow(
+                () -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
         Study study = findStudy(tune.getStudyId());
         if (!studyMemberService.isStudyLeader(currentUser, study)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
@@ -247,7 +248,8 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
         boolean matched = false;
         List<ScheduleTuneSlot> slots =
-            scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(tune.getId());
+            scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(
+                tune.getId()); // [file:21]
         for (ScheduleTuneSlot slot : slots) {
             if (slot.getStartTime().equals(request.start_time())
                 && slot.getEndTime().equals(request.end_time())) {
@@ -273,6 +275,7 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
         return new ScheduleCompleteResponseDto(true);
     }
+
 
     private List<ScheduleTuneSlot> buildSlots(
         ScheduleTune tune,
