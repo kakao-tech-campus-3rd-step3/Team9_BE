@@ -8,10 +8,12 @@ import com.pado.domain.schedule.dto.response.ScheduleTuneDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleTuneParticipantDto;
 import com.pado.domain.schedule.dto.response.ScheduleTuneParticipantResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleTuneResponseDto;
+import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.schedule.entity.ScheduleTune;
 import com.pado.domain.schedule.entity.ScheduleTuneParticipant;
 import com.pado.domain.schedule.entity.ScheduleTuneSlot;
 import com.pado.domain.schedule.entity.ScheduleTuneStatus;
+import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.schedule.repository.ScheduleTuneParticipantRepository;
 import com.pado.domain.schedule.repository.ScheduleTuneRepository;
 import com.pado.domain.schedule.repository.ScheduleTuneSlotRepository;
@@ -30,9 +32,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,7 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
     private final ScheduleTuneRepository scheduleTuneRepository;
     private final ScheduleTuneParticipantRepository scheduleTuneParticipantRepository;
     private final ScheduleTuneSlotRepository scheduleTuneSlotRepository;
+    private final ScheduleRepository scheduleRepository;
 
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
@@ -76,6 +80,7 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
         ScheduleTune saved = scheduleTuneRepository.save(tune);
 
+        // 멤버별 candidate_number 배정
         List<StudyMember> members = studyMemberRepository.findByStudyId(studyId);
         List<ScheduleTuneParticipant> participants = new ArrayList<>(members.size());
         long bit = 1L;
@@ -90,12 +95,16 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         }
         scheduleTuneParticipantRepository.saveAll(participants);
 
+        // 슬롯 생성
         int memberCount = participants.size();
         int bytes = Math.max(1, (memberCount + 7) / 8);
-        List<ScheduleTuneSlot> slots = buildSlots(saved,
+        List<ScheduleTuneSlot> slots = buildSlots(
+            saved,
             request.startDate(), request.endDate(),
             request.availableStartTime(), request.availableEndTime(),
-            saved.getSlotMinutes(), bytes);
+            saved.getSlotMinutes(),
+            bytes
+        );
         scheduleTuneSlotRepository.saveAll(slots);
 
         return saved.getId();
@@ -108,8 +117,10 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-        List<ScheduleTune> list = scheduleTuneRepository
-            .findByStudyIdAndStatusOrderByIdDesc(studyId, ScheduleTuneStatus.PENDING);
+
+        List<ScheduleTune> list =
+            scheduleTuneRepository.findByStudyIdAndStatusOrderByIdDesc(studyId,
+                ScheduleTuneStatus.PENDING);
 
         List<ScheduleTuneResponseDto> result = new ArrayList<>(list.size());
         for (ScheduleTune t : list) {
@@ -127,18 +138,31 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
+
         ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
+
+        // 참가자 닉네임 채우기
+        Study study = findStudy(studyId);
+        Map<Long, String> nameByStudyMemberId = new HashMap<>();
+        for (StudyMember sm : studyMemberRepository.findByStudyWithUser(study)) {
+            nameByStudyMemberId.put(sm.getId(), sm.getUser().getNickname());
+        }
 
         List<ScheduleTuneParticipant> parts = scheduleTuneParticipantRepository.findByScheduleTuneId(
             tune.getId());
         List<ScheduleTuneParticipantDto> partDtos = new ArrayList<>(parts.size());
         for (ScheduleTuneParticipant p : parts) {
-            partDtos.add(new ScheduleTuneParticipantDto(p.getId(), null, p.getCandidateNumber()));
+            partDtos.add(new ScheduleTuneParticipantDto(
+                p.getId(),
+                nameByStudyMemberId.get(p.getStudyMemberId()),
+                p.getCandidateNumber()
+            ));
         }
 
-        List<ScheduleTuneSlot> slots = scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(
-            tune.getId());
+        // 슬롯 OR 비트맵을 [binary_number]로 반환
+        List<ScheduleTuneSlot> slots =
+            scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(tune.getId());
         List<Long> candidateDates = new ArrayList<>(slots.size());
         for (ScheduleTuneSlot s : slots) {
             candidateDates.add(BitMaskUtils.toUnsignedLong(s.getOccupancyBits()));
@@ -182,9 +206,11 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
             .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT, "조율 참여 대상이 아닙니다."));
 
         int bitIndex = BitMaskUtils.bitIndexFromCandidateNumber(participant.getCandidateNumber());
-        
-        List<ScheduleTuneSlot> slots = scheduleTuneSlotRepository
-            .findByScheduleTuneIdOrderBySlotIndexAscForUpdate(tune.getId());
+
+        // 슬롯 잠금 후 비트 갱신
+        List<ScheduleTuneSlot> slots =
+            scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAscForUpdate(
+                tune.getId());
 
         if (request.candidateDates().size() != slots.size()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "candidate_dates 길이가 슬롯 수와 다릅니다.");
@@ -206,8 +232,63 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
     @Override
     public ScheduleCompleteResponseDto complete(Long tuneId, ScheduleCreateRequestDto request) {
-        throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE, "complete API는 다음 단계에서 구현됩니다.");
+        // 1) 튠 조회 및 리더 권한/상태 검증
+        User currentUser = getCurrentUser();
+        ScheduleTune tune = scheduleTuneRepository.findById(tuneId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
+        Study study = findStudy(tune.getStudyId());
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+        if (tune.getStatus() != ScheduleTuneStatus.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE, "이미 완료된 조율입니다.");
+        }
+
+        // 2) 시간창 및 슬롯 경계 검증 (snake_case 접근자 사용)
+        if (!request.end_time().isAfter(request.start_time())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "end_time은 start_time 이후여야 합니다.");
+        }
+        if (request.start_time().toLocalDate().isBefore(tune.getStartDate())
+            || request.end_time().toLocalDate().isAfter(tune.getEndDate())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 조율 날짜 범위를 벗어납니다.");
+        }
+        LocalTime s = request.start_time().toLocalTime();
+        LocalTime e = request.end_time().toLocalTime();
+        if (s.isBefore(tune.getAvailableStartTime()) || e.isAfter(tune.getAvailableEndTime())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 가용 시간대를 벗어납니다.");
+        }
+
+        boolean matched = false;
+        List<ScheduleTuneSlot> slots =
+            scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(tune.getId());
+        for (ScheduleTuneSlot slot : slots) {
+            if (slot.getStartTime().equals(request.start_time())
+                && slot.getEndTime().equals(request.end_time())) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 생성된 슬롯과 일치하지 않습니다.");
+        }
+
+        // 3) 본 일정 생성
+        Schedule schedule = Schedule.builder()
+            .studyId(tune.getStudyId())
+            .title(request.title())
+            .description(request.content())
+            .startTime(request.start_time())
+            .endTime(request.end_time())
+            .build();
+        scheduleRepository.save(schedule);
+
+        // 4) 조율 데이터 삭제 (FK CASCADE로 participant/slot 함께 정리)
+        scheduleTuneRepository.delete(tune);
+
+        return new ScheduleCompleteResponseDto(true);
     }
+
+    // ===== Helpers =====
 
     private List<ScheduleTuneSlot> buildSlots(
         ScheduleTune tune,
