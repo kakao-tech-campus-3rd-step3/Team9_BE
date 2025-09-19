@@ -4,6 +4,7 @@ import com.pado.domain.material.dto.request.FileRequestDto;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
+import com.pado.domain.material.dto.response.RecentMaterialResponseDto;
 import com.pado.domain.material.entity.File;
 import com.pado.domain.material.entity.Material;
 import com.pado.domain.material.entity.MaterialCategory;
@@ -20,7 +21,6 @@ import com.pado.domain.user.entity.Gender;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,7 +41,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -342,5 +341,57 @@ class MaterialServiceImplTest {
         assertThatThrownBy(() -> materialService.deleteMaterial(otherUser, ids))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.FORBIDDEN_MATERIAL_ACCESS.message);
+    }
+
+    @Test
+    void 최신_학습_자료_목록_조회_성공() {
+        // given
+        Long studyId = 1L;
+        List<RecentMaterialResponseDto> expectedList = List.of(
+                new RecentMaterialResponseDto(101L, "자료1", "작성자1", 2L, 2048L),
+                new RecentMaterialResponseDto(102L, "자료2", "작성자2", 1L, 1024L)
+        );
+
+        when(studyRepository.existsById(studyId)).thenReturn(true);
+
+        when(materialRepository.findRecentLearningMaterialsAsDto(eq(studyId), anyInt()))
+                .thenReturn(expectedList);
+
+        // when
+        List<RecentMaterialResponseDto> actualList = materialService.findRecentLearningMaterials(studyId);
+
+        // then
+        assertThat(actualList).isNotNull();
+        assertThat(actualList).hasSize(2);
+        assertThat(actualList.getFirst().material_title()).isEqualTo("자료1");
+        assertThat(actualList).isEqualTo(expectedList);
+    }
+
+    @Test
+    void 학습_자료가_없으면_빈_리스트_반환() {
+        // given
+        Long studyId = 1L;
+        when(studyRepository.existsById(studyId)).thenReturn(true);
+        when(materialRepository.findRecentLearningMaterialsAsDto(eq(studyId), anyInt()))
+                .thenReturn(Collections.emptyList());
+
+        // when
+        List<RecentMaterialResponseDto> actualList = materialService.findRecentLearningMaterials(studyId);
+
+        // then
+        assertThat(actualList).isNotNull();
+        assertThat(actualList).isEmpty();
+    }
+
+    @Test
+    void 존재하지_않는_스터디ID로_조회_시_예외_발생() {
+        // given
+        Long studyId = 999L;
+        when(studyRepository.existsById(studyId)).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> materialService.findRecentLearningMaterials(studyId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.STUDY_NOT_FOUND);
     }
 }
