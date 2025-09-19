@@ -141,3 +141,65 @@ CREATE TABLE attendance (
     CONSTRAINT fk_attendance_user FOREIGN KEY (user_id)
         REFERENCES users (id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS schedule (
+                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                        studyid BIGINT NOT NULL,
+                                        title VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    starttime TIMESTAMP NOT NULL,
+    endtime TIMESTAMP NOT NULL,
+    createdat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_schedule__study FOREIGN KEY (studyid) REFERENCES study(id) ON DELETE CASCADE
+    );
+
+CREATE INDEX IF NOT EXISTS idx_schedule__study_start ON schedule (studyid, starttime);
+
+CREATE TABLE IF NOT EXISTS schedule_tune (
+                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                             study_id BIGINT NOT NULL,
+                                             title VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    available_start_time TIME NOT NULL,
+    available_end_time TIME NOT NULL,
+    slot_minutes INT NOT NULL DEFAULT 30,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_schedule_tune__study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE
+    );
+
+CREATE INDEX IF NOT EXISTS idx_schedule_tune__study_status ON schedule_tune (study_id, status);
+
+CREATE TABLE IF NOT EXISTS schedule_tune_participant (
+                                                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                                         schedule_tune_id BIGINT NOT NULL,
+                                                         study_member_id BIGINT NOT NULL,
+                                                         candidate_number BIGINT NOT NULL,
+                                                         voted_at TIMESTAMP NULL,
+                                                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                         CONSTRAINT uk_schedule_tune_participant__tune_member UNIQUE (schedule_tune_id, study_member_id),
+    CONSTRAINT fk_schedule_tune_participant__tune FOREIGN KEY (schedule_tune_id) REFERENCES schedule_tune(id) ON DELETE CASCADE,
+    CONSTRAINT fk_schedule_tune_participant__studymember FOREIGN KEY (study_member_id) REFERENCES studymember(id) ON DELETE CASCADE
+    );
+
+CREATE INDEX IF NOT EXISTS idx_schedule_tune_participant__tune ON schedule_tune_participant (schedule_tune_id);
+
+CREATE TABLE IF NOT EXISTS schedule_tune_slot (
+                                                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                                  schedule_tune_id BIGINT NOT NULL,
+                                                  slot_index INT NOT NULL,
+                                                  start_time TIMESTAMP NOT NULL,
+                                                  end_time TIMESTAMP NOT NULL,
+                                                  occupancy_bits VARBINARY(512) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_schedule_tune_slot__tune_index UNIQUE (schedule_tune_id, slot_index),
+    CONSTRAINT fk_schedule_tune_slot__tune FOREIGN KEY (schedule_tune_id) REFERENCES schedule_tune(id) ON DELETE CASCADE
+    );
+
+CREATE INDEX IF NOT EXISTS idx_schedule_tune_slot__tune_index ON schedule_tune_slot (schedule_tune_id, slot_index);
