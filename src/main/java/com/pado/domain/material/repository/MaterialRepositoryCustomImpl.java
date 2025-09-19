@@ -1,5 +1,9 @@
 package com.pado.domain.material.repository;
 
+import com.pado.domain.dashboard.dto.LatestNoticeDto;
+import com.pado.domain.dashboard.dto.QLatestNoticeDto;
+import com.pado.domain.material.dto.response.QRecentMaterialResponseDto;
+import com.pado.domain.material.dto.response.RecentMaterialResponseDto;
 import com.pado.domain.material.entity.Material;
 import com.pado.domain.material.entity.MaterialCategory;
 import com.pado.domain.material.entity.QMaterial;
@@ -14,7 +18,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.pado.domain.material.entity.QFile.file;
 
 @Repository
 @RequiredArgsConstructor
@@ -53,6 +60,53 @@ public class MaterialRepositoryCustomImpl implements MaterialRepositoryCustom{
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total != null ? total : 0L);
+    }
+
+    public Optional<LatestNoticeDto> findRecentNoticeAsDto(Long studyId, MaterialCategory category) {
+        QMaterial material = QMaterial.material;
+        QUser user = QUser.user;
+
+        return Optional.ofNullable(
+                queryFactory
+                        .select(new QLatestNoticeDto(
+                                material.id,
+                                material.title,
+                                user.nickname,
+                                material.createdAt
+                        ))
+                        .from(material)
+                        .join(material.user, user)
+                        .where(
+                                material.study.id.eq(studyId),
+                                material.materialCategory.eq(category)
+                        )
+                        .orderBy(material.createdAt.desc())
+                        .limit(1)
+                        .fetchOne()
+        );
+    }
+
+    @Override
+    public List<RecentMaterialResponseDto> findRecentLearningMaterialsAsDto(Long studyId, int limit) {
+        return queryFactory
+                .select(new QRecentMaterialResponseDto(
+                        material.id,
+                        material.title,
+                        user.nickname,
+                        file.count(),
+                        file.size.sum().coalesce(0L)
+                ))
+                .from(material)
+                .join(material.user, user)
+                .leftJoin(file).on(file.material.id.eq(material.id))
+                .where(
+                        material.study.id.eq(studyId),
+                        material.materialCategory.eq(MaterialCategory.LEARNING)
+                )
+                .groupBy(material.id, user.nickname)
+                .orderBy(material.createdAt.desc())
+                .limit(limit)
+                .fetch();
     }
 
     private BooleanExpression categoriesIn(List<MaterialCategory> categories) {

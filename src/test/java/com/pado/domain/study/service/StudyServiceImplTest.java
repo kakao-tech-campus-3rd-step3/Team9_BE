@@ -3,6 +3,7 @@ package com.pado.domain.study.service;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
@@ -101,6 +102,25 @@ class StudyServiceImplTest {
                         .extracting(StudyCondition::getContent)
                         .containsExactly("열심히 하실 분만")
         );
+    }
+
+    @Test
+    void 내_스터디목록_조회_성공() {
+        // given
+        Long userId = 1L;
+        Study study1 = Study.builder().id(1L).title("스터디1").build();
+        Study study2 = Study.builder().id(2L).title("스터디2").build();
+
+        when(studyRepository.findByUserId(userId))
+                .thenReturn(List.of(study1, study2));
+
+        // when
+        List<MyStudyResponseDto> result = studyService.findMyStudies(userId);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).title()).isEqualTo("스터디1");
+        assertThat(result.get(1).title()).isEqualTo("스터디2");
     }
 
     @Test

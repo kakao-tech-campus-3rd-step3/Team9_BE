@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> {
+    int countByStudyId(long studyId);
     long countByStudy(Study study);
     boolean existsByStudyAndUser(Study study, User user);
 
@@ -29,4 +30,8 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
         where sm.role = :role and sm.study = :study
     """)
     Long findLeaderUserIdByStudy(@Param("study") Study study, @Param("role") StudyMemberRole role);
+
+    List<StudyMember> findAllByStudyIdOrderByRankPointDesc(Long studyId);
+
+    boolean existsByStudyIdAndUserId(Long studyId, Long userId);
 }

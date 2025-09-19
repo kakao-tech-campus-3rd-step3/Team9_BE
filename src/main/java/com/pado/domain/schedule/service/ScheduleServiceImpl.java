@@ -1,6 +1,7 @@
 package com.pado.domain.schedule.service;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
+import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
@@ -12,6 +13,10 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.auth.userdetails.CustomUserDetails;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +51,35 @@ public class ScheduleServiceImpl implements ScheduleService {
             .build();
 
         scheduleRepository.save(schedule);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleByDateResponseDto> findMySchedulesByMonth(Long userId, int year, int month) {
+        // 1. 요청받은 달의 1일 찾기
+        LocalDate firstDayOfMonth = LocalDate.of(year, month, 1);
+
+        // 2. 그 1일이 포함된 주의 일요일 찾기 (캘린더의 시작일)
+        LocalDate startDate = firstDayOfMonth.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+
+        // 3. 캘린더의 종료일 찾기 (시작일 + 6주 - 1일)
+        LocalDate endDate = startDate.plusWeeks(6).minusDays(1);
+
+        List<Schedule> schedules = scheduleRepository.findAllByUserIdAndPeriod(
+                userId,
+                startDate.atStartOfDay(),
+                endDate.plusDays(1).atStartOfDay()
+        );
+        // 4. DB에서 startDate와 endDate 사이의 모든 일정을 조회하여 반환
+        return schedules.stream()
+                .map(schedule -> new ScheduleByDateResponseDto(
+                        schedule.getId(),
+                        schedule.getStudyId(),
+                        schedule.getTitle(),
+                        schedule.getStartTime(),
+                        schedule.getEndTime()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.pado.domain.material.service;
 import com.pado.domain.material.dto.request.MaterialRequestDto;
 import com.pado.domain.material.dto.response.MaterialDetailResponseDto;
 import com.pado.domain.material.dto.response.MaterialListResponseDto;
+import com.pado.domain.material.dto.response.RecentMaterialResponseDto;
 import com.pado.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
 
@@ -31,4 +32,7 @@ public interface MaterialService {
 
     // 자료 삭제 (단일 또는 다중)
     void deleteMaterial(User user, List<Long> ids);
+
+    // 최신 자료 조회
+    List<RecentMaterialResponseDto> findRecentLearningMaterials(Long studyId);
 }

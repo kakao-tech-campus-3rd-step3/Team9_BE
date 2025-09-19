@@ -8,10 +8,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface StudyRepository extends JpaRepository<Study, Long>, StudyRepositoryCustom {
+
+    @Query("SELECT s FROM Study s JOIN s.studyMembers sm WHERE sm.user.id = :userId")
+    List<Study> findByUserId(@Param("userId") Long userId);
+
     @Query("SELECT s FROM Study s JOIN FETCH s.leader WHERE s.id = :studyId")
     Optional<Study> findByIdWithLeader(@Param("studyId") Long studyId);
 
