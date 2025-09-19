@@ -2,6 +2,7 @@ package com.pado.domain.study.controller;
 
 import com.pado.domain.study.dto.response.MyRankResponseDto;
 import com.pado.domain.study.dto.response.StudyRankingResponseDto;
+import com.pado.domain.study.dto.response.TotalRankingResponseDto;
 import com.pado.domain.study.service.StudyRankingService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.annotation.CurrentUser;
@@ -26,7 +27,7 @@ import java.util.List;
 
 @Tag(name = "06. Study Ranking", description = "스터디 랭킹 관련 API")
 @RestController
-@RequestMapping("/api/studies/{study_id}")
+@RequestMapping("/api/studies/{study_id}/ranking")
 @RequiredArgsConstructor
 public class StudyRankingController {
 
@@ -58,14 +59,9 @@ public class StudyRankingController {
     @Parameters({
             @Parameter(name = "study_id", description = "랭킹을 조회할 스터디의 ID", required = true, example = "1")
     })
-    @GetMapping("/ranking")
-    public ResponseEntity<StudyRankingResponseDto> getStudyRanking(
-            @PathVariable("study_id") Long studyId
-    ) {
-        // TODO: 랭킹 조회 로직 구현
-        List<String> mockRankings = Arrays.asList("파도타기", "랭커유저", "공부왕", "새내기");
-        StudyRankingResponseDto mockResponse = new StudyRankingResponseDto(mockRankings);
-
-        return ResponseEntity.ok(mockResponse);
+    @GetMapping
+    public ResponseEntity<TotalRankingResponseDto> getTotalRanking(@PathVariable("study_id") Long studyId) {
+        TotalRankingResponseDto totalRanking = studyRankingService.getTotalRanking(studyId);
+        return ResponseEntity.ok(totalRanking);
     }
 }

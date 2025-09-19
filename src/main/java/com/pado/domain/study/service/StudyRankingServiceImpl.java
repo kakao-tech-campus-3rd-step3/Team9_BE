@@ -2,6 +2,7 @@ package com.pado.domain.study.service;
 
 import com.pado.domain.study.dto.response.MyRankResponseDto;
 import com.pado.domain.study.dto.response.RankerResponseDto;
+import com.pado.domain.study.dto.response.TotalRankingResponseDto;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
@@ -32,6 +33,14 @@ public class StudyRankingServiceImpl implements StudyRankingService{
                 .findFirst()
                 .map(ranker -> new MyRankResponseDto(ranker.rank(), ranker.score()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "사용자가 해당 스터디의 멤버가 아닙니다."));
+    }
+
+    @Override
+    public TotalRankingResponseDto getTotalRanking(Long studyId) {
+        validateStudyExists(studyId);
+
+        List<RankerResponseDto> totalRanking = getRankedStudyMembers(studyId);
+        return new TotalRankingResponseDto(totalRanking);
     }
 
     private List<RankerResponseDto> getRankedStudyMembers(Long studyId) {
