@@ -7,6 +7,7 @@ import com.pado.domain.auth.dto.request.SignUpRequestDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
 import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
+import com.pado.domain.auth.dto.response.TokenWithRefreshResponseDto;
 import jakarta.validation.Valid;
 
 public interface AuthService {
@@ -24,4 +25,7 @@ public interface AuthService {
 
     //이메일 인증번호 검증
     EmailVerificationResponseDto emailVerify(@Valid EmailVerifyRequestDto request);
+
+    //accesstoken 재발급
+    //TokenResponseDto renewAccessToken(String refreshToken);
 }
