@@ -4,12 +4,11 @@ import com.pado.domain.auth.dto.request.EmailSendRequestDto;
 import com.pado.domain.auth.dto.request.EmailVerifyRequestDto;
 import com.pado.domain.auth.dto.request.LoginRequestDto;
 import com.pado.domain.auth.dto.request.SignUpRequestDto;
-import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
+import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
 import com.pado.domain.auth.dto.response.TokenWithRefreshResponseDto;
 import com.pado.domain.auth.service.AuthService;
-import com.pado.domain.user.service.UserService;
 import com.pado.global.auth.jwt.JwtProvider;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
@@ -25,8 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +34,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Optional;
 
 @Tag(name = "01. Authentication", description = "로그인, 회원가입 등 사용자 인증 관련 API")
 @RestController
@@ -157,7 +152,7 @@ public class AuthController {
         ResponseCookie refreshCookie = ResponseCookie.from("REFRESH_TOKEN", tokens.refreshToken())
                 .httpOnly(true)
                 .secure(true)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .path("/api/auth/refresh")
                 .maxAge(Duration.ofSeconds(jwtProvider.getRefreshTtl()))
                 .build();

@@ -47,7 +47,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (header != null && header.startsWith(BEARER)) {
                 String token = header.substring(BEARER.length());
-
                 jwtProvider.validate(token);
                 Long userId = jwtProvider.getUserId(token);
                 UserDetails userDetails = userDetailsService.loadUserById(userId);
@@ -60,9 +59,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         catch (BusinessException ex) {
             writeUnauthorized(res, ex.getErrorCode(), ex.getMessage(), req.getRequestURI());
+            return;
         }
         catch (Exception ex) {
             writeUnauthorized(res, ErrorCode.TOKEN_INVALID, ErrorCode.TOKEN_INVALID.message, req.getRequestURI());
+            return;
         }
 
         chain.doFilter(req, res);
@@ -72,7 +73,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (res.isCommitted()) return;
 
         res.setStatus(code.status.value());
-        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        res.setContentType(MediaType.APPLICATION_JSON_VALUE + "; charset= UTF-8");
         String body = objectMapper.writeValueAsString(
                 ErrorResponseDto.of(code, message, java.util.Collections.emptyList(), path)
         );
