@@ -57,8 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
 
-            chain.doFilter(req, res);
-
         }
         catch (BusinessException ex) {
             writeUnauthorized(res, ex.getErrorCode(), ex.getMessage(), req.getRequestURI());
@@ -66,6 +64,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         catch (Exception ex) {
             writeUnauthorized(res, ErrorCode.TOKEN_INVALID, ErrorCode.TOKEN_INVALID.message, req.getRequestURI());
         }
+
+        chain.doFilter(req, res);
     }
 
     private void writeUnauthorized(HttpServletResponse res, ErrorCode code, String message, String path) throws IOException {

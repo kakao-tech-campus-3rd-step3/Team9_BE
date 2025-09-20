@@ -63,7 +63,10 @@ public enum ErrorCode {
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", "파일을 찾을 수 없습니다."),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_DELETE_FAILED", "파일 삭제에 실패했습니다."),
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_FILE_FORMAT", "지원하지 않는 파일 형식입니다."),
-    S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다.");
+    S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다."),
+
+    //Redis
+    REDIS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "REDIS_UNAVAILABLE", "Redis 연결에 실패했습니다.");
 
     public final HttpStatus status;
     public final String code;

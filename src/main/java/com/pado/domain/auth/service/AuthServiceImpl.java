@@ -7,6 +7,7 @@ import com.pado.domain.auth.dto.request.SignUpRequestDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
 import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
+import com.pado.domain.auth.dto.response.TokenWithRefreshResponseDto;
 import com.pado.domain.auth.infra.mail.MailClient;
 import com.pado.domain.auth.infra.redis.RedisEmailVerificationStore;
 import com.pado.domain.auth.infra.redis.RedisRefreshTokenStore;
@@ -19,6 +20,9 @@ import com.pado.global.exception.common.ErrorCode;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.data.redis.RedisSystemException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -58,7 +62,7 @@ public class AuthServiceImpl implements AuthService{
     }
 
     @Override
-    public TokenResponseDto login(LoginRequestDto request) {
+    public TokenWithRefreshResponseDto login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() ->
                         new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "이메일 또는 비밀번호가 일치하지 않습니다."));
@@ -68,27 +72,28 @@ public class AuthServiceImpl implements AuthService{
 
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail());
 
-        //refreshtoken 사용 시
-//        String refreshToken = jwtProvider.generateRefreshToken(user.getId(), user.getEmail());
-//        redisRefreshTokenStore.saveToken(user.getId(), refreshToken, Duration.ofSeconds(jwtProvider.getRefreshTtl()));
-//        return new TokenWithRefreshResponseDto(accessToken, refreshToken);
-        return new TokenResponseDto(accessToken);
+        String refreshToken = jwtProvider.generateRefreshToken(user.getId(), user.getEmail());
+        try {
+            redisRefreshTokenStore.saveToken(user.getId(), refreshToken, Duration.ofSeconds(jwtProvider.getRefreshTtl()));
+        } catch (DataAccessException e) {
+            throw new BusinessException(ErrorCode.REDIS_UNAVAILABLE);
+        }
+        return new TokenWithRefreshResponseDto(accessToken, refreshToken);
     }
 
-    //refreshtoken 사용 시
-//    @Override
-//    public TokenResponseDto renewAccessToken(String refreshToken) {
-//        Long userId = jwtProvider.getUserId(refreshToken);
-//        String savedToken = redisRefreshTokenStore.getToken(userId).orElseThrow(
-//                () -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "refreshtoken이 존재하지 않습니다.")
-//        );
-//
-//        if(!savedToken.equals(refreshToken)){
-//            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "refreshtoken이 일치하지 않습니다.");
-//        }
-//
-//        return new TokenResponseDto(jwtProvider.generateAccessToken(userId, jwtProvider.getEmail(refreshToken)));
-//    }
+    @Override
+    public TokenResponseDto renewAccessToken(String refreshToken) {
+        Long userId = jwtProvider.getUserId(refreshToken);
+        String savedToken = redisRefreshTokenStore.getToken(userId).orElseThrow(
+                () -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "RefreshToken이 일치하지 않습니다.")
+        );
+
+        if(!savedToken.equals(refreshToken)){
+            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "RefreshToken이 일치하지 않습니다.");
+        }
+
+        return new TokenResponseDto(jwtProvider.generateAccessToken(userId, jwtProvider.getEmail(refreshToken)));
+    }
 
     @Override
     public NicknameCheckResponseDto checkNickname(String nickname) {
