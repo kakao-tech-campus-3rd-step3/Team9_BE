@@ -4,12 +4,11 @@ import com.pado.domain.auth.dto.request.EmailSendRequestDto;
 import com.pado.domain.auth.dto.request.EmailVerifyRequestDto;
 import com.pado.domain.auth.dto.request.LoginRequestDto;
 import com.pado.domain.auth.dto.request.SignUpRequestDto;
-import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.EmailVerificationResponseDto;
+import com.pado.domain.auth.dto.response.NicknameCheckResponseDto;
 import com.pado.domain.auth.dto.response.TokenResponseDto;
 import com.pado.domain.auth.dto.response.TokenWithRefreshResponseDto;
 import com.pado.domain.auth.service.AuthService;
-import com.pado.domain.user.service.UserService;
 import com.pado.global.auth.jwt.JwtProvider;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
@@ -25,8 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +34,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
-import java.util.Arrays;
 
 @Tag(name = "01. Authentication", description = "로그인, 회원가입 등 사용자 인증 관련 API")
 @RestController
@@ -152,36 +148,50 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
-        return ResponseEntity.ok().body(authService.login(request));
+        TokenWithRefreshResponseDto tokens = authService.login(request);
+        ResponseCookie refreshCookie = ResponseCookie.from("REFRESH_TOKEN", tokens.refreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/api/auth/refresh")
+                .maxAge(Duration.ofSeconds(jwtProvider.getRefreshTtl()))
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(new TokenResponseDto(tokens.accessToken()));
     }
 
-    //refreshtoken 사용 시
-//    @PostMapping("/login")
-//    public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
-//        TokenWithRefreshResponseDto tokens = authService.login(request);
-//        ResponseCookie refreshCookie = ResponseCookie.from("REFRESH_TOKEN", tokens.refreshToken())
-//                .httpOnly(true)
-//                .secure(true)
-//                .sameSite("Strict")
-//                .path("/api/auth/refresh")
-//                .maxAge(Duration.ofSeconds(jwtProvider.getRefreshTtl()))
-//                .build();
-//
-//        return ResponseEntity.ok()
-//                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-//                .body(new TokenResponseDto(tokens.accessToken()));
-//    }
-
-//    @PostMapping("/refresh")
-//    public ResponseEntity<TokenResponseDto> refresh(HttpServletRequest request){
-//        String refreshToken = Arrays.stream(request.getCookies())
-//                .filter(c -> "REFRESH_TOKEN".equals(c.getName()))
-//                .findFirst()
-//                .map(Cookie::getValue)
-//                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "리프레시 토큰이 없습니다."));
-//
-//        return ResponseEntity.ok().body(authService.renewAccessToken(refreshToken));
-//    }
+    @NoApi409Conflict
+    @Operation(summary = "토큰 재발급", description = "사용자가 refreshtoken을 통해 인증 토큰을 재발급받습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증 토큰 발급 성공",
+                    content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패 (잘못된 또는 존재하지 않는 토큰)",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponseDto.class),
+                            examples = @ExampleObject(
+                                    name = "인증 실패",
+                                    value = """
+                                            {
+                                              "code": "AUTHENTICATION_FAILED",
+                                              "message": "RefreshToken이 존재하지 않습니다.",
+                                              "errors": [],
+                                              "timestamp": "2025-09-07T08:15:10.8668626",
+                                              "path": "/api/auth/refresh"
+                                            }
+                                            """
+                            )
+                    )
+            )
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponseDto> refresh(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
+        if (refreshToken == null) {
+            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "RefreshToken이 존재하지 않습니다.");
+        }
+        return ResponseEntity.ok().body(authService.renewAccessToken(refreshToken));
+    }
 
     @NoApi409Conflict
     @Operation(summary = "이메일 인증(인증번호 전송)", description = "입력한 이메일로 인증번호를 전송합니다.")

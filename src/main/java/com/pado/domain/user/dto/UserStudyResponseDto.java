@@ -9,7 +9,7 @@ public record UserStudyResponseDto (
         String nickname,
 
         @Schema(description = "프로필 이미지 URL", example = "https://your-s3-bucket.s3.amazonaws.com/images/profile.jpg")
-        String image_url,
+        String image_key,
 
         @Schema(description = "스터디 제목", example = "파도 스터디")
         String title,

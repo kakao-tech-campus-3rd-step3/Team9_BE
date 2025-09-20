@@ -23,7 +23,7 @@ public class UserServiceImpl implements UserService {
     private final StudyMemberRepository studyMemberRepository;
     @Override
     public UserSimpleResponseDto getUserSimple(User user) {
-        return new UserSimpleResponseDto(user.getNickname(), user.getProfileImageUrl());
+        return new UserSimpleResponseDto(user.getNickname(), user.getImage_key());
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         return new UserDetailResponseDto(
                 user.getNickname(),
-                user.getProfileImageUrl(),
+                user.getImage_key(),
                 user.getInterests().stream()
                         .map(ui -> ui.getCategory().name())
                         .toList(),
@@ -52,6 +52,6 @@ public class UserServiceImpl implements UserService {
                 () -> new BusinessException(ErrorCode.USER_NOT_FOUND)
         );
 
-        return new UserStudyResponseDto(user.getNickname(), user.getProfileImageUrl(), study.getTitle(), studyMember.getRole());
+        return new UserStudyResponseDto(user.getNickname(), user.getImage_key(), study.getTitle(), studyMember.getRole());
     }
 }

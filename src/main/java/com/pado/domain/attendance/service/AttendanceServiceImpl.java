@@ -64,7 +64,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 return new AttendanceStatusDto(status, schedule.getStartTime());
                             })
                             .toList();
-                    return new MemberAttendanceDto(user.getNickname(), user.getProfileImageUrl(), attendanceStatusDtoList);
+                    return new MemberAttendanceDto(user.getNickname(), user.getImage_key(), attendanceStatusDtoList);
                 })
                 .toList();
 

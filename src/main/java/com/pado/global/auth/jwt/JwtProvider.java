@@ -60,24 +60,30 @@ public class JwtProvider {
     }
 
     public Long getUserId(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        Claims claims = parseClaimsOrThrow(token);
         return Long.valueOf(claims.getSubject());
     }
 
     public String getEmail(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        Claims claims = parseClaimsOrThrow(token);
         return String.valueOf(claims.get("email",  String.class));
     }
 
     public long getRefreshTtl() {
         return props.getRefreshExpSeconds();
+    }
+
+    private Claims parseClaimsOrThrow(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "토큰이 만료되었습니다.");
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.TOKEN_INVALID, "유효하지 않은 토큰입니다.");
+        }
     }
 }
