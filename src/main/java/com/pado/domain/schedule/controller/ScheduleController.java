@@ -68,11 +68,12 @@ public class ScheduleController {
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/schedules/me")
     public ResponseEntity<List<ScheduleByDateResponseDto>> getMySchedules(
-            @Parameter(description = "조회할 연도", required = true, example = "2025") @RequestParam int year,
-            @Parameter(description = "조회할 월", required = true, example = "9") @RequestParam int month,
-            @Parameter(hidden = true) @CurrentUser User user
+        @Parameter(description = "조회할 연도", required = true, example = "2025") @RequestParam int year,
+        @Parameter(description = "조회할 월", required = true, example = "9") @RequestParam int month,
+        @Parameter(hidden = true) @CurrentUser User user
     ) {
-        List<ScheduleByDateResponseDto> schedules = scheduleService.findMySchedulesByMonth(user.getId(), year, month);
+        List<ScheduleByDateResponseDto> schedules = scheduleService.findMySchedulesByMonth(
+            user.getId(), year, month);
         return ResponseEntity.ok(schedules);
     }
 
@@ -97,11 +98,12 @@ public class ScheduleController {
         @Parameter(name = "study_id", description = "일정을 수정할 스터디의 ID", required = true, example = "1"),
         @Parameter(name = "schedule_id", description = "수정할 일정의 ID", required = true, example = "1234")
     })
-    @PutMapping("/studies/{study_id}/schedules/{schedule_id}")
-    public ResponseEntity<Void> updateSchedule(@PathVariable("study_id") Long studyId,
-        @PathVariable("schedule_id") Long scheduleId,
-        @Valid @RequestBody ScheduleCreateRequestDto request) {
-        scheduleService.updateSchedule(studyId, scheduleId, request);
+    @PutMapping("schedules/{scheduleid}")
+    public ResponseEntity<Void> updateSchedule(
+        @PathVariable("scheduleid") Long scheduleId,
+        @Valid @RequestBody ScheduleCreateRequestDto request
+    ) {
+        scheduleService.updateSchedule(scheduleId, request);
         return ResponseEntity.ok().build();
     }
 
@@ -113,10 +115,11 @@ public class ScheduleController {
         @Parameter(name = "study_id", description = "일정을 삭제할 스터디의 ID", required = true, example = "1"),
         @Parameter(name = "schedule_id", description = "삭제할 일정의 ID", required = true, example = "1")
     })
-    @DeleteMapping("/studies/{study_id}/schedules/{schedule_id}")
-    public ResponseEntity<Void> deleteSchedule(@PathVariable("study_id") Long studyId,
-        @PathVariable("schedule_id") Long scheduleId) {
-        scheduleService.deleteSchedule(studyId, scheduleId);
+    @DeleteMapping("schedules/{scheduleid}")
+    public ResponseEntity<Void> deleteSchedule(
+        @PathVariable("scheduleid") Long scheduleId
+    ) {
+        scheduleService.deleteSchedule(scheduleId);
         return ResponseEntity.noContent().build();
     }
 }
