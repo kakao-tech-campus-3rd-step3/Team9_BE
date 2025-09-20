@@ -55,7 +55,7 @@ public class UserController {
             responseCode = "200", description = "스터디 정보 조회 성공",
             content = @Content(schema = @Schema(implementation = UserStudyResponseDto.class))
     )
-    @GetMapping("{study_id}")
+    @GetMapping("/{study_id}")
     public ResponseEntity<UserStudyResponseDto> getStudyUserInfo(
             @PathVariable("study_id") Long studyId, @Parameter(hidden = true) @CurrentUser User user
     ) {
