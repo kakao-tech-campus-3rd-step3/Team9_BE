@@ -90,12 +90,12 @@ public class ScheduleController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404ScheduleNotFoundError
     @Operation(summary = "일정 수정", description = "지정된 ID를 가진 일정을 수정합니다. (스터디 리더만 가능)", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponse(responseCode = "200", description = "일정 수정 성공", content = @Content)
     @Parameters({
-        @Parameter(name = "study_id", description = "일정을 수정할 스터디의 ID", required = true, example = "1"),
         @Parameter(name = "schedule_id", description = "수정할 일정의 ID", required = true, example = "1234")
     })
     @PutMapping("schedules/{scheduleid}")
@@ -112,7 +112,6 @@ public class ScheduleController {
     @Operation(summary = "일정 삭제", description = "지정된 ID를 가진 일정을 삭제합니다. (스터디 리더만 가능)")
     @ApiResponse(responseCode = "204", description = "일정 삭제 성공", content = @Content)
     @Parameters({
-        @Parameter(name = "study_id", description = "일정을 삭제할 스터디의 ID", required = true, example = "1"),
         @Parameter(name = "schedule_id", description = "삭제할 일정의 ID", required = true, example = "1")
     })
     @DeleteMapping("schedules/{scheduleid}")

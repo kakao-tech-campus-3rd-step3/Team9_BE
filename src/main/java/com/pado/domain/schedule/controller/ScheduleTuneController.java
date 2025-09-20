@@ -139,7 +139,6 @@ public class ScheduleTuneController {
         )
     ))
     @Parameters({
-        @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
     @GetMapping("schedule-tunes/{tuneid}")
@@ -188,7 +187,6 @@ public class ScheduleTuneController {
         )
     ))
     @Parameters({
-        @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
     @PostMapping("schedule-tunes/{tuneid}/participants")

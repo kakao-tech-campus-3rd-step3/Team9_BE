@@ -67,7 +67,6 @@ public class AttendanceController {
         content = @Content(schema = @Schema(implementation = AttendanceStatusResponseDto.class))
     )
     @Parameters({
-        @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
         @Parameter(name = "schedule_id", description = "출석 상태를 조회할 일정의 ID", required = true, example = "1234")
     })
     @GetMapping("schedules/{scheduleid}/attendance")
