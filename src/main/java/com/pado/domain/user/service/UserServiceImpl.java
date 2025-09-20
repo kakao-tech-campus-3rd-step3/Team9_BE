@@ -17,7 +17,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserSimpleResponseDto getUserSimple(User user) {
-        return new UserSimpleResponseDto(user.getNickname(), user.getProfileImageUrl());
+        return new UserSimpleResponseDto(user.getNickname(), user.getImage_key());
     }
 
     @Transactional(readOnly = true)
@@ -28,7 +28,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         return new UserDetailResponseDto(
                 user.getNickname(),
-                user.getProfileImageUrl(),
+                user.getImage_key(),
                 user.getInterests().stream()
                         .map(ui -> ui.getCategory().name())
                         .toList(),

@@ -8,6 +8,6 @@ public record UserSimpleResponseDto(
         String nickname,
 
         @Schema(description = "프로필 이미지 URL", example = "https://your-s3-bucket.s3.amazonaws.com/images/profile.jpg")
-        String image_url
+        String image_key
 ) {
 }

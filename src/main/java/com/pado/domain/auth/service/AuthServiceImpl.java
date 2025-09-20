@@ -51,7 +51,7 @@ public class AuthServiceImpl implements AuthService{
                 passwordHash,
                 request.nickname(),
                 request.region(),
-                request.image_url(),
+                request.image_key(),
                 request.gender(),
                 request.interests()
         );
