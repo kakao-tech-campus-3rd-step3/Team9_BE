@@ -52,6 +52,6 @@ public class UserServiceImpl implements UserService {
                 () -> new BusinessException(ErrorCode.USER_NOT_FOUND)
         );
 
-        return new UserStudyResponseDto(user.getNickname(), user.getProfileImageUrl(), study.getTitle(), studyMember.getRole());
+        return new UserStudyResponseDto(user.getNickname(), user.getImage_key(), study.getTitle(), studyMember.getRole());
     }
 }
