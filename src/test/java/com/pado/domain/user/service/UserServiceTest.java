@@ -46,7 +46,7 @@ class UserServiceTest {
             Long studyId = 1L;
             User user = User.builder()
                     .nickname("baejw")
-                    .profileImageUrl("https://cdn.example.com/p.png")
+                    .image_key("https://cdn.example.com/p.png")
                     .build();
             ReflectionTestUtils.setField(user, "id", 1L);
 
@@ -71,7 +71,7 @@ class UserServiceTest {
 
             // then
             assertThat(dto.nickname()).isEqualTo("baejw");
-            assertThat(dto.image_url()).isEqualTo("https://cdn.example.com/p.png");
+            assertThat(dto.image_key()).isEqualTo("https://cdn.example.com/p.png");
             assertThat(dto.title()).isEqualTo("알고리즘 스터디");
             assertThat(dto.role()).isEqualTo(StudyMemberRole.LEADER);
         }
