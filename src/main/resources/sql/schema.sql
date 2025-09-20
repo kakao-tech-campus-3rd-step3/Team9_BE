@@ -127,6 +127,7 @@ CREATE TABLE material_file (
     name VARCHAR(255) NOT NULL,
     file_key VARCHAR(255) NOT NULL UNIQUE,
     size BIGINT NOT NULL,
+    file_type VARCHAR(50) NOT NULL,
     material_id BIGINT NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
 
