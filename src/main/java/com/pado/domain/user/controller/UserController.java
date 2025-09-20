@@ -56,7 +56,7 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = UserStudyResponseDto.class))
     )
     @GetMapping("{study_id}")
-    public ResponseEntity<UserStudyResponseDto> getSimpleUserInfo(
+    public ResponseEntity<UserStudyResponseDto> getStudyUserInfo(
             @PathVariable("study_id") Long studyId, @Parameter(hidden = true) @CurrentUser User user
     ) {
         return ResponseEntity.ok(userService.getUserStudy(studyId, user));
