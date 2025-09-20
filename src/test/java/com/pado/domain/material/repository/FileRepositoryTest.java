@@ -91,13 +91,13 @@ class FileRepositoryTest {
         testMaterial2 = materialRepository.save(testMaterial2);
 
         // 테스트 파일들 생성
-        file1 = new File("file1.pdf", "s3-key-1", 1024L);
+        file1 = new File("file1.pdf", "s3-key-1", 1024L, ".pdf");
         file1.setMaterial(testMaterial1);
 
-        file2 = new File("file2.docx", "s3-key-2", 1024L);
+        file2 = new File("file2.docx", "s3-key-2", 1024L, ".docx");
         file2.setMaterial(testMaterial1);
 
-        file3 = new File("file3.jpg", "s3-key-3", 1024L);
+        file3 = new File("file3.jpg", "s3-key-3", 1024L, ".jpg");
         file3.setMaterial(testMaterial2);
 
         fileRepository.saveAll(Arrays.asList(file1, file2, file3));
