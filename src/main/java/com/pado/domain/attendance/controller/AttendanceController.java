@@ -33,24 +33,25 @@ import java.util.List;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class AttendanceController {
+
     private final AttendanceService attendanceService;
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404StudyNotFoundError
     @Operation(
-            summary = "전체 참여 현황 조회",
-            description = "지금까지 진행한 스터디의 전체 참여 현황을 조회합니다. (스터디 멤버만 가능)"
+        summary = "전체 참여 현황 조회",
+        description = "지금까지 진행한 스터디의 전체 참여 현황을 조회합니다. (스터디 멤버만 가능)"
     )
     @ApiResponse(
-            responseCode = "200", description = "전체 참여 현황 조회 성공",
-            content = @Content(schema = @Schema(implementation = AttendanceListResponseDto.class))
+        responseCode = "200", description = "전체 참여 현황 조회 성공",
+        content = @Content(schema = @Schema(implementation = AttendanceListResponseDto.class))
     )
     @Parameters({
-            @Parameter(name = "study_id", description = "참여 현황을 조회할 스터디의 ID", required = true, example = "1")
+        @Parameter(name = "study_id", description = "참여 현황을 조회할 스터디의 ID", required = true, example = "1")
     })
     @GetMapping("/studies/{study_id}/attendance")
     public ResponseEntity<AttendanceListResponseDto> getFullAttendance(
-            @PathVariable("study_id") Long studyId
+        @PathVariable("study_id") Long studyId
     ) {
         return ResponseEntity.ok(attendanceService.getFullAttendance(studyId));
     }
@@ -58,62 +59,60 @@ public class AttendanceController {
     @Api403ForbiddenStudyMemberOnlyError
     @Api404ScheduleNotFoundError
     @Operation(
-            summary = "개별 참여 현황 조회",
-            description = "사용자의 특정 스터디 일정에 대한 참여 현황을 조회합니다. (스터디 멤버만 가능)"
+        summary = "개별 참여 현황 조회",
+        description = "사용자의 특정 스터디 일정에 대한 참여 현황을 조회합니다. (스터디 멤버만 가능)"
     )
     @ApiResponse(
-            responseCode = "200", description = "개별 참여 현황 조회 성공",
-            content = @Content(schema = @Schema(implementation = AttendanceStatusResponseDto.class))
+        responseCode = "200", description = "개별 참여 현황 조회 성공",
+        content = @Content(schema = @Schema(implementation = AttendanceStatusResponseDto.class))
     )
     @Parameters({
-            @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1"),
-            @Parameter(name = "schedule_id", description = "출석 상태를 조회할 일정의 ID", required = true, example = "1234")
+        @Parameter(name = "schedule_id", description = "출석 상태를 조회할 일정의 ID", required = true, example = "1234")
     })
-    @GetMapping("/studies/{study_id}/attendance/{schedule_id}")
+    @GetMapping("schedules/{scheduleid}/attendance")
     public ResponseEntity<AttendanceStatusResponseDto> getIndividualAttendanceStatus(
-            @PathVariable("study_id") Long studyId,
-            @PathVariable("schedule_id") Long scheduleId,
-            @Parameter(hidden = true) @CurrentUser User user
+        @PathVariable("scheduleid") Long scheduleId,
+        @Parameter(hidden = true) @CurrentUser User user
     ) {
-        return ResponseEntity.ok(attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user));
+        return ResponseEntity.ok(attendanceService.getIndividualAttendanceStatus(scheduleId, user));
     }
 
     @Api403ForbiddenStudyMemberOnlyError
     @Api404ScheduleNotFoundError
     @Operation(
-            summary = "출석 체크",
-            description = "스터디원이 자신의 출석을 체크합니다."
+        summary = "출석 체크",
+        description = "스터디원이 자신의 출석을 체크합니다."
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "출석 체크 성공",
-                    content = @Content(schema = @Schema(implementation = AttendanceStatusResponseDto.class))),
-            @ApiResponse(responseCode = "409", description = "출석 시간 만료 또는 이미 출석 체크됨",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = {
-                                    @ExampleObject(
-                                            name = "이미 출석 체크됨 예시",
-                                            value = """
-                                                {
-                                                  "code": "ALREADY_CHECKED_IN",
-                                                  "message": "이미 출석 체크되었습니다.",
-                                                  "errors": [],
-                                                  "timestamp": "2025-09-07T08:15:10.8668626",
-                                                  "path": "/api/schedules/1234/attendance"
-                                                }
-                                                """
-                                    )
-                            })
-            )
+        @ApiResponse(responseCode = "200", description = "출석 체크 성공",
+            content = @Content(schema = @Schema(implementation = AttendanceStatusResponseDto.class))),
+        @ApiResponse(responseCode = "409", description = "출석 시간 만료 또는 이미 출석 체크됨",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = {
+                    @ExampleObject(
+                        name = "이미 출석 체크됨 예시",
+                        value = """
+                            {
+                              "code": "ALREADY_CHECKED_IN",
+                              "message": "이미 출석 체크되었습니다.",
+                              "errors": [],
+                              "timestamp": "2025-09-07T08:15:10.8668626",
+                              "path": "/api/schedules/1234/attendance"
+                            }
+                            """
+                    )
+                })
+        )
     })
     @Parameters({
-            @Parameter(name = "schedule_id", description = "출석 체크할 일정의 ID", required = true, example = "1234")
+        @Parameter(name = "schedule_id", description = "출석 체크할 일정의 ID", required = true, example = "1234")
     })
     @PostMapping("/schedules/{schedule_id}/attendance")
     public ResponseEntity<AttendanceStatusResponseDto> checkAttendance(
-            @PathVariable("schedule_id") Long scheduleId,
-            @Parameter(hidden = true) @CurrentUser User user
+        @PathVariable("schedule_id") Long scheduleId,
+        @Parameter(hidden = true) @CurrentUser User user
     ) {
         return ResponseEntity.ok(attendanceService.checkIn(scheduleId, user));
     }

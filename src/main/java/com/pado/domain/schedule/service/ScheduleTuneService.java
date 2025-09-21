@@ -15,9 +15,9 @@ public interface ScheduleTuneService {
 
     List<ScheduleTuneResponseDto> findAllScheduleTunes(Long studyId);
 
-    ScheduleTuneDetailResponseDto findScheduleTuneDetail(Long studyId, Long tuneId);
+    ScheduleTuneDetailResponseDto findScheduleTuneDetail(Long tuneId);
 
-    ScheduleTuneParticipantResponseDto participate(Long studyId, Long tuneId,
+    ScheduleTuneParticipantResponseDto participate(Long tuneId,
         ScheduleTuneParticipantRequestDto request);
 
     ScheduleCompleteResponseDto complete(Long tuneId, ScheduleCreateRequestDto request);
