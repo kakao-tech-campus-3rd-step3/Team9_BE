@@ -38,37 +38,43 @@ public class AttendanceServiceImpl implements AttendanceService {
     public AttendanceListResponseDto getFullAttendance(Long studyId) {
         Study study = studyRepository.findById(studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
         Long leaderId = studyMemberRepository.findLeaderUserIdByStudy(study,
             StudyMemberRole.LEADER);
+
         List<StudyMember> studyMembers = studyMemberRepository.findByStudyWithUser(study);
         List<Schedule> schedules = scheduleRepository.findByStudyIdOrderByStartTimeAsc(studyId);
         List<Attendance> attendances = attendanceRepository.findAllByStudyIdWithScheduleAndUser(
             studyId);
+
+        // 리더 우선 정렬
         List<StudyMember> orderedMembers = studyMembers.stream()
             .sorted(Comparator.comparing(sm -> !sm.getUser().getId().equals(leaderId)))
             .toList();
 
-        Map<String, Attendance> attendanceMap = attendances.stream()
-            .collect(Collectors.toMap(
-                attendance -> attendance.getUser().getId() + "-" + attendance.getSchedule().getId(),
-                attendance -> attendance
-            ));
+        // userId -> (scheduleId -> Attendance) 중첩 맵으로 수집
+        Map<Long, Map<Long, Attendance>> attendanceByUser = attendances.stream()
+            .collect(Collectors.groupingBy(a -> a.getUser().getId(),
+                Collectors.toMap(a -> a.getSchedule().getId(),
+                    java.util.function.Function.identity(),
+                    (a, b) -> a)));
 
-        // MemberAttendanceDto List 생성
+        // 멤버별 출석 상태 + 이미지키 반환
         List<MemberAttendanceDto> memberAttendanceDtoList = orderedMembers.stream()
             .map(studyMember -> {
                 User user = studyMember.getUser();
-
-                //AttendanceStatusDto List 생성
                 List<AttendanceStatusDto> attendanceStatusDtoList = schedules.stream()
                     .map(schedule -> {
-                        Attendance attendance = attendanceMap.get(
-                            user.getId() + "-" + schedule.getId());
-                        boolean status = (attendance != null) && (attendance.isStatus());
+                        Attendance attendance = attendanceByUser
+                            .getOrDefault(user.getId(), Map.of())
+                            .get(schedule.getId());
+                        boolean status = attendance != null && attendance.isStatus();
                         return new AttendanceStatusDto(status, schedule.getStartTime());
                     })
                     .toList();
-                return new MemberAttendanceDto(user.getNickname(), user.getProfileImageUrl(),
+
+                // imagekey 사용
+                return new MemberAttendanceDto(user.getNickname(), user.getImage_key(),
                     attendanceStatusDtoList);
             })
             .toList();
