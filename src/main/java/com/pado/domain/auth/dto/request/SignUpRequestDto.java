@@ -26,7 +26,7 @@ public record SignUpRequestDto(
 
         @Schema(description = "프로필 이미지 URL (없는 경우 빈 문자열)", example = "https://your-s3-bucket.s3.amazonaws.com/images/profile.jpg")
         @NotNull(message = "이미지 URL은 null일 수 없습니다.")
-        String image_url,
+        String image_key,
 
         @Schema(description = "닉네임", example = "파도")
         @NotBlank(message = "닉네임은 필수 입력 항목입니다.")

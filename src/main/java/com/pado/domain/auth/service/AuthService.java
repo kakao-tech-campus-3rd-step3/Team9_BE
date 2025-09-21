@@ -15,7 +15,7 @@ public interface AuthService {
     void register(SignUpRequestDto request);
 
     //로그인
-    TokenResponseDto login(LoginRequestDto request);
+    TokenWithRefreshResponseDto login(LoginRequestDto request);
 
     //닉네임 중복 확인
     NicknameCheckResponseDto  checkNickname(String nickname);
@@ -27,5 +27,5 @@ public interface AuthService {
     EmailVerificationResponseDto emailVerify(@Valid EmailVerifyRequestDto request);
 
     //accesstoken 재발급
-    //TokenResponseDto renewAccessToken(String refreshToken);
+    TokenResponseDto renewAccessToken(String refreshToken);
 }

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users  (
     password_hash VARCHAR(200) NOT NULL,
     nickname VARCHAR(100) NOT NULL UNIQUE,
     region VARCHAR(100),
-    profile_image_url VARCHAR(500),
+    image_key VARCHAR(500),
     gender VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -127,6 +127,7 @@ CREATE TABLE material_file (
     name VARCHAR(255) NOT NULL,
     file_key VARCHAR(255) NOT NULL UNIQUE,
     size BIGINT NOT NULL,
+    file_type VARCHAR(50) NOT NULL,
     material_id BIGINT NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
 

@@ -2,6 +2,7 @@ package com.pado.domain.user.controller;
 
 import com.pado.domain.user.dto.UserDetailResponseDto;
 import com.pado.domain.user.dto.UserSimpleResponseDto;
+import com.pado.domain.user.dto.UserStudyResponseDto;
 import com.pado.domain.user.entity.User;
 import com.pado.domain.user.service.UserService;
 import com.pado.global.auth.annotation.CurrentUser;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -45,5 +47,18 @@ public class UserController {
     @GetMapping("/detail")
     public ResponseEntity<UserDetailResponseDto> getDetailUserInfo(@Parameter(hidden = true) @CurrentUser User user) {
         return ResponseEntity.ok(userService.getUserDetail(user.getId()));
+    }
+
+    @Api404UserNotFoundError
+    @Operation(summary = "유저 스터디 정보 조회", description = "인증 토큰과 study_id를 통해 현재 로그인된 사용자의 스터디 정보(역할, 스터디 이름 포함)를 조회합니다.")
+    @ApiResponse(
+            responseCode = "200", description = "스터디 정보 조회 성공",
+            content = @Content(schema = @Schema(implementation = UserStudyResponseDto.class))
+    )
+    @GetMapping("/{study_id}")
+    public ResponseEntity<UserStudyResponseDto> getStudyUserInfo(
+            @PathVariable("study_id") Long studyId, @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        return ResponseEntity.ok(userService.getUserStudy(studyId, user));
     }
 }
