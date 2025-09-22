@@ -29,7 +29,6 @@ import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class AuthServiceImpl implements AuthService{
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -40,7 +39,8 @@ public class AuthServiceImpl implements AuthService{
     private final AuthProps authProps;
 
     @Override
-    public void register(@Valid SignUpRequestDto request) {
+    @Transactional
+    public void register(SignUpRequestDto request) {
         if(userRepository.existsByEmail(request.email())){
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
