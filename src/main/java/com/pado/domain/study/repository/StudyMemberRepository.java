@@ -4,6 +4,8 @@ import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.user.entity.User;
+
+import java.util.Collection;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -40,6 +42,5 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     Long findLeaderUserIdByStudy(@Param("study") Study study, @Param("role") StudyMemberRole role);
 
     List<StudyMember> findAllByStudyIdOrderByRankPointDesc(Long studyId);
-
-    boolean existsByStudyIdAndUserId(Long studyId, Long userId);
+    boolean existsByStudyIdAndUserIdAndRoleIn(Long studyId, Long userId, Collection<StudyMemberRole> roles);
 }
