@@ -34,7 +34,7 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-resources/**",
-                    "/api-docs/**", "/actuator/health").permitAll()
+                    "/api-docs/**", "/v3/api-docs/**", "/actuator/health").permitAll()
                 .requestMatchers("/api/upload/**", "/api/download/**").permitAll()
                 .requestMatchers("/api/studies/*/apply", "/api/studies/*/member/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/studies/*/schedule-tunes/**").authenticated()
