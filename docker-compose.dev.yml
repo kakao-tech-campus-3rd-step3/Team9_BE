@@ -1,0 +1,42 @@
+version: "3.9"
+
+name: pado-dev
+
+services:
+  app:
+    container_name: pado-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+    environment:
+      # 스프링 프로파일
+      - SPRING_PROFILES_ACTIVE=dev
+      # Redis 연결(컨테이너-컨테이너 통신)
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      # JWT/메일 등 필요한 환경값이 있다면 여기에 추가
+      # - APP_JWT_SECRET=change-me
+      # - APP_JWT_ACCESS_EXP_SECONDS=1800
+      # - APP_JWT_REFRESH_EXP_SECONDS=1209600
+    ports:
+      - "8080:8080"   # 호스트 8080 -> 컨테이너 8080
+    networks:
+      - pado-net
+    # 필요 시 소스 마운트(핫 리로드 환경) 대신 JAR 빌드 사용 권장
+    # volumes:
+    #   - ./:/app
+
+  redis:
+    container_name: pado-redis
+    image: redis:7-alpine
+    command: [ "redis-server", "--appendonly", "yes" ]
+    ports:
+      - "6379:6379"   # 외부 접근이 필요 없으면 이 라인은 생략 가능
+    networks:
+      - pado-net
+
+networks:
+  pado-net:
+    driver: bridge

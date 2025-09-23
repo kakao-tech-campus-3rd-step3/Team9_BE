@@ -9,7 +9,7 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
+        registry.addMapping("/**")
             .allowedOrigins(
                 "https://gogumalatte.site",
                 "http://localhost:3000",
@@ -19,6 +19,7 @@ public class CorsConfig implements WebMvcConfigurer {
             )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
             .allowedHeaders("*")
+            .exposedHeaders("Set-Cookie")
             .allowCredentials(true)
             .maxAge(3600);
     }
