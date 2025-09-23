@@ -104,9 +104,11 @@ public class AuthController {
             .maxAge(Duration.ofSeconds(jwtProvider.getRefreshTtl()));
 
         ResponseCookie cookie = isLocalLike()
-            ? base.secure(false).sameSite("Lax").build()
-            : base.domain(".gogumalatte.site").secure(true).sameSite("None").build();
-
+            ? base.sameSite("None").secure(false).build()
+            : base.domain(".gogumalatte.site").secure(true).sameSite("None")
+                .build();
+        org.slf4j.LoggerFactory.getLogger(AuthController.class)
+            .info("Login Set-Cookie => {}", cookie.toString());
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, cookie.toString())
             .body(new TokenResponseDto(tokens.accessToken()));
