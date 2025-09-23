@@ -74,16 +74,25 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtProvider.generateRefreshToken(user.getId(), user.getEmail());
 
+        long refreshTtlSec = jwtProvider.getRefreshTtl();
+        if (refreshTtlSec <= 0) {
+            throw new IllegalStateException(
+                "refresh TTL must be > 0 seconds, but was " + refreshTtlSec);
+        }
+        Duration ttl = Duration.ofSeconds(refreshTtlSec);
+        log.info("Saving refresh token to Redis: userId={}, ttlSec={}", user.getId(),
+            refreshTtlSec);
+
         try {
-            redisRefreshTokenStore.saveToken(user.getId(), refreshToken,
-                Duration.ofSeconds(jwtProvider.getRefreshTtl()));
+            redisRefreshTokenStore.saveToken(user.getId(), refreshToken, ttl);
         } catch (DataAccessException e) {
             log.error(
                 "Failed to save refresh token to Redis (userId={}, host/port check needed). reason={}, causeClass={}",
                 user.getId(),
                 e.getMessage(),
                 (e.getCause() != null ? e.getCause().getClass().getName() : "null"),
-                e);
+                e
+            );
             throw new BusinessException(ErrorCode.REDIS_UNAVAILABLE,
                 "Redis unavailable while saving refresh token");
         }
@@ -114,7 +123,7 @@ public class AuthServiceImpl implements AuthService {
 
     private String generateCode() {
         SecureRandom r = new SecureRandom();
-        int n = r.nextInt(1_000_000); // 0 ~ 999999
+        int n = r.nextInt(1_000_000);
         return String.format("%06d", n);
     }
 
