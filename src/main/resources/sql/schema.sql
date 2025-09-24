@@ -204,3 +204,11 @@ CREATE TABLE IF NOT EXISTS schedule_tune_slot (
     );
 
 CREATE INDEX IF NOT EXISTS idx_schedule_tune_slot__tune_index ON schedule_tune_slot (schedule_tune_id, slot_index);
+
+CREATE TABLE IF NOT EXISTS chapter (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_chapter_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE
+);
