@@ -86,7 +86,7 @@ public class ChatServiceImpl implements ChatService {
 
     private void validateMessageContent(String content) {
         if (content == null || content.trim().isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
+            throw new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND);
         }
 
         if (content.length() > 1000) {
