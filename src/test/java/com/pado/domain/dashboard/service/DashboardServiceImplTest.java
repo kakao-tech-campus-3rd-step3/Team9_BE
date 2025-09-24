@@ -14,25 +14,20 @@ import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
-import jakarta.persistence.EntityNotFoundException;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mockStatic;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,20 +41,16 @@ class DashboardServiceImplTest {
     @Mock private ScheduleRepository scheduleRepository;
     @Mock private StudyMemberRepository studyMemberRepository;
     @Mock private AttendanceRepository attendanceRepository;
-
-    private MockedStatic<LocalDateTime> mockedTime;
+    @Mock private Clock clock;
 
     private Study study;
     private User author;
     private Material notice;
     private Schedule schedule;
-    private final LocalDateTime fixedNow = LocalDateTime.of(2025, 9, 18, 1, 11, 8);
+    private final LocalDateTime fixedNow = LocalDateTime.of(2025, 9, 24, 16, 55, 0);
 
     @BeforeEach
     void setUp() {
-        mockedTime = mockStatic(LocalDateTime.class);
-        mockedTime.when(LocalDateTime::now).thenReturn(fixedNow);
-
         study = Study.builder().title("테스트 스터디").build();
         ReflectionTestUtils.setField(study, "id", 1L);
 
@@ -77,14 +68,12 @@ class DashboardServiceImplTest {
         ReflectionTestUtils.setField(schedule, "id", 201L);
     }
 
-    @AfterEach
-    void tearDown() {
-        mockedTime.close();
-    }
-
     @Test
     void 스터디_대시보드_조회_성공() {
         // given
+        when(clock.instant()).thenReturn(fixedNow.toInstant(ZoneOffset.UTC));
+        when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+
         LatestNoticeDto expectedNoticeDto = new LatestNoticeDto(101L, "공지사항 제목", "작성자", fixedNow.minusDays(1));
         when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
         when(materialRepository.findRecentNoticeAsDto(1L, MaterialCategory.NOTICE)).thenReturn(Optional.of(expectedNoticeDto));

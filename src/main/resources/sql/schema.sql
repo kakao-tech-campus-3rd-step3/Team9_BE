@@ -218,3 +218,11 @@ CREATE TABLE chat_message (
 
 CREATE INDEX idx_chat_message_study_id ON chat_message (study_id, id);
 CREATE INDEX idx_chat_message_study_created_at ON chat_message (study_id, created_at);
+
+CREATE TABLE IF NOT EXISTS chapter (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_chapter_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE
+);

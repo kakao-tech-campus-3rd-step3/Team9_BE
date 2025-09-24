@@ -25,7 +25,6 @@ public enum ErrorCode {
     INVALID_MATERIAL_CATEGORY(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_CATEGORY", "자료 카테고리가 올바르지 않습니다."),
     INVALID_MATERIAL_WEEK_REQUIRED(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_WEEK_REQUIRED", "학습자료에는 주차 정보가 필수입니다."),
     INVALID_MATERIAL_WEEK_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "INVALID_MATERIAL_WEEK_NOT_ALLOWED", "학습자료가 아닌 카테고리에서는 주차를 설정할 수 없습니다."),
-
     INVALID_START_TIME(HttpStatus.BAD_REQUEST, "INVALID_START_TIME", "시작 시간이 올바르지 않습니다."),
     INVALID_CANDIDATE_DATES(HttpStatus.BAD_REQUEST, "INVALID_CANDIDATE_DATES", "가능 날짜가 올바르지 않습니다."),
 
@@ -65,6 +64,9 @@ public enum ErrorCode {
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_DELETE_FAILED", "파일 삭제에 실패했습니다."),
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_FILE_FORMAT", "지원하지 않는 파일 형식입니다."),
     S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다."),
+
+    //Progress Domain
+    CHAPTER_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAPTER_NOT_FOUND", "로드맵 차시를 찾을 수 없습니다."),
 
     //Redis
     REDIS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "REDIS_UNAVAILABLE", "Redis 연결에 실패했습니다."),

@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -29,14 +30,13 @@ public class DashboardServiceImpl implements DashboardService {
     private final ScheduleRepository scheduleRepository;
     private final StudyMemberRepository studyMemberRepository;
     private final AttendanceRepository attendanceRepository;
+    private final Clock clock;
 
     public StudyDashboardResponseDto getStudyDashboard(Long studyId) {
-        return getStudyDashboard(studyId, LocalDateTime.now());
-    }
-
-    private StudyDashboardResponseDto getStudyDashboard(Long studyId, LocalDateTime now) {
         Study study = studyRepository.findById(studyId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
+        LocalDateTime now = LocalDateTime.now(clock);
 
         LatestNoticeDto latestNotice = findLatestNotice(studyId);
         UpcomingScheduleDto upcomingSchedule = findUpcomingSchedule(studyId, now);
