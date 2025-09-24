@@ -1,0 +1,42 @@
+package com.pado.domain.chat.entity;
+
+import com.pado.domain.basetime.AuditingEntity;
+import com.pado.domain.study.entity.Study;
+import com.pado.domain.study.entity.StudyMember;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "chat_message", indexes = {
+        @Index(name = "idx_study_id", columnList = "study_id, id"),
+        @Index(name = "idx_study_created_at", columnList = "study_id, created_at")
+})
+public class ChatMessage extends AuditingEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "study_id", nullable = false)
+    private Study study;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id", nullable = false)
+    private StudyMember sender;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Builder
+    public ChatMessage(Study study, StudyMember sender, String content) {
+        this.study = study;
+        this.sender = sender;
+        this.content = content;
+    }
+}
