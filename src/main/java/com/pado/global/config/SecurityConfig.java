@@ -36,6 +36,8 @@ public class SecurityConfig {
                     .requestMatchers("/api/upload/**", "/api/download/**").permitAll()
                     .requestMatchers("/api/studies/*/apply", "/api/studies/*/member/**").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/studies/**").permitAll()
+                    .requestMatchers("/ws/**", "/ws").permitAll()
+                    .requestMatchers("/chat-test.html", "/static/**", "/*.html").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(
