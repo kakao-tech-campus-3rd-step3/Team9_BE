@@ -169,7 +169,7 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(false);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(false);
 
         // when & then
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
@@ -190,7 +190,7 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(true);
 
         // when & then
@@ -211,7 +211,7 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
 
         // when
@@ -236,7 +236,7 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(true);
 
         AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(
@@ -259,7 +259,7 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
 
         AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(
