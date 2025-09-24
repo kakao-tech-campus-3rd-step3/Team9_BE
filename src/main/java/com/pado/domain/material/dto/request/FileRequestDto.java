@@ -1,5 +1,6 @@
 package com.pado.domain.material.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,5 +23,9 @@ public record FileRequestDto(
 
         @Schema(description = "파일 크기(단위: bytes)", example = "1024")
         @NotNull(message = "파일 크기는 필수입니다.")
-        Long size
+        Long size,
+
+        @JsonProperty("file_type")
+        @Schema(name = "file_type", description = "파일 타입", example = ".pdf")
+        String fileType
 ) {}

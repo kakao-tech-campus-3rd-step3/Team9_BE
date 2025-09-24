@@ -66,6 +66,8 @@ public enum ErrorCode {
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_FILE_FORMAT", "지원하지 않는 파일 형식입니다."),
     S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다."),
 
+    //Redis
+    REDIS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "REDIS_UNAVAILABLE", "Redis 연결에 실패했습니다."),
 
     // Chat Domain
     INVALID_SUBSCRIBE_PATH(HttpStatus.BAD_REQUEST, "INVALID_SUBSCRIBE_PATH", "구독 경로가 잘못되었습니다."),

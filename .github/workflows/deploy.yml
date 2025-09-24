@@ -166,6 +166,8 @@ jobs:
             echo "Pull $IMAGE and run on localhost:${PORT} ..."
             sudo docker pull "$IMAGE"
             sudo docker rm -f "$NAME" 2>/dev/null || true
+            sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
+            sudo docker network connect pado-net redis || true
             
             # Create PR env file on remote (prevent expansion with quoted heredoc)
             cat > /tmp/pado-pr.env <<'EOF'
@@ -180,13 +182,18 @@ jobs:
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}
+            JWT_REFRESH_EXP_SECONDS=${{ secrets.JWT_REFRESH_EXP_SECONDS || '1209600' }}
+            MAIL_VERIFICATION_EXP_SECONDS=${{ secrets.MAIL_VERIFICATION_EXP_SECONDS || '300' }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT || '6379' }}
             EOF
             
             NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
+              --network pado-net \
               --add-host host.docker.internal:host-gateway \
               --env-file /tmp/pado-pr.env \
               "$IMAGE")
-            
+
             if [ -z "$NEW_ID" ]; then
               echo "docker run failed"
               sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
@@ -286,6 +293,8 @@ jobs:
             if sudo docker ps -a --format '{{.Names}}' | grep -q "^$NEW_NAME$"; then
               sudo docker rm -f "$NEW_NAME"
             fi
+            sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
+            sudo docker network connect pado-net redis || true
 
             cat > /tmp/pado.env <<'EOF'
             SPRING_PROFILES_ACTIVE=prod
@@ -299,9 +308,14 @@ jobs:
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS }}
+            JWT_REFRESH_EXP_SECONDS=${{ secrets.JWT_REFRESH_EXP_SECONDS || '1209600' }}
+            MAIL_VERIFICATION_EXP_SECONDS=${{ secrets.MAIL_VERIFICATION_EXP_SECONDS || '300' }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT || '6379' }}
             EOF
             
             NEW_CONTAINER_ID=$(sudo docker run -d --name "$NEW_NAME" -p ${TARGET_PORT}:8080 \
+              --network pado-net \
               --add-host host.docker.internal:host-gateway \
               --env-file /tmp/pado.env \
               "$IMAGE")

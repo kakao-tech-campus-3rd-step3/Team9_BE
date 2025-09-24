@@ -1,6 +1,5 @@
 package com.pado.domain.attendance.service;
 
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,47 +55,48 @@ class AttendanceServiceImplTest {
 
     private User testUser(Long id) {
         User u = User.builder()
-                .email("test@test.com")
-                .passwordHash("hashed")
-                .nickname("tester")
-                .region(Region.SEOUL)
-                .gender(Gender.MALE)
-                .build();
+            .email("test@test.com")
+            .passwordHash("hashed")
+            .nickname("tester")
+            .region(Region.SEOUL)
+            .gender(Gender.MALE)
+            .build();
         ReflectionTestUtils.setField(u, "id", id);
         return u;
     }
 
     private User testUser(Long id, String name) {
         User u = User.builder()
-                .email("test@test.com")
-                .passwordHash("hashed")
-                .nickname(name)
-                .region(Region.SEOUL)
-                .gender(Gender.MALE)
-                .build();
+            .email("test@test.com")
+            .passwordHash("hashed")
+            .nickname(name)
+            .region(Region.SEOUL)
+            .gender(Gender.MALE)
+            .build();
         ReflectionTestUtils.setField(u, "id", id);
         return u;
     }
 
     private Schedule testSchedule(Long id, Long studyId, LocalDateTime startDate) {
-        Schedule s =  Schedule.builder()
-                .studyId(studyId)
-                .title("스터디 일정")
-                .description("설명")
-                .startTime(startDate)
-                .endTime(startDate.plusDays(1))
-                .build();
+        Schedule s = Schedule.builder()
+            .studyId(studyId)
+            .title("스터디 일정")
+            .description("설명")
+            .startTime(startDate)
+            .endTime(startDate.plusDays(1))
+            .build();
         ReflectionTestUtils.setField(s, "id", id);
         return s;
     }
+
     private Schedule testSchedule(Long studyId) {
         return Schedule.builder()
-                .studyId(studyId)
-                .title("스터디 일정")
-                .description("설명")
-                .startTime(LocalDateTime.now())
-                .endTime(LocalDateTime.now().plusHours(2))
-                .build();
+            .studyId(studyId)
+            .title("스터디 일정")
+            .description("설명")
+            .startTime(LocalDateTime.now())
+            .endTime(LocalDateTime.now().plusHours(2))
+            .build();
     }
 
     private Study testStudy(Long id) {
@@ -105,21 +105,21 @@ class AttendanceServiceImplTest {
 
     private Attendance testAttendance(Long id, Schedule schedule, User user, boolean status) {
         Attendance a = Attendance.builder()
-                .schedule(schedule)
-                .user(user)
-                .status(status)
-                .checkInTime(LocalDateTime.now())
-                .build();
+            .schedule(schedule)
+            .user(user)
+            .status(status)
+            .checkInTime(LocalDateTime.now())
+            .build();
         ReflectionTestUtils.setField(a, "id", id);
         return a;
     }
 
     private StudyMember testStudyMember(Study study, User user, StudyMemberRole role) {
         return StudyMember.builder()
-                .study(study)
-                .user(user)
-                .role(role)
-                .build();
+            .study(study)
+            .user(user)
+            .role(role)
+            .build();
     }
 
     @Test
@@ -133,8 +133,8 @@ class AttendanceServiceImplTest {
 
         // when & then
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(ErrorCode.SCHEDULE_NOT_FOUND.message);
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining(ErrorCode.SCHEDULE_NOT_FOUND.message);
     }
 
     @Test
@@ -147,14 +147,13 @@ class AttendanceServiceImplTest {
         User user = testUser(userId);
         Schedule schedule = testSchedule(studyId);
 
-
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
     }
 
     @Test
@@ -170,12 +169,12 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(false);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(false);
 
         // when & then
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY.message);
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY.message);
     }
 
     @Test
@@ -191,13 +190,13 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(true);
 
         // when & then
         assertThatThrownBy(() -> attendanceService.checkIn(scheduleId, user))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(ErrorCode.ALREADY_CHECKED_IN.message);
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining(ErrorCode.ALREADY_CHECKED_IN.message);
     }
 
     @Test
@@ -212,7 +211,7 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
 
         // when
@@ -226,7 +225,7 @@ class AttendanceServiceImplTest {
 
     @Test
     @DisplayName("출석한 경우 개별 출석 여부 확인")
-    void 개별_출석_확인_출석(){
+    void 개별_출석_확인_출석() {
         // given
         Long userId = 10L;
         Long scheduleId = 1L;
@@ -237,10 +236,11 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(true);
 
-        AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user);
+        AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(
+            scheduleId, user);
         assertThat(response).isNotNull();
         assertThat(response.status()).isTrue();
         then(attendanceRepository).should(times(0)).save(any(Attendance.class));
@@ -248,7 +248,7 @@ class AttendanceServiceImplTest {
 
     @Test
     @DisplayName("미출석한 경우 개별 출석 여부 확인")
-    void 개별_출석_확인_미출석(){
+    void 개별_출석_확인_미출석() {
         // given
         Long userId = 10L;
         Long scheduleId = 1L;
@@ -259,10 +259,11 @@ class AttendanceServiceImplTest {
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
-        given(studyMemberRepository.existsByStudyAndUser(study, user)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))).willReturn(true);
         given(attendanceRepository.existsByScheduleAndUser(schedule, user)).willReturn(false);
 
-        AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(studyId, scheduleId, user);
+        AttendanceStatusResponseDto response = attendanceService.getIndividualAttendanceStatus(
+            scheduleId, user);
         assertThat(response).isNotNull();
         assertThat(response.status()).isFalse();
         then(attendanceRepository).should(times(0)).save(any(Attendance.class));
@@ -282,22 +283,22 @@ class AttendanceServiceImplTest {
         StudyMember sm2 = testStudyMember(study, u2, StudyMemberRole.LEADER);
         List<StudyMember> members = List.of(sm1, sm2);
 
-        // 스케줄 3개 (시간순 정렬 가정)
         LocalDateTime base = LocalDateTime.now().withNano(0);
         Schedule sc1 = testSchedule(11L, studyId, base.plusDays(1));
         Schedule sc2 = testSchedule(12L, studyId, base.plusDays(2));
         Schedule sc3 = testSchedule(13L, studyId, base.plusDays(3));
         List<Schedule> schedules = List.of(sc1, sc2, sc3);
 
-        // Attendance: u1은 sc1만 출석(true)
         Attendance a1 = testAttendance(1000L, sc1, u1, true);
         List<Attendance> attendanceList = List.of(a1);
 
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
         given(studyMemberRepository.findByStudyWithUser(study)).willReturn(members);
         given(scheduleRepository.findByStudyIdOrderByStartTimeAsc(studyId)).willReturn(schedules);
-        given(attendanceRepository.findAllByStudyIdWithScheduleAndUser(studyId)).willReturn(attendanceList);
-        given(studyMemberRepository.findLeaderUserIdByStudy(study, StudyMemberRole.LEADER)).willReturn(u2.getId());
+        given(attendanceRepository.findAllByStudyIdWithScheduleAndUser(studyId)).willReturn(
+            attendanceList);
+        given(studyMemberRepository.findLeaderUserIdByStudy(study,
+            StudyMemberRole.LEADER)).willReturn(u2.getId());
 
         // when
         AttendanceListResponseDto resp = attendanceService.getFullAttendance(studyId);
@@ -305,33 +306,23 @@ class AttendanceServiceImplTest {
         // then
         assertThat(resp).isNotNull();
 
-        // record 스타일 가정: members()
         List<MemberAttendanceDto> resultMembers = resp.members();
         assertThat(resultMembers).hasSize(2);
 
-        // 멤버별 상태 길이는 스케줄 개수와 동일해야 함
         MemberAttendanceDto m1 = resultMembers.get(0);
         MemberAttendanceDto m2 = resultMembers.get(1);
 
         assertThat(m1.attendance()).hasSize(3);
         assertThat(m2.attendance()).hasSize(3);
-
-        // u2: [false, false, false], 리더가 먼저 출력되는지 확인
         assertThat(m1.name()).isEqualTo("u2");
         assertThat(m1.attendance().stream().allMatch(s -> !s.status())).isTrue();
-
-
-        // u1: [true, false, false]
         assertThat(m2.name()).isEqualTo("u1");
         assertThat(m2.attendance().get(0).status()).isTrue();
         assertThat(m2.attendance().get(1).status()).isFalse();
         assertThat(m2.attendance().get(2).status()).isFalse();
-
-        // 스케줄 시간 정렬 보장 체크
         assertThat(m1.attendance().get(0).schedule_date()).isEqualTo(sc1.getStartTime());
         assertThat(m1.attendance().get(1).schedule_date()).isEqualTo(sc2.getStartTime());
         assertThat(m1.attendance().get(2).schedule_date()).isEqualTo(sc3.getStartTime());
-
 
         then(studyRepository).should(times(1)).findById(studyId);
         then(studyMemberRepository).should(times(1)).findByStudyWithUser(study);

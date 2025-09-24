@@ -55,31 +55,33 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ScheduleByDateResponseDto> findMySchedulesByMonth(Long userId, int year, int month) {
+    public List<ScheduleByDateResponseDto> findMySchedulesByMonth(Long userId, int year,
+        int month) {
         // 1. 요청받은 달의 1일 찾기
         LocalDate firstDayOfMonth = LocalDate.of(year, month, 1);
 
         // 2. 그 1일이 포함된 주의 일요일 찾기 (캘린더의 시작일)
-        LocalDate startDate = firstDayOfMonth.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+        LocalDate startDate = firstDayOfMonth.with(
+            TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
 
         // 3. 캘린더의 종료일 찾기 (시작일 + 6주 - 1일)
         LocalDate endDate = startDate.plusWeeks(6).minusDays(1);
 
         List<Schedule> schedules = scheduleRepository.findAllByUserIdAndPeriod(
-                userId,
-                startDate.atStartOfDay(),
-                endDate.plusDays(1).atStartOfDay()
+            userId,
+            startDate.atStartOfDay(),
+            endDate.plusDays(1).atStartOfDay()
         );
         // 4. DB에서 startDate와 endDate 사이의 모든 일정을 조회하여 반환
         return schedules.stream()
-                .map(schedule -> new ScheduleByDateResponseDto(
-                        schedule.getId(),
-                        schedule.getStudyId(),
-                        schedule.getTitle(),
-                        schedule.getStartTime(),
-                        schedule.getEndTime()
-                ))
-                .collect(Collectors.toList());
+            .map(schedule -> new ScheduleByDateResponseDto(
+                schedule.getId(),
+                schedule.getStudyId(),
+                schedule.getTitle(),
+                schedule.getStartTime(),
+                schedule.getEndTime()
+            ))
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -106,7 +108,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     public ScheduleDetailResponseDto findScheduleDetailById(Long scheduleId) {
         Schedule schedule = findScheduleById(scheduleId);
         User currentUser = getCurrentUser();
-        
+
         if (!studyMemberService.isStudyMember(currentUser, schedule.getStudyId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
@@ -121,34 +123,24 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    public void updateSchedule(Long studyId, Long scheduleId, ScheduleCreateRequestDto request) {
+    public void updateSchedule(Long scheduleId, ScheduleCreateRequestDto request) {
         User currentUser = getCurrentUser();
-        Study study = findStudyById(studyId);
-
+        Schedule schedule = findScheduleById(scheduleId);
+        Study study = findStudyById(schedule.getStudyId());
         if (!studyMemberService.isStudyLeader(currentUser, study)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
-        }
-
-        Schedule schedule = findScheduleById(scheduleId);
-        if (!schedule.getStudyId().equals(studyId)) {
-            throw new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND, "해당 스터디에 존재하지 않는 일정입니다.");
         }
         schedule.update(request.title(), request.content(), request.start_time(),
             request.end_time());
     }
 
     @Override
-    public void deleteSchedule(Long studyId, Long scheduleId) {
+    public void deleteSchedule(Long scheduleId) {
         User currentUser = getCurrentUser();
-        Study study = findStudyById(studyId);
-
+        Schedule schedule = findScheduleById(scheduleId);
+        Study study = findStudyById(schedule.getStudyId());
         if (!studyMemberService.isStudyLeader(currentUser, study)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
-        }
-
-        Schedule schedule = findScheduleById(scheduleId);
-        if (!schedule.getStudyId().equals(studyId)) {
-            throw new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND, "해당 스터디에 존재하지 않는 일정입니다.");
         }
         scheduleRepository.delete(schedule);
     }

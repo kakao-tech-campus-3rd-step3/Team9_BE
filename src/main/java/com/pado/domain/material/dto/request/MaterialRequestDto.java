@@ -41,8 +41,8 @@ public record MaterialRequestDto(
                 """,
                 example = """
                 [
-                  {"id": 1, "name": "기존파일.pdf", "key": "..."},
-                  {"id": null, "name": "새파일.jpg", "key": "..."}
+                  {"id": 1, "name": "기존파일.pdf", "key": "...", "size": 795820, "file_type": ".pdf"},
+                  {"id": null, "name": "새파일.jpg", "key": "...", "size": 500000, "file_type": ".pptx"}
                 ]
                 """)
         @NotNull(message = "files는 null일 수 없습니다.")

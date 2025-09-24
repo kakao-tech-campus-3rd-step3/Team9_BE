@@ -40,7 +40,7 @@ public class User extends AuditingEntity {
     private Region region;
 
     @Column(length = 500)
-    private String profileImageUrl;
+    private String image_key;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -50,12 +50,12 @@ public class User extends AuditingEntity {
     private List<UserInterest> interests = new ArrayList<>();
 
     @Builder
-    public User(String email, String passwordHash, String nickname, Region region, String profileImageUrl, Gender gender){
+    public User(String email, String passwordHash, String nickname, Region region, String image_key, Gender gender){
         this.email = email;
         this.passwordHash = passwordHash;
         this.nickname = nickname;
         this.region = region;
-        this.profileImageUrl = profileImageUrl;
+        this.image_key = image_key;
         this.gender = gender;
     }
 
@@ -64,7 +64,7 @@ public class User extends AuditingEntity {
             String passwordHash,
             String nickname,
             Region region,
-            String profileImageUrl,
+            String image_key,
             Gender gender,
             Collection<Category> interests
     ) {
@@ -73,7 +73,7 @@ public class User extends AuditingEntity {
         user.passwordHash = Objects.requireNonNull(passwordHash);
         user.nickname = Objects.requireNonNull(nickname);
         user.region = region;
-        user.profileImageUrl = profileImageUrl;
+        user.image_key = image_key;
         user.gender = gender;
 
         for (Category c : interests) {
@@ -93,18 +93,6 @@ public class User extends AuditingEntity {
                 .category(category)
                 .build();
         this.interests.add(interest);
-    }
-
-    public void changeNickname(String nickname) {
-        this.nickname = nickname;
-    }
-
-    public void changeRegion(Region region) {
-        this.region = region;
-    }
-
-    public void changeProfileImage(String url) {
-        this.profileImageUrl = url;
     }
 
     @Override

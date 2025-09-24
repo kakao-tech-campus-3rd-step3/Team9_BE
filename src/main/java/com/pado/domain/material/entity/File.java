@@ -25,15 +25,19 @@ public class File {
     @Column(nullable = false)
     private Long size; // 단위: byte
 
+    @Column(name = "file_type", nullable = false)
+    private String fileType;
+
     // Material 생성 이후 setter를 통해 연관관계를 지어줘야 함
     @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "material_id", nullable = false)
     private Material material;
 
-    public File(String name, String fileKey, Long size) {
+    public File(String name, String fileKey, Long size, String fileType) {
         this.name = name;
         this.fileKey = fileKey;
         this.size = size;
+        this.fileType = fileType;
     }
 }

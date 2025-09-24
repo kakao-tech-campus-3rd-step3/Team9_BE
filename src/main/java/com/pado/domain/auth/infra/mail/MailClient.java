@@ -1,4 +1,4 @@
-package com.pado.domain.auth.mail;
+package com.pado.domain.auth.infra.mail;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;

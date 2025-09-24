@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -28,17 +29,22 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        http.cors(Customizer.withDefaults())
+            .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-resources/**",
-                    "/api-docs/**", "/actuator/health").permitAll()
-                    .requestMatchers("/api/upload/**", "/api/download/**").permitAll()
-                    .requestMatchers("/api/studies/*/apply", "/api/studies/*/member/**").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/studies/**").permitAll()
-                    .requestMatchers("/ws/**", "/ws").permitAll()
-                    .requestMatchers("/chat-test.html", "/static/**", "/*.html").permitAll()
-                    .anyRequest().authenticated()
+                    "/api-docs/**", "/v3/api-docs/**", "/actuator/health").permitAll()
+                .requestMatchers("/api/upload/**", "/api/download/**").permitAll()
+                .requestMatchers("/api/studies/*/apply", "/api/studies/*/member/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/studies/*/schedule-tunes/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/studies/*/attendance/**").authenticated()
+                .requestMatchers("/api/schedules/**").authenticated()
+                .requestMatchers("/api/schedule-tunes/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/studies/**").permitAll()
+                .requestMatchers("/ws/**", "/ws").permitAll()
+                .requestMatchers("/chat-test.html", "/static/**", "/*.html").permitAll()
+                .anyRequest().authenticated()
             )
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwtProvider, customUserDetailsService, objectMapper),
