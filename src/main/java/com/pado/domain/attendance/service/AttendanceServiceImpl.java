@@ -117,7 +117,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
 
         // 스터디 멤버 검증
-        if (!studyMemberRepository.existsByStudyAndUser(study, user)) {
+        if (!studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
 

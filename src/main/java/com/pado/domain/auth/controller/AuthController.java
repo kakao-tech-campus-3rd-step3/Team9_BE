@@ -13,20 +13,16 @@ import com.pado.global.auth.jwt.JwtProvider;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import com.pado.global.exception.dto.ErrorResponseDto;
-import com.pado.global.swagger.annotation.common.NoApi409Conflict;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -35,87 +31,52 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 
-@Tag(name = "01. Authentication", description = "로그인, 회원가입 등 사용자 인증 관련 API")
+@Tag(name = "01. Authentication", description = "인증/인가 API")
 @RestController
 @RequestMapping("/api/auth")
-@SecurityRequirements({})
 @RequiredArgsConstructor
 public class AuthController {
+
     private final AuthService authService;
     private final JwtProvider jwtProvider;
-    @Operation(summary = "닉네임 중복 확인", description = "입력한 닉네임이 사용 가능한지 확인합니다.\n\n" +
-            "**[Mock 테스트용 안내]**\n" +
-            "- `nickname`으로 \"중복닉네임\"을 전송하면 `false`를 반환합니다.\n" +
-            "- 그 외 모든 값에 대해서는 `true`를 반환합니다.")
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
+    private boolean isLocalLike() {
+        String p = activeProfile == null ? "" : activeProfile.toLowerCase();
+        return p.contains("dev") || p.contains("local");
+    }
+
+    @Operation(summary = "닉네임 중복 확인", description = "닉네임 사용 가능 여부를 확인합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "사용 가능 여부 확인 성공",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = NicknameCheckResponseDto.class),
-                            examples = {
-                                    @ExampleObject(name = "사용 가능한 닉네임", value = "{\"is_available\": true}"),
-                                    @ExampleObject(name = "이미 존재하는 닉네임", value = "{\"is_available\": false}")
-                            })),
-            @ApiResponse(responseCode = "400", description = "유효하지 않은 입력 값",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "파라미터 유효성 오류",
-                                    value = """
-                                            {
-                                              "code": "INVALID_INPUT",
-                                              "message": "요청 값이 올바르지 않습니다.",
-                                              "errors": [
-                                                "nickname: 닉네임은 2자 이상 10자 이하로 입력해주세요."
-                                              ],
-                                              "timestamp": "2025-09-07T08:15:10.8668626",
-                                              "path": "/api/auth/check-nickname"
-                                            }
-                                            """
-                            )
-                    )
-            )
-    })
-    @Parameters({
-            @Parameter(name = "nickname", description = "중복 확인할 닉네임", required = true, example = "파도")
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = NicknameCheckResponseDto.class),
+                examples = {
+                    @ExampleObject(name = "사용 가능", value = "{\"isAvailable\":true}"),
+                    @ExampleObject(name = "사용 불가", value = "{\"isAvailable\":false}")
+                })),
+        @ApiResponse(responseCode = "400", description = "유효성 오류",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = @ExampleObject(name = "유효성 에러", value = "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다.\",\"errors\":[\"nickname: 2~10자\"],\"path\":\"/api/auth/check-nickname\"}")))
     })
     @GetMapping("/check-nickname")
-    public ResponseEntity<NicknameCheckResponseDto> checkNickname(
-            @RequestParam
-            @Size(min = 2, max = 10, message = "닉네임은 2자 이상 10자 이하로 입력해주세요.")
-            String nickname
-    ) {
+    public ResponseEntity<NicknameCheckResponseDto> checkNickname(@RequestParam String nickname) {
         return ResponseEntity.ok(authService.checkNickname(nickname));
     }
 
-    @Operation(summary = "회원가입", description = "이메일, 비밀번호, 닉네임, 성별, 관심 분야, 지역 정보를 입력 받아 회원 계정을 생성합니다.")
+    @Operation(summary = "회원가입", description = "이메일/비밀번호 등으로 회원가입합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "회원가입 성공"),
-            @ApiResponse(responseCode = "409", description = "이미 존재하는 이메일 또는 닉네임",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = {
-                                    @ExampleObject(name = "이미 존재하는 이메일",
-                                            value = """
-                                                    {
-                                                      "code": "DUPLICATE_EMAIL",
-                                                      "message": "이미 사용 중인 이메일입니다.",
-                                                      "errors": [],
-                                                      "timestamp": "2025-09-07T08:15:10.8668626",
-                                                      "path": "/api/auth/signup"
-                                                    }
-                                                    """),
-                                    @ExampleObject(name = "이미 존재하는 닉네임",
-                                            value = """
-                                                    {
-                                                      "code": "DUPLICATE_NICKNAME",
-                                                      "message": "이미 사용 중인 닉네임입니다.",
-                                                      "errors": [],
-                                                      "timestamp": "2025-09-07T08:15:10.8668626",
-                                                      "path": "/api/auth/signup"
-                                                    }
-                                                    """)
-                            })
-            )
+        @ApiResponse(responseCode = "201", description = "생성"),
+        @ApiResponse(responseCode = "409", description = "중복 이메일/닉네임",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = {
+                    @ExampleObject(name = "이메일 중복", value = "{\"code\":\"DUPLICATE_EMAIL\",\"message\":\"이미 사용 중인 이메일입니다.\",\"errors\":[],\"path\":\"/api/auth/signup\"}"),
+                    @ExampleObject(name = "닉네임 중복", value = "{\"code\":\"DUPLICATE_NICKNAME\",\"message\":\"이미 사용 중인 닉네임입니다.\",\"errors\":[],\"path\":\"/api/auth/signup\"}")
+                }))
     })
     @PostMapping("/signup")
     public ResponseEntity<Void> register(@Valid @RequestBody SignUpRequestDto request) {
@@ -123,127 +84,84 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @NoApi409Conflict
-    @Operation(summary = "로그인", description = "사용자가 이메일과 비밀번호를 입력해 로그인을 요청합니다. 입력 정보가 맞으면 인증 토큰(예: JWT)을 반환합니다.")
+    @Operation(summary = "로그인", description = "이메일/비밀번호로 로그인하고, Refresh 쿠키를 설정합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "로그인 성공",
-                    content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패 (잘못된 이메일 또는 비밀번호)",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "인증 실패",
-                                    value = """
-                                            {
-                                              "code": "AUTHENTICATION_FAILED",
-                                              "message": "이메일 또는 비밀번호가 일치하지 않습니다.",
-                                              "errors": [],
-                                              "timestamp": "2025-09-07T08:15:10.8668626",
-                                              "path": "/api/auth/login"
-                                            }
-                                            """
-                            )
-                    )
-            )
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "인증 실패",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = @ExampleObject(name = "자격 증명 불일치", value = "{\"code\":\"UNAUTHENTICATED_USER\",\"message\":\"Invalid credentials\",\"errors\":[],\"path\":\"/api/auth/login\"}")))
     })
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         TokenWithRefreshResponseDto tokens = authService.login(request);
-        ResponseCookie refreshCookie = ResponseCookie.from("REFRESH_TOKEN", tokens.refreshToken())
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Lax")
-                .path("/api/auth/refresh")
-                .maxAge(Duration.ofSeconds(jwtProvider.getRefreshTtl()))
-                .build();
 
+        ResponseCookie.ResponseCookieBuilder base = ResponseCookie.from("REFRESH_TOKEN",
+                tokens.refreshToken())
+            .httpOnly(true)
+            .path("/")
+            .maxAge(Duration.ofSeconds(jwtProvider.getRefreshTtl()));
+
+        ResponseCookie cookie = isLocalLike()
+            ? base.sameSite("None").secure(false).build()
+            : base.domain(".gogumalatte.site").secure(true).sameSite("None")
+                .build();
+        org.slf4j.LoggerFactory.getLogger(AuthController.class)
+            .info("Login Set-Cookie => {}", cookie.toString());
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-                .body(new TokenResponseDto(tokens.accessToken()));
+            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .body(new TokenResponseDto(tokens.accessToken()));
     }
 
-    @NoApi409Conflict
-    @Operation(summary = "토큰 재발급", description = "사용자가 refreshtoken을 통해 인증 토큰을 재발급받습니다.")
+    @Operation(summary = "액세스 토큰 재발급", description = "Refresh 쿠키로 Access 토큰을 재발급합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "인증 토큰 발급 성공",
-                    content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패 (잘못된 또는 존재하지 않는 토큰)",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "인증 실패",
-                                    value = """
-                                            {
-                                              "code": "AUTHENTICATION_FAILED",
-                                              "message": "RefreshToken이 존재하지 않습니다.",
-                                              "errors": [],
-                                              "timestamp": "2025-09-07T08:15:10.8668626",
-                                              "path": "/api/auth/refresh"
-                                            }
-                                            """
-                            )
-                    )
-            )
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = TokenResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "리프레시 누락/불일치",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = {
+                    @ExampleObject(name = "쿠키 누락", value = "{\"code\":\"UNAUTHENTICATED_USER\",\"message\":\"RefreshToken 쿠키가 없습니다.\",\"errors\":[],\"path\":\"/api/auth/refresh\"}"),
+                    @ExampleObject(name = "토큰 불일치", value = "{\"code\":\"UNAUTHENTICATED_USER\",\"message\":\"RefreshToken mismatch\",\"errors\":[],\"path\":\"/api/auth/refresh\"}")
+                }))
     })
     @PostMapping("/refresh")
-    public ResponseEntity<TokenResponseDto> refresh(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
+    public ResponseEntity<TokenResponseDto> refresh(
+        @CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
         if (refreshToken == null) {
-            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "RefreshToken이 존재하지 않습니다.");
+            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "RefreshToken 쿠키가 없습니다.");
         }
-        return ResponseEntity.ok().body(authService.renewAccessToken(refreshToken));
+        return ResponseEntity.ok(authService.renewAccessToken(refreshToken));
     }
 
-    @NoApi409Conflict
-    @Operation(summary = "이메일 인증(인증번호 전송)", description = "입력한 이메일로 인증번호를 전송합니다.")
+    @Operation(summary = "이메일 인증코드 발송", description = "이메일로 인증 코드를 보냅니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "인증번호 전송 성공",
-                    content = @Content(schema = @Schema(implementation = EmailVerificationResponseDto.class),
-                            examples = @ExampleObject(value = "{\"success\": true, \"message\": \"인증번호가 성공적으로 전송되었습니다.\"}"))),
-            @ApiResponse(responseCode = "409", description = "이미 가입된 이메일",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(name = "이미 가입된 이메일",
-                                    value = """
-                                            {
-                                              "code": "DUPLICATE_EMAIL",
-                                              "message": "이미 사용 중인 이메일입니다.",
-                                              "errors": [],
-                                              "timestamp": "2025-09-07T08:15:10.8668626",
-                                              "path": "/api/auth/email/send"
-                                            }
-                                            """
-                            )
-                    )
-            )
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = EmailVerificationResponseDto.class))),
+        @ApiResponse(responseCode = "409", description = "중복 이메일(정책상 충돌 상황 가정)",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = @ExampleObject(name = "이메일 충돌", value = "{\"code\":\"DUPLICATE_EMAIL\",\"message\":\"이미 사용 중인 이메일입니다.\",\"errors\":[],\"path\":\"/api/auth/email/send\"}")))
     })
     @PostMapping("/email/send")
-    public ResponseEntity<EmailVerificationResponseDto> sendVerificationEmail(@Valid @RequestBody EmailSendRequestDto request) {
+    public ResponseEntity<EmailVerificationResponseDto> sendVerificationEmail(
+        @Valid @RequestBody EmailSendRequestDto request) {
         return ResponseEntity.ok(authService.emailSend(request));
     }
 
-    @NoApi409Conflict
-    @Operation(summary = "이메일 인증(인증번호 확인)", description = "사용자가 입력한 인증번호가 올바른지 확인합니다.")
+    @Operation(summary = "이메일 인증", description = "인증 코드를 검증합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "이메일 인증 성공",
-                    content = @Content(schema = @Schema(implementation = EmailVerificationResponseDto.class),
-                            examples = @ExampleObject(value = "{\"success\": true, \"message\": \"이메일 인증이 완료되었습니다.\"}"))),
-            @ApiResponse(responseCode = "401", description = "인증번호 불일치 또는 만료",
-                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(name = "인증번호 불일치 또는 만료",
-                                    value = """
-                                            {
-                                              "code": "VERIFICATION_CODE_MISMATCH",
-                                              "message": "인증번호가 일치하지 않거나 만료되었습니다.",
-                                              "errors": [],
-                                              "timestamp": "2025-09-07T08:15:10.8668626",
-                                              "path": "/api/auth/email/verify"
-                                            }
-                                            """
-                            )
-                    )
-            )
+        @ApiResponse(responseCode = "200", description = "성공",
+            content = @Content(schema = @Schema(implementation = EmailVerificationResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "코드 불일치",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponseDto.class),
+                examples = @ExampleObject(name = "코드 불일치", value = "{\"code\":\"VERIFICATION_CODE_MISMATCH\",\"message\":\"인증 코드가 올바르지 않습니다.\",\"errors\":[],\"path\":\"/api/auth/email/verify\"}")))
     })
     @PostMapping("/email/verify")
-    public ResponseEntity<EmailVerificationResponseDto> verifyEmailCode(@Valid @RequestBody EmailVerifyRequestDto request) {
+    public ResponseEntity<EmailVerificationResponseDto> verifyEmailCode(
+        @Valid @RequestBody EmailVerifyRequestDto request) {
         return ResponseEntity.ok(authService.emailVerify(request));
     }
 }
