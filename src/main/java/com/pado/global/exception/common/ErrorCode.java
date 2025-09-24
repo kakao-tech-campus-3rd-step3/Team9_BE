@@ -54,6 +54,7 @@ public enum ErrorCode {
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 스터디에 참여 신청했습니다."),
     STUDY_NOT_RECRUITING(HttpStatus.BAD_REQUEST, "STUDY_NOT_RECRUITING", "모집 중인 스터디가 아닙니다."),
     STUDY_FULL(HttpStatus.BAD_REQUEST, "STUDY_FULL", "스터디 정원이 가득 찼습니다."),
+    STUDY_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_APPLICATION_NOT_FOUND", "승인 요청중인 유저를 찾을 수 없습니다."),
 
     // Material Domain
     MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다."),
@@ -63,7 +64,14 @@ public enum ErrorCode {
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", "파일을 찾을 수 없습니다."),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_DELETE_FAILED", "파일 삭제에 실패했습니다."),
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_FILE_FORMAT", "지원하지 않는 파일 형식입니다."),
-    S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다.");
+    S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다."),
+
+
+    // Chat Domain
+    INVALID_SUBSCRIBE_PATH(HttpStatus.BAD_REQUEST, "INVALID_SUBSCRIBE_PATH", "구독 경로가 잘못되었습니다."),
+    CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_NOT_FOUND", "채팅 메시지를 찾을 수 없습니다."),
+    CHAT_MESSAGE_TOO_LONG(HttpStatus.BAD_REQUEST, "CHAT_MESSAGE_TOO_LONG", "메시지가 너무 깁니다."),
+    WEBSOCKET_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "WEBSOCKET_CONNECTION_FAILED", "웹소켓 연결에 실패했습니다.");
 
     public final HttpStatus status;
     public final String code;
