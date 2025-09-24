@@ -31,11 +31,9 @@ import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
-public class AuthServiceImpl implements AuthService {
-
+public class AuthServiceImpl implements AuthService{
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
-
+    
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
@@ -45,8 +43,9 @@ public class AuthServiceImpl implements AuthService {
     private final AuthProps authProps;
 
     @Override
-    public void register(@Valid SignUpRequestDto request) {
-        if (userRepository.existsByEmail(request.email())) {
+    @Transactional
+    public void register(SignUpRequestDto request) {
+        if(userRepository.existsByEmail(request.email())){
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
         String passwordHash = passwordEncoder.encode(request.password());
