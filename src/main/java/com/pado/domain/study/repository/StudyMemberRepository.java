@@ -43,4 +43,6 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
 
     List<StudyMember> findAllByStudyIdOrderByRankPointDesc(Long studyId);
     boolean existsByStudyIdAndUserIdAndRoleIn(Long studyId, Long userId, Collection<StudyMemberRole> roles);
+
+    boolean existsByStudyIdAndUserId(Long studyId, Long id);
 }
