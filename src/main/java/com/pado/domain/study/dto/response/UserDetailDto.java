@@ -5,8 +5,8 @@ import java.util.List;
 
 @Schema(description = "사용자 세부 정보 DTO")
 public record UserDetailDto(
-        @Schema(description = "사용자 프로필 이미지 URL", example = "https://pado-image.com/user/1")
-        String image_url,
+        @Schema(description = "스터디 대표 이미지 파일 키 (S3에 저장된 객체 경로)", example = "study/12345/main.png")
+        String file_key,
 
         @Schema(description = "성별", example = "Men", allowableValues = {"Men", "Women"})
         String gender,

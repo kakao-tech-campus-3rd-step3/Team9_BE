@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,12 +31,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @SecurityRequirements({})
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
     @Operation(summary = "닉네임 중복 확인", description = "입력한 닉네임이 사용 가능한지 확인합니다.\n\n" +
             "**[Mock 테스트용 안내]**\n" +
             "- `nickname`으로 \"중복닉네임\"을 전송하면 `false`를 반환합니다.\n" +

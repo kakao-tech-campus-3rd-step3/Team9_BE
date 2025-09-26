@@ -1,6 +1,8 @@
 package com.pado.domain.material.entity;
 
 import com.pado.domain.basetime.AuditingEntity;
+import com.pado.domain.study.entity.Study;
+import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.*;
@@ -31,23 +33,15 @@ public class Material extends AuditingEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    // TODO: 추후 User, Study 엔티티 연관관계 활성화
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "user_id", nullable = false)
-    // private User user;
+     @ManyToOne(fetch = FetchType.LAZY)
+     @JoinColumn(name = "user_id", nullable = false)
+     private User user;
 
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "study_id", nullable = false)
-    // private Study study;
+     @ManyToOne(fetch = FetchType.LAZY)
+     @JoinColumn(name = "study_id", nullable = false)
+     private Study study;
 
-    // 임시로 studyId와 userId를 직접 저장 (추후 연관관계로 변경)
-    @Column(name = "study_id", nullable = false)
-    private Long studyId;
-
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-
-    public Material(String title, MaterialCategory materialCategory, Integer week, String content, Long studyId, Long userId) {
+    public Material(String title, MaterialCategory materialCategory, Integer week, String content, Study study, User user) {
 
         validateCategoryAndWeek(materialCategory, week);
 
@@ -55,8 +49,8 @@ public class Material extends AuditingEntity {
         this.materialCategory = materialCategory;
         this.week = week;
         this.content = content;
-        this.studyId = studyId;
-        this.userId = userId;
+        this.study = study;
+        this.user = user;
     }
 
     public void updateMaterial(String title, MaterialCategory materialCategory, Integer week, String content) {
@@ -69,8 +63,9 @@ public class Material extends AuditingEntity {
         this.content = content;
     }
 
-    public boolean isOwnedBy(Long userId) {
-        return this.userId.equals(userId);
+    public boolean isOwnedBy(User user) {
+
+        return this.user.getId().equals(user.getId());
     }
 
     public boolean isLearningMaterial() {

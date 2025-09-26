@@ -33,9 +33,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-resources/**",
                     "/api-docs/**", "/actuator/health").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/studies").permitAll()
-                .requestMatchers("/api/studies/**").authenticated()
-                .anyRequest().authenticated()
+                    .requestMatchers("/api/upload/**", "/api/download/**").permitAll()
+                    .requestMatchers("/api/studies/*/apply", "/api/studies/*/member/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/studies/**").permitAll()
+                    .anyRequest().authenticated()
             )
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwtProvider, customUserDetailsService, objectMapper),

@@ -3,13 +3,11 @@ package com.pado.domain.study.service;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
-import com.pado.domain.study.entity.Study;
-import com.pado.domain.study.entity.StudyCategory;
-import com.pado.domain.study.entity.StudyMember;
-import com.pado.domain.study.entity.StudyMemberRole;
+import com.pado.domain.study.entity.*;
 import com.pado.domain.study.exception.StudyNotFoundException;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
@@ -44,7 +42,7 @@ public class StudyServiceImpl implements StudyService {
                 .studyTime(requestDto.study_time())
                 .region(requestDto.region())
                 .maxMembers(requestDto.max_members())
-                .imageUrl(requestDto.image_url())
+                .fileKey(requestDto.file_key())
                 .build();
 
         newStudy.addInterests(requestDto.interests());
@@ -58,6 +56,17 @@ public class StudyServiceImpl implements StudyService {
 
         studyRepository.save(newStudy);
         studyMemberRepository.save(leaderMember);
+    }
+
+    public List<MyStudyResponseDto> findMyStudies(Long userId) {
+        List<Study> studies = studyRepository.findByUserId(userId);
+
+        return studies.stream()
+                .map(study -> new MyStudyResponseDto(
+                        study.getId(),
+                        study.getTitle()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -90,15 +99,19 @@ public class StudyServiceImpl implements StudyService {
                 .map(StudyCategory::getCategory)
                 .collect(Collectors.toList());
 
+        List<String> conditions = study.getConditions().stream()
+                .map(StudyCondition::getContent)
+                .toList();
+
         return new StudyDetailResponseDto(
-                study.getImageUrl(),
+                study.getFileKey(),
                 study.getTitle(),
                 study.getDescription(),
                 study.getDetailDescription(),
                 categories,
                 study.getRegion(),
                 study.getStudyTime(),
-                study.getConditions(),
+                conditions,
                 currentMembers,
                 study.getMaxMembers()
         );

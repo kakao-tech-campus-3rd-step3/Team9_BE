@@ -2,6 +2,7 @@ package com.pado.domain.study.controller;
 
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.shared.entity.Region;
@@ -44,6 +45,16 @@ public class StudyController {
             @Valid @RequestBody StudyCreateRequestDto request) {
         studyService.createStudy(user, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(summary = "내 스터디 목록 조회", description = "현재 로그인한 사용자가 참여하고 있는 스터디 목록을 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping("/me")
+    public ResponseEntity<List<MyStudyResponseDto>> getMyStudies(
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        List<MyStudyResponseDto> myStudies = studyService.findMyStudies(user.getId());
+        return ResponseEntity.ok(myStudies);
     }
 
     @SecurityRequirements({})

@@ -138,7 +138,7 @@ public class StudyRepositoryCustomImpl implements StudyRepositoryCustom {
 
         // 최신순 -> id순 정렬
         orderSpecifiers.add(new OrderSpecifier<>(Order.DESC, study.createdAt));
-        orderSpecifiers.add(new OrderSpecifier<>(Order.ASC, study.id));
+        orderSpecifiers.add(new OrderSpecifier<>(Order.DESC, study.id));
 
         return orderSpecifiers;
     }

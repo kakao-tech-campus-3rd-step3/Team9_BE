@@ -1,9 +1,6 @@
 package com.pado.domain.s3.service;
 
-import com.pado.domain.s3.dto.DownloadPresignedUrlRequestDto;
-import com.pado.domain.s3.dto.DownloadPresignedUrlResponseDto;
-import com.pado.domain.s3.dto.UploadPreSignedUrlRequestDto;
-import com.pado.domain.s3.dto.UploadPreSignedUrlResponseDto;
+import com.pado.domain.s3.dto.*;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +30,11 @@ public class S3Service {
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
-    // 업로드용
-    public UploadPreSignedUrlResponseDto createUploadPresignedUrl(UploadPreSignedUrlRequestDto request) {
+    @Value("${cloud.aws.s3.prefix}")
+    private String s3Prefix;
+
+    // 파일 업로드용
+    public UploadPreSignedUrlResponseDto createUploadPresignedUrl(UploadFilePreSignedUrlRequestDto request) {
         String fileName = request.name();
         String key = generateFileKey(fileName);
         String presignedUrl = generatePresignedUploadUrl(key);
@@ -42,8 +42,17 @@ public class S3Service {
         return new UploadPreSignedUrlResponseDto(presignedUrl, key);
     }
 
-    // 다운로드용
-    public DownloadPresignedUrlResponseDto createDownloadPresignedUrl(DownloadPresignedUrlRequestDto request) {
+    // 사진 업로드용
+    public UploadPreSignedUrlResponseDto createImagePresignedUrl(UploadPhotoPresignedUrlRequestDto request) {
+        String contentType = request.contentType();
+        String key = generateImageKey(contentType);
+        String presignedUrl = generatePresignedUploadUrl(key);
+
+        return new UploadPreSignedUrlResponseDto(presignedUrl, key);
+    }
+
+    // 파일 다운로드용
+    public DownloadPresignedUrlResponseDto createDownloadPresignedUrl(DownloadFilePresignedUrlRequestDto request) {
         String fileName = request.fileName();
         String fileKey = request.fileKey();
 
@@ -53,6 +62,20 @@ public class S3Service {
         }
 
         String presignedUrl = generatePresignedDownloadUrl(fileName, fileKey);
+
+        return new DownloadPresignedUrlResponseDto(presignedUrl);
+    }
+
+    // 사진 다운로드용
+    public DownloadPresignedUrlResponseDto createDownloadPhotoPresignedUrl(DownloadPhotoPresignedUrlRequestDto request) {
+        String fileKey = request.fileKey();
+
+        // 파일 존재 여부 확인
+        if (!doesFileExist(fileKey)) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+
+        String presignedUrl = generatePresignedDownloadUrl(fileKey);
 
         return new DownloadPresignedUrlResponseDto(presignedUrl);
     }
@@ -75,14 +98,32 @@ public class S3Service {
     // 파일 다운로드용 Presigned URL 생성
     public String generatePresignedDownloadUrl(String fileName, String fileKey) {
         try {
-            // String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
-            // String contentDisposition = "attachment; filename=\"" + encodedFileName + "\"";
             String contentDisposition = "attachment; filename=\"" + fileName + "\"";
 
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(fileKey)
                     .responseContentDisposition(contentDisposition)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(15))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            PresignedGetObjectRequest presignedGetObjectRequest = s3Presigner.presignGetObject(presignRequest);
+            return presignedGetObjectRequest.url().toString();
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
+        }
+    }
+
+    // 사진 표시용 Presigned URL 생성
+    public String generatePresignedDownloadUrl(String fileKey) {
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
                     .build();
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
@@ -110,7 +151,27 @@ public class S3Service {
             extension = fileName.substring(fileName.lastIndexOf("."));
         }
 
-        return uuid + extension;
+        return s3Prefix + uuid + extension;
+    }
+
+    // 사진 다운로드 용 키 생성
+    private String generateImageKey(String contentType) {
+        String extension = getFileExtensionFromContentType(contentType);
+        return s3Prefix + UUID.randomUUID().toString() + extension;
+    }
+
+
+    private String getFileExtensionFromContentType(String contentType) {
+        if (contentType == null || contentType.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_FILE_FORMAT, "Content-Type이 비어있습니다.");
+        }
+
+        return switch (contentType) {
+            case "image/jpeg", "image/jpg" -> ".jpg";
+            case "image/png" -> ".png";
+            case "image/gif" -> ".gif";
+            default -> throw new BusinessException(ErrorCode.INVALID_FILE_FORMAT, "지원하지 않는 이미지 형식입니다: " + contentType);
+        };
     }
 
     // 현재 설정된 리전 반환

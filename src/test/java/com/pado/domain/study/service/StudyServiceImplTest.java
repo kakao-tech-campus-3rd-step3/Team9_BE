@@ -3,10 +3,12 @@ package com.pado.domain.study.service;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
 import com.pado.domain.study.entity.Study;
+import com.pado.domain.study.entity.StudyCondition;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.study.repository.StudyMemberRepository;
@@ -89,16 +91,36 @@ class StudyServiceImplTest {
                 () -> assertThat(savedStudy.getRegion()).isEqualTo(dto.region()),
                 () -> assertThat(savedStudy.getStudyTime()).isEqualTo(dto.study_time()),
                 () -> assertThat(savedStudy.getMaxMembers()).isEqualTo(dto.max_members()),
-                () -> assertThat(savedStudy.getImageUrl()).isEqualTo(dto.image_url()),
+                () -> assertThat(savedStudy.getFileKey()).isEqualTo(dto.file_key()),
                 () -> assertThat(savedStudy.getLeader()).isEqualTo(user),
 
                 () -> assertThat(savedStudy.getInterests()).hasSize(2),
                 () -> assertThat(savedStudy.getInterests().get(0).getCategory()).isEqualTo(Category.PROGRAMMING),
                 () -> assertThat(savedStudy.getInterests().get(1).getCategory()).isEqualTo(Category.LANGUAGE),
 
-                () -> assertThat(savedStudy.getConditions()).hasSize(1),
-                () -> assertThat(savedStudy.getConditions().get(0)).isEqualTo("열심히 하실 분만")
+                () -> assertThat(savedStudy.getConditions())
+                        .extracting(StudyCondition::getContent)
+                        .containsExactly("열심히 하실 분만")
         );
+    }
+
+    @Test
+    void 내_스터디목록_조회_성공() {
+        // given
+        Long userId = 1L;
+        Study study1 = Study.builder().id(1L).title("스터디1").build();
+        Study study2 = Study.builder().id(2L).title("스터디2").build();
+
+        when(studyRepository.findByUserId(userId))
+                .thenReturn(List.of(study1, study2));
+
+        // when
+        List<MyStudyResponseDto> result = studyService.findMyStudies(userId);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).title()).isEqualTo("스터디1");
+        assertThat(result.get(1).title()).isEqualTo("스터디2");
     }
 
     @Test
@@ -162,7 +184,7 @@ class StudyServiceImplTest {
 
         Study mockStudy = Study.builder()
                 .id(100L)
-                .imageUrl("https://test.com/image.jpg")
+                .fileKey("https://test.com/image.jpg")
                 .title("테스트 스터디")
                 .description("테스트 설명")
                 .detailDescription("상세 설명")
@@ -182,7 +204,7 @@ class StudyServiceImplTest {
 
         // then
         assertAll(
-                () -> assertThat(result.image_url()).isEqualTo(mockStudy.getImageUrl()),
+                () -> assertThat(result.file_key()).isEqualTo(mockStudy.getFileKey()),
                 () -> assertThat(result.title()).isEqualTo(mockStudy.getTitle()),
                 () -> assertThat(result.description()).isEqualTo(mockStudy.getDescription()),
                 () -> assertThat(result.detail_description()).isEqualTo(mockStudy.getDetailDescription()),

@@ -13,12 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
       - name: Run tests with Gradle
         uses: gradle/gradle-build-action@v2
         with:
@@ -27,17 +38,208 @@ jobs:
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
 
-  build-and-deploy:
-    needs: test
+  pr-smoke:
+    if: github.event_name == 'pull_request'
+    name: PR Container Smoke Test (local)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: pr-smoke-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build with Gradle (skip tests optional)
+        run: ./gradlew build -x test --parallel --configure-on-demand
+      - name: Build Docker image
+        run: docker build -t pado-app:${{ github.sha }} .
+      - name: Run container (dev profile)
+        run: |
+          set -euo pipefail
+          docker run -d --name pado-smoke -p 18080:8080 \
+            -e SPRING_PROFILES_ACTIVE=dev \
+            pado-app:${{ github.sha }}
+      - name: Wait for health (status:UP)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            echo "Health check #$i ..."
+            if curl -s --fail http://127.0.0.1:18080/actuator/health | grep -q '"status":"UP"'; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed"
+          docker logs pado-smoke || true
+          exit 1
+      - name: Smoke API - GET /api/studies
+        run: |
+          set -euo pipefail
+          curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18080/api/studies | grep -qE "200"
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f pado-smoke || true
+
+  pr-ec2-smoke:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    name: PR EC2 Smoke (prod profile on temp port)
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: pr-ec2-smoke
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+      - name: Build with Gradle (skip tests optional)
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build -x test --parallel --configure-on-demand
+
+      - name: Get current git commit hash
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image (PR)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:${{ steps.vars.outputs.sha_short }}
+
+      - name: EC2 remote smoke on temp port (env-file)
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -euo pipefail
+            DOCKER_USERNAME='${{ secrets.DOCKERHUB_USERNAME }}'
+            APP_NAME=pado-app
+            IMAGE_TAG='${{ steps.vars.outputs.sha_short }}'
+            IMAGE="$DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG"
+            PORT=18080
+            NAME="pado-pr-${{ github.run_id }}"
+            
+            echo "Pull $IMAGE and run on localhost:${PORT} ..."
+            sudo docker pull "$IMAGE"
+            sudo docker rm -f "$NAME" 2>/dev/null || true
+            
+            # Create PR env file on remote (prevent expansion with quoted heredoc)
+            cat > /tmp/pado-pr.env <<'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS || '3600' }}
+            EOF
+            
+            NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
+              --add-host host.docker.internal:host-gateway \
+              --env-file /tmp/pado-pr.env \
+              "$IMAGE")
+            
+            if [ -z "$NEW_ID" ]; then
+              echo "docker run failed"
+              sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
+              exit 1
+            fi
+            
+            HEALTH="http://127.0.0.1:${PORT}/actuator/health"
+            for i in $(seq 1 12); do
+              echo "PR EC2 health check #$i ..."
+              if curl -s --fail "$HEALTH" | grep -q '"status":"UP"'; then OK=true; break; fi
+              sleep 5
+            done
+            
+            if [ "${OK:-false}" != true ]; then
+              echo "--- Health response ---"
+              curl -s "$HEALTH" || true
+              echo
+              echo "--- Logs ---"
+              sudo docker logs "$NAME" || true
+              sudo docker rm -f "$NAME" || true
+              sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
+              exit 1
+            fi
+            
+            sudo docker rm -f "$NAME" || true
+            sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
+            echo "PR EC2 smoke passed."
+
+  build-and-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-develop
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v2
         with:
@@ -46,12 +248,12 @@ jobs:
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -59,93 +261,89 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:${{ steps.vars.outputs.sha_short }}
             ${{ secrets.DOCKERHUB_USERNAME }}/pado-app:latest
 
-      - name: Deploy to EC2
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+      - name: Deploy to EC2 (Blue/Green) with env-file
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -euo pipefail
+
             DOCKER_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             APP_NAME=pado-app
             IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
+            IMAGE="$DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG"
             NGINX_CONF_PATH="/etc/nginx/sites-available/pado"
 
-            CURRENT_PORT=$(grep -oP '(?<=server 127.0.0.1:)\d+' $NGINX_CONF_PATH)
+            CURRENT_PORT=$(grep -oP '(?<=server 127.0.0.1:)\d+' "$NGINX_CONF_PATH" || true)
+            if [ "$CURRENT_PORT" = "8081" ]; then TARGET_PORT=8082; else TARGET_PORT=8081; fi
+            echo "Current Port: $CURRENT_PORT, Target Port: $TARGET_PORT"
+
+            sudo docker pull "$IMAGE"
+
+            NEW_NAME="pado-$TARGET_PORT"
+            if sudo docker ps -a --format '{{.Names}}' | grep -q "^$NEW_NAME$"; then
+              sudo docker rm -f "$NEW_NAME"
+            fi
+
+            cat > /tmp/pado.env <<'EOF'
+            SPRING_PROFILES_ACTIVE=prod
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXP_SECONDS=${{ secrets.JWT_ACCESS_EXP_SECONDS }}
+            EOF
             
-            if [ "$CURRENT_PORT" = "8081" ]; then
-              TARGET_PORT=8082
-            else
-              TARGET_PORT=8081
+            NEW_CONTAINER_ID=$(sudo docker run -d --name "$NEW_NAME" -p ${TARGET_PORT}:8080 \
+              --add-host host.docker.internal:host-gateway \
+              --env-file /tmp/pado.env \
+              "$IMAGE")
+            
+            if [ -z "$NEW_CONTAINER_ID" ]; then
+              echo "ERROR: docker run did not return a container ID"
+              sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true
+              exit 1
             fi
             
-            echo "Current Port: $CURRENT_PORT, Target Port for New Container: $TARGET_PORT"
-            
-            sudo docker pull $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG
-            
-            NEW_CONTAINER_ID=$(sudo docker run -d -p ${TARGET_PORT}:8080 \
-              --add-host host.docker.internal:host-gateway \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }} \
-              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
-              -e MAIL_HOST=${{ secrets.MAIL_HOST }} \
-              -e MAIL_PORT=${{ secrets.MAIL_PORT }} \
-              -e MAIL_USERNAME=${{ secrets.MAIL_USERNAME }} \
-              -e MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} \
-              $DOCKER_USERNAME/$APP_NAME:$IMAGE_TAG)
-            
-            echo "New container ($NEW_CONTAINER_ID) started on port $TARGET_PORT. Starting health check..."
-            
-            sleep 10
-
-            HEALTH_CHECK_URL=http://localhost:${TARGET_PORT}/actuator/health
-            HEALTH_CHECK_PASSED=false
+            echo "Started $NEW_NAME ($NEW_CONTAINER_ID) on :$TARGET_PORT. Health check..."
+            HEALTH_CHECK_URL="http://127.0.0.1:${TARGET_PORT}/actuator/health"
             for i in $(seq 1 12); do
-              echo "Health check attempt #$i..."
-              # --fail 옵션은 HTTP 상태 코드가 200번대가 아니면 실패로 처리합니다.
-              if curl -s --fail $HEALTH_CHECK_URL > /dev/null; then
-                echo "Health check PASSED."
-                HEALTH_CHECK_PASSED=true
-                break
+              echo "Health check #$i ..."
+              if curl -s --fail "$HEALTH_CHECK_URL" | grep -q '"status":"UP"'; then
+                HEALTH_OK=true; break
               fi
               sleep 5
             done
             
-            if [ "$HEALTH_CHECK_PASSED" = true ]; then
-              echo "Deployment successful. Switching Nginx to port $TARGET_PORT."
+            if [ "${HEALTH_OK:-false}" = true ]; then
+              sudo sed -i "s/server 127.0.0.1:.*/server 127.0.0.1:${TARGET_PORT};/" "$NGINX_CONF_PATH"
+              sudo nginx -t && sudo systemctl reload nginx
             
-              sudo sed -i "s/server 127.0.0.1:.*/server 127.0.0.1:${TARGET_PORT};/" $NGINX_CONF_PATH
-            
-              sudo systemctl reload nginx
-            
-              echo "Nginx reloaded. Stopping old container on port $CURRENT_PORT."
-            
-              OLD_CONTAINER_ID=$(sudo docker ps -q --filter "publish=${CURRENT_PORT}")
-              if [ ! -z "$OLD_CONTAINER_ID" ]; then
-                sudo docker stop $OLD_CONTAINER_ID
-                sudo docker rm $OLD_CONTAINER_ID
+              if [ -n "$CURRENT_PORT" ]; then
+                OLD_ID=$(sudo docker ps -q --filter "publish=${CURRENT_PORT}")
+                  if [ -n "$OLD_ID" ]; then
+                    sudo docker rm -f "$OLD_ID"
+                  fi
               fi
             
               sudo docker image prune -f
-              exit 0
+              echo "Deployment complete."
             else
-              echo "Health check FAILED. Displaying logs before rollback."
-
-              # Health Check 실패의 상세 원인을 파악하기 위해 /actuator/health 엔드포인트의 실제 응답을 출력합니다.
-              echo "--- Health check endpoint response ---"
-              curl -s $HEALTH_CHECK_URL
+              echo "--- Health endpoint response ---"
+              curl -s "$HEALTH_CHECK_URL" || true
               echo
-              echo "------------------------------------"
-
-              echo "--- Logs from container $NEW_CONTAINER_ID ---"
-              sudo docker logs $NEW_CONTAINER_ID
-              echo "-------------------------------------------"
-            
-              echo "Rolling back deployment..."
-              sudo docker stop $NEW_CONTAINER_ID
-              sudo docker rm $NEW_CONTAINER_ID
+              echo "--- Container logs ($NEW_NAME) ---"
+              sudo docker logs "$NEW_NAME" || true
+              sudo docker rm -f "$NEW_NAME" || true
+              sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true
               exit 1
             fi
+
+            sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true

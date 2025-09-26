@@ -2,7 +2,6 @@ package com.pado.domain.study.entity;
 
 import com.pado.domain.basetime.AuditingEntity;
 import com.pado.domain.shared.entity.Category;
-import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -10,7 +9,6 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Entity
 @Getter
@@ -47,7 +45,7 @@ public class Study extends AuditingEntity {
     private Integer maxMembers;
 
     @Column(length = 500)
-    private String imageUrl;
+    private String fileKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -58,16 +56,17 @@ public class Study extends AuditingEntity {
     @Builder.Default
     private StudyStatus status = StudyStatus.RECRUITING;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "study_condition", joinColumns = @JoinColumn(name = "study_id"))
-    @Column(name = "content", length = 500)
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<String> conditions = new ArrayList<>();
+    private List<StudyCondition> conditions = new ArrayList<>();
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-
     private List<StudyCategory> interests = new ArrayList<>();
+
+    @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<StudyMember> studyMembers = new ArrayList<>();
 
     public void addInterests(List<Category> categories) {
         this.interests.clear();
@@ -79,15 +78,21 @@ public class Study extends AuditingEntity {
                             .category(category)
                             .build()
                     )
-                    .collect(Collectors.toList());
+                    .toList();
             this.interests.addAll(newInterests);
         }
     }
 
-    public void addConditions(List<String> conditions) {
+    public void addConditions(List<String> conditionContents) {
         this.conditions.clear();
-        if (conditions != null) {
-            this.conditions.addAll(conditions);
+        if (conditionContents != null) {
+            List<StudyCondition> newConditions = conditionContents.stream()
+                    .map(content -> StudyCondition.builder()
+                            .study(this)
+                            .content(content)
+                            .build())
+                    .toList();
+            this.conditions.addAll(newConditions);
         }
     }
 }
