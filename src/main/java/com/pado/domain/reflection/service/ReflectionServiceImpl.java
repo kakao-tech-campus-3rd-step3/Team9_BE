@@ -9,6 +9,9 @@ import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.schedule.repository.ScheduleRepository;
+import com.pado.domain.user.entity.User;
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +29,15 @@ public class ReflectionServiceImpl implements ReflectionService {
 
     @Override
     @Transactional
-    public ReflectionResponseDto createReflection(Long studyId, Long studyMemberId,
+    public ReflectionResponseDto createReflection(Long studyId, User user,
         ReflectionCreateRequestDto request) {
-        Study study = studyRepository.findById(studyId).orElseThrow();
-        StudyMember member = studyMemberRepository.findById(studyMemberId).orElseThrow();
-        Schedule schedule =
-            request.scheduleId() != null ? scheduleRepository.findById(request.scheduleId())
-                .orElse(null) : null;
+        StudyMember member = checkStudyMember(studyId, user);
+        Study study = studyRepository.findById(studyId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
+        Schedule schedule = request.scheduleId() != null ?
+            scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
+
         Reflection reflection = Reflection.builder()
             .study(study)
             .studyMember(member)
@@ -43,33 +48,41 @@ public class ReflectionServiceImpl implements ReflectionService {
             .learnedContent(request.learnedContent())
             .improvement(request.improvement())
             .build();
+
         reflectionRepository.save(reflection);
         return toDto(reflection);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReflectionResponseDto> getReflections(Long studyId) {
-        return reflectionRepository.findByStudyId(studyId).stream().map(this::toDto)
+    public List<ReflectionResponseDto> getReflections(Long studyId, User user) {
+        checkStudyMember(studyId, user);
+        return reflectionRepository.findByStudyId(studyId).stream()
+            .map(this::toDto)
             .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ReflectionResponseDto getReflection(Long reflectionId) {
-        Reflection r = reflectionRepository.findById(reflectionId).orElseThrow();
-        return toDto(r);
+    public ReflectionResponseDto getReflection(Long reflectionId, User user) {
+        Reflection reflection = reflectionRepository.findById(reflectionId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
+        checkStudyMember(reflection.getStudy().getId(), user);
+        return toDto(reflection);
     }
 
     @Override
     @Transactional
-    public ReflectionResponseDto updateReflection(Long reflectionId,
+    public ReflectionResponseDto updateReflection(Long reflectionId, User user,
         ReflectionCreateRequestDto request) {
-        Reflection r = reflectionRepository.findById(reflectionId).orElseThrow();
-        Schedule schedule =
-            request.scheduleId() != null ? scheduleRepository.findById(request.scheduleId())
-                .orElse(null) : null;
-        r.update(
+        Reflection reflection = reflectionRepository.findById(reflectionId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
+        checkReflectionOwner(reflection, user);
+
+        Schedule schedule = request.scheduleId() != null ?
+            scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
+
+        reflection.update(
             schedule,
             request.satisfactionScore(),
             request.understandingScore(),
@@ -77,13 +90,27 @@ public class ReflectionServiceImpl implements ReflectionService {
             request.learnedContent(),
             request.improvement()
         );
-        return toDto(r);
+        return toDto(reflection);
     }
-    
+
     @Override
     @Transactional
-    public void deleteReflection(Long reflectionId) {
+    public void deleteReflection(Long reflectionId, User user) {
+        Reflection reflection = reflectionRepository.findById(reflectionId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
+        checkReflectionOwner(reflection, user);
         reflectionRepository.deleteById(reflectionId);
+    }
+
+    private StudyMember checkStudyMember(Long studyId, User user) {
+        return studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
+    }
+
+    private void checkReflectionOwner(Reflection reflection, User user) {
+        if (!reflection.getStudyMember().getUser().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_REFLECTION_OWNER_ONLY);
+        }
     }
 
     private ReflectionResponseDto toDto(Reflection r) {

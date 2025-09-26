@@ -88,7 +88,6 @@ public enum ErrorCode {
 
     //Redis
     REDIS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "REDIS_UNAVAILABLE", "Redis 연결에 실패했습니다.");
-
     public final HttpStatus status;
     public final String code;
     public final String message;
