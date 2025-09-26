@@ -45,4 +45,14 @@ public class Reflection extends AuditingEntity {
 
     @Column(nullable = false, length = 1000)
     private String improvement;
+
+    public void update(Schedule schedule, Integer satisfactionScore, Integer understandingScore,
+        Integer participationScore, String learnedContent, String improvement) {
+        this.schedule = schedule;
+        this.satisfactionScore = satisfactionScore;
+        this.understandingScore = understandingScore;
+        this.participationScore = participationScore;
+        this.learnedContent = learnedContent;
+        this.improvement = improvement;
+    }
 }
