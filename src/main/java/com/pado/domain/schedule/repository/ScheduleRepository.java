@@ -25,4 +25,5 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
             @Param("periodStart") LocalDateTime periodStart,
             @Param("periodEnd") LocalDateTime periodEnd);
     Optional<Schedule> findTopByStudyIdAndStartTimeAfterOrderByStartTimeAsc(Long studyId, LocalDateTime startTime);
+    int countAllByStudyId(Long studyId);
 }

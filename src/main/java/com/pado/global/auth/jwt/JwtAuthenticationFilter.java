@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -29,52 +30,74 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER = "Bearer ";
 
+    private static final List<String> WHITELIST_PREFIXES = List.of(
+        "/api/auth",
+        "/swagger-ui",
+        "/swagger-resources",
+        "/api-docs",
+        "/actuator/health"
+    );
+
     @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res,
+        FilterChain chain)
+        throws ServletException, IOException {
+
+        if (isWhitelisted(req)) {
+            chain.doFilter(req, res);
+            return;
+        }
 
         try {
             String header = req.getHeader(AUTH_HEADER);
-
             if (header == null || header.isBlank()) {
                 chain.doFilter(req, res);
                 return;
             }
+
             if (!header.startsWith(BEARER)) {
-                writeUnauthorized(res, ErrorCode.TOKEN_INVALID, ErrorCode.TOKEN_INVALID.message, req.getRequestURI());
+                chain.doFilter(req, res);
                 return;
             }
 
-            if (header != null && header.startsWith(BEARER)) {
-                String token = header.substring(BEARER.length());
+            String token = header.substring(BEARER.length());
+            jwtProvider.validate(token);
+            Long userId = jwtProvider.getUserId(token);
 
-                jwtProvider.validate(token);
-                Long userId = jwtProvider.getUserId(token);
-                UserDetails userDetails = userDetailsService.loadUserById(userId);
-                Authentication auth =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            }
+            UserDetails userDetails = userDetailsService.loadUserById(userId);
+            Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(auth);
 
             chain.doFilter(req, res);
-
-        }
-        catch (BusinessException ex) {
+        } catch (BusinessException ex) {
             writeUnauthorized(res, ex.getErrorCode(), ex.getMessage(), req.getRequestURI());
-        }
-        catch (Exception ex) {
-            writeUnauthorized(res, ErrorCode.TOKEN_INVALID, ErrorCode.TOKEN_INVALID.message, req.getRequestURI());
+        } catch (Exception ex) {
+            writeUnauthorized(res, ErrorCode.TOKEN_INVALID, ErrorCode.TOKEN_INVALID.message,
+                req.getRequestURI());
         }
     }
 
-    private void writeUnauthorized(HttpServletResponse res, ErrorCode code, String message, String path) throws IOException {
-        if (res.isCommitted()) return;
+    private boolean isWhitelisted(HttpServletRequest req) {
+        String uri = req.getRequestURI();
+        for (String p : WHITELIST_PREFIXES) {
+            if (uri.startsWith(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
+    private void writeUnauthorized(HttpServletResponse res, ErrorCode code, String message,
+        String path) throws IOException {
+        if (res.isCommitted()) {
+            return;
+        }
         res.setStatus(code.status.value());
-        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ;
+        res.setContentType(MediaType.APPLICATION_JSON_VALUE + "; charset=UTF-8");
         String body = objectMapper.writeValueAsString(
-                ErrorResponseDto.of(code, message, java.util.Collections.emptyList(), path)
+            ErrorResponseDto.of(code, message, java.util.Collections.emptyList(), path)
         );
         res.getWriter().write(body);
     }

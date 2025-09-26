@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AttendanceServiceImpl implements AttendanceService {
+
     private final AttendanceRepository attendanceRepository;
     private final ScheduleRepository scheduleRepository;
     private final StudyMemberRepository studyMemberRepository;
@@ -36,46 +37,57 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Transactional(readOnly = true)
     public AttendanceListResponseDto getFullAttendance(Long studyId) {
         Study study = studyRepository.findById(studyId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
-        Long leaderId = studyMemberRepository.findLeaderUserIdByStudy(study, StudyMemberRole.LEADER);
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
+        Long leaderId = studyMemberRepository.findLeaderUserIdByStudy(study,
+            StudyMemberRole.LEADER);
+
         List<StudyMember> studyMembers = studyMemberRepository.findByStudyWithUser(study);
         List<Schedule> schedules = scheduleRepository.findByStudyIdOrderByStartTimeAsc(studyId);
-        List<Attendance> attendances = attendanceRepository.findAllByStudyIdWithScheduleAndUser(studyId);
+        List<Attendance> attendances = attendanceRepository.findAllByStudyIdWithScheduleAndUser(
+            studyId);
+
+        // 리더 우선 정렬
         List<StudyMember> orderedMembers = studyMembers.stream()
-                .sorted(Comparator.comparing(sm -> !sm.getUser().getId().equals(leaderId)))
-                .toList();
+            .sorted(Comparator.comparing(sm -> !sm.getUser().getId().equals(leaderId)))
+            .toList();
 
-        Map<String, Attendance> attendanceMap = attendances.stream()
-                .collect(Collectors.toMap(
-                        attendance -> attendance.getUser().getId()+ "-" +  attendance.getSchedule().getId(),
-                        attendance -> attendance
-                ));
+        // userId -> (scheduleId -> Attendance) 중첩 맵으로 수집
+        Map<Long, Map<Long, Attendance>> attendanceByUser = attendances.stream()
+            .collect(Collectors.groupingBy(a -> a.getUser().getId(),
+                Collectors.toMap(a -> a.getSchedule().getId(),
+                    java.util.function.Function.identity(),
+                    (a, b) -> a)));
 
-        // MemberAttendanceDto List 생성
+        // 멤버별 출석 상태 + 이미지키 반환
         List<MemberAttendanceDto> memberAttendanceDtoList = orderedMembers.stream()
-                .map(studyMember -> {
-                    User user = studyMember.getUser();
+            .map(studyMember -> {
+                User user = studyMember.getUser();
+                List<AttendanceStatusDto> attendanceStatusDtoList = schedules.stream()
+                    .map(schedule -> {
+                        Attendance attendance = attendanceByUser
+                            .getOrDefault(user.getId(), Map.of())
+                            .get(schedule.getId());
+                        boolean status = attendance != null && attendance.isStatus();
+                        return new AttendanceStatusDto(status, schedule.getStartTime());
+                    })
+                    .toList();
 
-                    //AttendanceStatusDto List 생성
-                    List<AttendanceStatusDto> attendanceStatusDtoList = schedules.stream()
-                            .map(schedule -> {
-                                Attendance attendance = attendanceMap.get(user.getId() + "-" + schedule.getId());
-                                boolean status = (attendance != null) && (attendance.isStatus());
-                                return new AttendanceStatusDto(status, schedule.getStartTime());
-                            })
-                            .toList();
-                    return new MemberAttendanceDto(user.getNickname(), user.getProfileImageUrl(), attendanceStatusDtoList);
-                })
-                .toList();
+                // imagekey 사용
+                return new MemberAttendanceDto(user.getNickname(), user.getImage_key(),
+                    attendanceStatusDtoList);
+            })
+            .toList();
 
         return new AttendanceListResponseDto(memberAttendanceDtoList);
     }
 
 
     @Override
-    public AttendanceStatusResponseDto getIndividualAttendanceStatus(Long studyId, Long scheduleId, User user) {
+    public AttendanceStatusResponseDto getIndividualAttendanceStatus(Long scheduleId, User user) {
         Schedule schedule = checkException(scheduleId, user);
-        return new AttendanceStatusResponseDto(attendanceRepository.existsByScheduleAndUser(schedule, user));
+        return new AttendanceStatusResponseDto(
+            attendanceRepository.existsByScheduleAndUser(schedule, user));
     }
 
 
@@ -84,7 +96,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         Schedule schedule = checkException(scheduleId, user);
 
         // 출석 여부 확인
-        if(attendanceRepository.existsByScheduleAndUser(schedule, user)) {
+        if (attendanceRepository.existsByScheduleAndUser(schedule, user)) {
             throw new BusinessException(ErrorCode.ALREADY_CHECKED_IN);
         }
 
@@ -95,17 +107,17 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
     // 공통 예외 검증
-    private Schedule checkException(Long scheduleId, User user){
+    private Schedule checkException(Long scheduleId, User user) {
         // 스케줄 검증
         Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
 
         // 스터디 검증
         Study study = studyRepository.findById(schedule.getStudyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
 
         // 스터디 멤버 검증
-        if (!studyMemberRepository.existsByStudyAndUser(study, user)) {
+        if (!studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
 

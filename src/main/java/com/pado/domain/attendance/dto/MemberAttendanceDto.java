@@ -9,7 +9,7 @@ public record MemberAttendanceDto(
         String name,
 
         @Schema(description = "회원 프로필 이미지 URL", example = "https://pado-image.com/user/1")
-        String image_url,
+        String image_key,
 
         @Schema(description = "출석 정보 목록")
         List<AttendanceStatusDto> attendance

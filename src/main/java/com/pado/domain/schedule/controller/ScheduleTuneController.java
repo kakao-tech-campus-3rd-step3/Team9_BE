@@ -139,15 +139,13 @@ public class ScheduleTuneController {
         )
     ))
     @Parameters({
-        @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
-    @GetMapping("/studies/{study_id}/schedule-tunes/{tune_id}")
+    @GetMapping("schedule-tunes/{tuneid}")
     public ResponseEntity<ScheduleTuneDetailResponseDto> getScheduleTuneDetail(
-        @PathVariable("study_id") Long studyId,
-        @PathVariable("tune_id") Long tuneId
+        @PathVariable("tuneid") Long tuneId
     ) {
-        return ResponseEntity.ok(scheduleTuneService.findScheduleTuneDetail(studyId, tuneId));
+        return ResponseEntity.ok(scheduleTuneService.findScheduleTuneDetail(tuneId));
     }
 
     @Api403ForbiddenStudyMemberOnlyError
@@ -189,16 +187,14 @@ public class ScheduleTuneController {
         )
     ))
     @Parameters({
-        @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
-    @PostMapping("/studies/{study_id}/schedule-tunes/{tune_id}")
+    @PostMapping("schedule-tunes/{tuneid}/participants")
     public ResponseEntity<ScheduleTuneParticipantResponseDto> participateInScheduleTune(
-        @PathVariable("study_id") Long studyId,
-        @PathVariable("tune_id") Long tuneId,
+        @PathVariable("tuneid") Long tuneId,
         @Valid @org.springframework.web.bind.annotation.RequestBody ScheduleTuneParticipantRequestDto request
     ) {
-        return ResponseEntity.ok(scheduleTuneService.participate(studyId, tuneId, request));
+        return ResponseEntity.ok(scheduleTuneService.participate(tuneId, request));
     }
 
     @Api403ForbiddenStudyLeaderOnlyError

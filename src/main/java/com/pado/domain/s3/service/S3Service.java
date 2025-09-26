@@ -4,6 +4,7 @@ import com.pado.domain.s3.dto.*;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -17,11 +18,13 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class S3Service {
 
     private final S3Client s3Client;
@@ -78,6 +81,22 @@ public class S3Service {
         String presignedUrl = generatePresignedDownloadUrl(fileKey);
 
         return new DownloadPresignedUrlResponseDto(presignedUrl);
+    }
+
+    // AI용 파일 다운로더
+    public InputStream downloadFileAsStream(String fileKey) {
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
+            return s3Client.getObject(getObjectRequest);
+        } catch (NoSuchKeyException e) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        } catch (S3Exception e) {
+            log.error("S3 error downloading file key '{}': {}", fileKey, e.getMessage(), e);
+            throw new BusinessException(ErrorCode.S3_SERVICE_ERROR);
+        }
     }
 
     //파일 업로드용 Presigned URL 생성 (15분 유효)

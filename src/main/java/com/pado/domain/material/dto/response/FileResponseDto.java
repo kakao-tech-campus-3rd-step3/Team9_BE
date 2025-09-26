@@ -14,6 +14,10 @@ public record FileResponseDto(
         String key,
 
         @Schema(description = "파일 크기 (단위: bytes)", example = "1024")
-        Long size
+        Long size,
+
+        @Schema(description = "파일 타입", example = ".pdf")
+        @JsonProperty("file_type")
+        String fileType
 ) {
 }

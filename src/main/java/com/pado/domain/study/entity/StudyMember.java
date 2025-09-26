@@ -44,4 +44,16 @@ public class StudyMember extends AuditingEntity {
         this.message = message;
         this.rankPoint = (rankPoint != null) ? rankPoint : 0;
     }
+
+    public void addRankPoints(int pointsToAdd) {
+        if (pointsToAdd > 0) {
+            this.rankPoint += pointsToAdd;
+        }
+    }
+
+    public void subtractRankPoints(int pointsToSubtract) {
+        if (pointsToSubtract > 0) {
+            this.rankPoint = Math.max(0, this.rankPoint - pointsToSubtract);
+        }
+    }
 }

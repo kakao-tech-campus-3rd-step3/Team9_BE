@@ -11,7 +11,7 @@ public record UserDetailResponseDto(
         String nickname,
 
         @Schema(description = "프로필 이미지 URL", example = "https://your-s3-bucket.s3.amazonaws.com/images/profile.jpg")
-        String imageUrl,
+        String image_key,
 
         @Schema(description = "관심 분야 목록", example = "[\"프로그래밍\", \"취업\"]")
         List<String> interests,

@@ -101,9 +101,10 @@ class MaterialServiceImplTest {
         ReflectionTestUtils.setField(material, "id", 1L);
 
         file = new File(
-                "Test File",
+                "Test File.pdf",
                 "File Key",
-                1024L
+                1024L,
+                ".pdf"
         );
         file.setMaterial(material);
         ReflectionTestUtils.setField(file, "id", 1L);
@@ -119,7 +120,7 @@ class MaterialServiceImplTest {
                 MaterialCategory.LEARNING,
                 1,
                 "Test Content",
-                List.of(new FileRequestDto(null, "test.pdf", "test-key", 1024L))
+                List.of(new FileRequestDto(null, "test.pdf", "test-key", 1024L, ".pdf"))
         );
 
         given(studyRepository.findById(studyId)).willReturn(Optional.of(study));

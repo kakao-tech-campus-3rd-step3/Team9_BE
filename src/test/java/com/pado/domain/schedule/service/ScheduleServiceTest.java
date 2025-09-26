@@ -2,7 +2,6 @@ package com.pado.domain.schedule.service;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
 import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
-import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
@@ -33,7 +32,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -131,14 +130,21 @@ class ScheduleServiceTest {
             LocalDateTime expectedPeriodStart = expectedStartDate.atStartOfDay();
             LocalDateTime expectedPeriodEnd = expectedEndDate.plusDays(1).atStartOfDay();
 
-            Schedule scheduleInPeriod = Schedule.builder().studyId(1L).title("9월 스터디").startTime(LocalDateTime.of(2025, 9, 15, 10, 0)).endTime(LocalDateTime.of(2025, 9, 15, 12, 0)).build();
+            Schedule scheduleInPeriod = Schedule.builder()
+                .studyId(1L)
+                .title("9월 스터디")
+                .startTime(LocalDateTime.of(2025, 9, 15, 10, 0))
+                .endTime(LocalDateTime.of(2025, 9, 15, 12, 0))
+                .build();
             ReflectionTestUtils.setField(scheduleInPeriod, "id", 101L);
 
-            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), eq(expectedPeriodStart), eq(expectedPeriodEnd)))
-                    .thenReturn(List.of(scheduleInPeriod));
+            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), eq(expectedPeriodStart),
+                eq(expectedPeriodEnd)))
+                .thenReturn(List.of(scheduleInPeriod));
 
             // when
-            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId, year, month);
+            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId,
+                year, month);
 
             // then
             assertThat(result).hasSize(1);
@@ -154,10 +160,12 @@ class ScheduleServiceTest {
             int year = 2025;
             int month = 11;
 
-            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), any(), any())).thenReturn(Collections.emptyList());
+            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), any(), any())).thenReturn(
+                Collections.emptyList());
 
             // when
-            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId, year, month);
+            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId,
+                year, month);
 
             // then
             assertThat(result).isNotNull().isEmpty();
@@ -175,38 +183,52 @@ class ScheduleServiceTest {
             setAuthentication(leader);
             ScheduleCreateRequestDto request = new ScheduleCreateRequestDto("수정된 제목", "수정된 내용",
                 LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(2));
-            Schedule existingSchedule = Schedule.builder().studyId(1L).title("원본 제목").build();
 
+            Schedule existingSchedule = Schedule.builder()
+                .studyId(1L)
+                .title("원본 제목")
+                .description("원본 내용")
+                .startTime(LocalDateTime.now().plusDays(1))
+                .endTime(LocalDateTime.now().plusDays(1).plusHours(1))
+                .build();
+
+            when(scheduleRepository.findById(10L)).thenReturn(Optional.of(existingSchedule));
             when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
             when(studyMemberService.isStudyLeader(leader, study)).thenReturn(true);
-            when(scheduleRepository.findById(10L)).thenReturn(Optional.of(existingSchedule));
 
             // when
-            scheduleService.updateSchedule(1L, 10L, request);
+            scheduleService.updateSchedule(10L, request);
 
             // then
             assertThat(existingSchedule.getTitle()).isEqualTo("수정된 제목");
             assertThat(existingSchedule.getDescription()).isEqualTo("수정된 내용");
+            assertThat(existingSchedule.getStartTime()).isEqualTo(request.start_time());
+            assertThat(existingSchedule.getEndTime()).isEqualTo(request.end_time());
         }
 
         @Test
-        @DisplayName("다른 스터디의 일정을 수정하려 하면 NOT_FOUND 예외가 발생한다.")
-        void updateSchedule_Fail_WrongStudy() {
+        @DisplayName("해당 일정의 스터디 리더가 아니면 FORBIDDEN 예외가 발생한다.")
+        void updateSchedule_Fail_NotLeaderOfThatStudy() {
             // given
             setAuthentication(leader);
             ScheduleCreateRequestDto request = new ScheduleCreateRequestDto("수정된 제목", "수정된 내용",
                 LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(2));
-            Schedule anotherStudySchedule = Schedule.builder().studyId(999L)
+            
+            Schedule anotherStudySchedule = Schedule.builder()
+                .studyId(999L)
+                .title("타 스터디 일정")
                 .build();
+            Study anotherStudy = Study.builder().leader(member).title("다른 스터디").build();
+            ReflectionTestUtils.setField(anotherStudy, "id", 999L);
 
-            when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
-            when(studyMemberService.isStudyLeader(leader, study)).thenReturn(true);
             when(scheduleRepository.findById(10L)).thenReturn(Optional.of(anotherStudySchedule));
+            when(studyRepository.findById(999L)).thenReturn(Optional.of(anotherStudy));
+            when(studyMemberService.isStudyLeader(leader, anotherStudy)).thenReturn(false);
 
             // when & then
             BusinessException exception = assertThrows(BusinessException.class,
-                () -> scheduleService.updateSchedule(1L, 10L, request));
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SCHEDULE_NOT_FOUND);
+                () -> scheduleService.updateSchedule(10L, request));
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
     }
 }

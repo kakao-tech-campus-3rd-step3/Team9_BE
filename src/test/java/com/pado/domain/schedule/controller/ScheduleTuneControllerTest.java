@@ -126,9 +126,9 @@ class ScheduleTuneControllerTest {
                 LocalDateTime.now().plusDays(1).withHour(12),
                 List.of(new ScheduleTuneParticipantDto(1L, "Alice", 1L))
             );
-            given(scheduleTuneService.findScheduleTuneDetail(1L, 100L)).willReturn(dto);
+            given(scheduleTuneService.findScheduleTuneDetail(100L)).willReturn(dto);
 
-            mockMvc.perform(get("/api/studies/{study_id}/schedule-tunes/{tune_id}", 1L, 100L))
+            mockMvc.perform(get("/api/schedule-tunes/{tune_id}", 100L))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("정기회의"))
@@ -139,10 +139,10 @@ class ScheduleTuneControllerTest {
         @WithMockUser
         @DisplayName("상세 실패 - 404 Not Found")
         void detail_not_found() throws Exception {
-            given(scheduleTuneService.findScheduleTuneDetail(1L, 999L))
+            given(scheduleTuneService.findScheduleTuneDetail(999L))
                 .willThrow(new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
 
-            mockMvc.perform(get("/api/studies/{study_id}/schedule-tunes/{tune_id}", 1L, 999L))
+            mockMvc.perform(get("/api/schedule-tunes/{tune_id}", 999L))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("PENDING_SCHEDULE_NOT_FOUND"));
@@ -159,10 +159,10 @@ class ScheduleTuneControllerTest {
         void participate_success() throws Exception {
             ScheduleTuneParticipantRequestDto req = new ScheduleTuneParticipantRequestDto(
                 List.of(1L, 0L, 1L));
-            given(scheduleTuneService.participate(anyLong(), anyLong(), any()))
+            given(scheduleTuneService.participate(anyLong(), any()))
                 .willReturn(new ScheduleTuneParticipantResponseDto("updated"));
 
-            mockMvc.perform(post("/api/studies/{study_id}/schedule-tunes/{tune_id}", 1L, 100L)
+            mockMvc.perform(post("/api/schedule-tunes/{tune_id}/participants", 100L)
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
@@ -177,10 +177,10 @@ class ScheduleTuneControllerTest {
         void participate_forbidden() throws Exception {
             ScheduleTuneParticipantRequestDto req = new ScheduleTuneParticipantRequestDto(
                 List.of(1L));
-            given(scheduleTuneService.participate(anyLong(), anyLong(), any()))
+            given(scheduleTuneService.participate(anyLong(), any()))
                 .willThrow(new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
 
-            mockMvc.perform(post("/api/studies/{study_id}/schedule-tunes/{tune_id}", 1L, 100L)
+            mockMvc.perform(post("/api/schedule-tunes/{tune_id}/participants", 100L)
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))

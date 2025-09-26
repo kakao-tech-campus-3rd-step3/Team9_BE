@@ -16,30 +16,60 @@ import java.util.Date;
 @Component
 @RequiredArgsConstructor
 public class JwtProvider {
+
     private final JwtProps props;
 
-    private SecretKey key(){
+    private SecretKey key() {
         return Keys.hmacShaKeyFor(props.getSecret().getBytes(StandardCharsets.UTF_8));
-    };
+    }
+    
+    private long requirePositiveSeconds(long seconds, String name) {
+        if (seconds <= 0) {
+            throw new IllegalStateException(name + " must be > 0 seconds");
+        }
+        return seconds;
+    }
+
+    public long getAccessTtl() {
+        return requirePositiveSeconds(props.getAccessExpSeconds(), "access TTL");
+    }
+
+    public long getRefreshTtl() {
+        return requirePositiveSeconds(props.getRefreshExpSeconds(), "refresh TTL");
+    }
 
     public String generateAccessToken(Long userId, String email) {
         Instant now = Instant.now();
-        Instant exp = now.plusSeconds(props.getAccessExpSeconds());
+        long ttl = getAccessTtl();
+        Instant exp = now.plusSeconds(ttl);
         return Jwts.builder()
-                .setSubject(String.valueOf(userId))
-                .claim("email", email)
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(exp))
-                .signWith(key(), SignatureAlgorithm.HS256)
-                .compact();
+            .setSubject(String.valueOf(userId))
+            .claim("email", email)
+            .setIssuedAt(Date.from(now))
+            .setExpiration(Date.from(exp))
+            .signWith(key(), SignatureAlgorithm.HS256)
+            .compact();
+    }
+
+    public String generateRefreshToken(Long userId, String email) {
+        Instant now = Instant.now();
+        long ttl = getRefreshTtl();
+        Instant exp = now.plusSeconds(ttl);
+        return Jwts.builder()
+            .setSubject(String.valueOf(userId))
+            .claim("email", email)
+            .setIssuedAt(Date.from(now))
+            .setExpiration(Date.from(exp))
+            .signWith(key(), SignatureAlgorithm.HS256)
+            .compact();
     }
 
     public void validate(String token) {
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(key())
-                    .build()
-                    .parseClaimsJws(token);
+                .setSigningKey(key())
+                .build()
+                .parseClaimsJws(token);
         } catch (ExpiredJwtException e) {
             throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "토큰이 만료되었습니다.");
         } catch (JwtException | IllegalArgumentException e) {
@@ -48,11 +78,26 @@ public class JwtProvider {
     }
 
     public Long getUserId(String token) {
-        Claims claims = Jwts.parserBuilder()
+        Claims claims = parseClaimsOrThrow(token);
+        return Long.valueOf(claims.getSubject());
+    }
+
+    public String getEmail(String token) {
+        Claims claims = parseClaimsOrThrow(token);
+        return String.valueOf(claims.get("email", String.class));
+    }
+
+    private Claims parseClaimsOrThrow(String token) {
+        try {
+            return Jwts.parserBuilder()
                 .setSigningKey(key())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-        return Long.valueOf(claims.getSubject());
+        } catch (ExpiredJwtException e) {
+            throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "토큰이 만료되었습니다.");
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.TOKEN_INVALID, "유효하지 않은 토큰입니다.");
+        }
     }
 }

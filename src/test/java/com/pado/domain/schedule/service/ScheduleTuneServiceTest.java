@@ -179,7 +179,7 @@ class ScheduleTuneServiceTest {
                 .availableEndTime(LocalTime.of(11, 0))
                 .slotMinutes(30).status(ScheduleTuneStatus.PENDING).build();
             ReflectionTestUtils.setField(tune, "id", 777L);
-            given(tuneRepo.findByIdAndStudyId(777L, 10L)).willReturn(Optional.of(tune));
+            given(tuneRepo.findById(777L)).willReturn(Optional.of(tune));
 
             StudyMember sm = StudyMember.builder().study(study).user(member).build();
             ReflectionTestUtils.setField(sm, "id", 100L);
@@ -208,7 +208,7 @@ class ScheduleTuneServiceTest {
             ScheduleTuneParticipantRequestDto req = new ScheduleTuneParticipantRequestDto(
                 List.of(1L, 0L));
 
-            ScheduleTuneParticipantResponseDto resp = service.participate(10L, 777L, req);
+            ScheduleTuneParticipantResponseDto resp = service.participate(777L, req);
             assertThat(resp.message()).isEqualTo("updated");
             assertThat(BitMaskUtils.popcount(s1.getOccupancyBits())).isEqualTo(1);
             assertThat(BitMaskUtils.popcount(s2.getOccupancyBits())).isEqualTo(0);
@@ -259,7 +259,7 @@ class ScheduleTuneServiceTest {
         }
 
         @Test
-        @DisplayName("슬롯과 불일치하면 INVALID_INPUT")
+        @DisplayName("슬롯과 불일치하면 INVALIDINPUT")
         void complete_slot_mismatch() {
             setAuth(leader);
 
@@ -275,8 +275,7 @@ class ScheduleTuneServiceTest {
             given(tuneRepo.findById(777L)).willReturn(Optional.of(tune));
             given(studyRepo.findById(10L)).willReturn(Optional.of(study));
             given(studyMemberService.isStudyLeader(leader, study)).willReturn(true);
-            given(slotRepo.findByScheduleTuneIdOrderBySlotIndexAsc(777L)).willReturn(
-                List.of());
+            given(slotRepo.findByScheduleTuneIdOrderBySlotIndexAsc(777L)).willReturn(List.of());
 
             LocalDateTime st = LocalDateTime.now().plusDays(1).withHour(10);
             LocalDateTime et = st.plusMinutes(30);

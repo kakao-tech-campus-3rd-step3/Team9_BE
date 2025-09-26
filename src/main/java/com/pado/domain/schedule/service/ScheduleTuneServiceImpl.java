@@ -127,15 +127,15 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
     @Override
     @Transactional(Transactional.TxType.SUPPORTS)
-    public ScheduleTuneDetailResponseDto findScheduleTuneDetail(Long studyId, Long tuneId) {
+    public ScheduleTuneDetailResponseDto findScheduleTuneDetail(Long tuneId) {
         User currentUser = getCurrentUser();
-        if (!studyMemberService.isStudyMember(currentUser, studyId)) {
+        ScheduleTune tune = scheduleTuneRepository.findById(tuneId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
+        if (!studyMemberService.isStudyMember(currentUser, tune.getStudyId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-        ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
 
-        Study study = findStudy(studyId);
+        Study study = findStudy(tune.getStudyId());
         Map<Long, String> nameByStudyMemberId = new HashMap<>();
         for (StudyMember sm : studyMemberRepository.findByStudyWithUser(study)) {
             nameByStudyMemberId.put(sm.getId(), sm.getUser().getNickname());
@@ -175,14 +175,15 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
     }
 
     @Override
-    public ScheduleTuneParticipantResponseDto participate(Long studyId, Long tuneId,
+    public ScheduleTuneParticipantResponseDto participate(Long tuneId,
         ScheduleTuneParticipantRequestDto request) {
         User currentUser = getCurrentUser();
+        ScheduleTune tune = scheduleTuneRepository.findById(tuneId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
+        long studyId = tune.getStudyId();
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
-        ScheduleTune tune = scheduleTuneRepository.findByIdAndStudyId(tuneId, studyId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.PENDING_SCHEDULE_NOT_FOUND));
         if (tune.getStatus() != ScheduleTuneStatus.PENDING) {
             throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE, "이미 완료된 조율입니다.");
         }

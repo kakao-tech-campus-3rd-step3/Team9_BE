@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration; // import 추가
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
@@ -31,8 +31,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// --- 해결을 위한 핵심 코드 ---
-// UserDetailsServiceAutoConfiguration을 제외하여 불필요한 UserDetailsService Bean 생성을 막습니다.
 @WebMvcTest(controllers = ScheduleController.class,
     excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
 @Import(GlobalExceptionHandler.class)
@@ -44,7 +42,6 @@ class ScheduleControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // SecurityConfig가 필요로 하는 의존성은 Mock으로 그대로 주입합니다.
     @MockitoBean
     private JwtProvider jwtProvider;
     @MockitoBean
@@ -165,16 +162,15 @@ class ScheduleControllerTest {
         @DisplayName("수정 성공 - 200 OK")
         void updateSchedule_Success() throws Exception {
             // given
-            long studyId = 1L;
             long scheduleId = 10L;
             ScheduleCreateRequestDto requestDto = new ScheduleCreateRequestDto("수정된 일정", "수정된 내용",
                 LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2));
             willDoNothing().given(scheduleService)
-                .updateSchedule(anyLong(), anyLong(), any(ScheduleCreateRequestDto.class));
+                .updateSchedule(anyLong(), any(ScheduleCreateRequestDto.class));
 
             // when & then
             mockMvc.perform(
-                    put("/api/studies/{study_id}/schedules/{schedule_id}", studyId, scheduleId)
+                    put("/api/schedules/{schedule_id}", scheduleId)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -187,14 +183,13 @@ class ScheduleControllerTest {
         @DisplayName("수정 실패 (유효성 검사 - 내용 누락) - 400 Bad Request")
         void updateSchedule_Fail_Validation() throws Exception {
             // given
-            long studyId = 1L;
             long scheduleId = 10L;
             ScheduleCreateRequestDto invalidRequestDto = new ScheduleCreateRequestDto("수정된 일정", "",
                 LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2));
 
             // when & then
             mockMvc.perform(
-                    put("/api/studies/{study_id}/schedules/{schedule_id}", studyId, scheduleId)
+                    put("/api/schedules/{schedule_id}", scheduleId)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequestDto)))
@@ -213,13 +208,12 @@ class ScheduleControllerTest {
         @DisplayName("삭제 성공 - 204 No Content")
         void deleteSchedule_Success() throws Exception {
             // given
-            long studyId = 1L;
             long scheduleId = 10L;
-            willDoNothing().given(scheduleService).deleteSchedule(studyId, scheduleId);
+            willDoNothing().given(scheduleService).deleteSchedule(scheduleId);
 
             // when & then
             mockMvc.perform(
-                    delete("/api/studies/{study_id}/schedules/{schedule_id}", studyId, scheduleId)
+                    delete("/api/schedules/{schedule_id}", scheduleId)
                         .with(csrf()))
                 .andDo(print())
                 .andExpect(status().isNoContent());
@@ -230,14 +224,13 @@ class ScheduleControllerTest {
         @DisplayName("삭제 실패 (권한 없음) - 403 Forbidden")
         void deleteSchedule_Fail_Forbidden() throws Exception {
             // given
-            long studyId = 1L;
             long scheduleId = 10L;
             willThrow(new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY)).given(
-                scheduleService).deleteSchedule(studyId, scheduleId);
+                scheduleService).deleteSchedule(scheduleId);
 
             // when & then
             mockMvc.perform(
-                    delete("/api/studies/{study_id}/schedules/{schedule_id}", studyId, scheduleId)
+                    delete("/api/schedules/{schedule_id}", scheduleId)
                         .with(csrf()))
                 .andDo(print())
                 .andExpect(status().isForbidden())
