@@ -9,20 +9,11 @@ public record ProgressMemberStatusDto(
         String nickname,
         @Schema(description = "스터디에서의 역할", example = "Leader", allowableValues = {"Leader", "Member", "Pending"})
         StudyMemberRole role,
-
         @Schema(description = "출석 횟수", example = "5")
         int attendance_count,
-        @Schema(description = "총 출석 횟수", example = "10")
-        int attendance_total,
-
         @Schema(description = "퀴즈 횟수", example = "8")
         int quiz_count,
-        @Schema(description = "총 퀴즈 횟수", example = "10")
-        int quiz_total,
-
         @Schema(description = "회고 횟수", example = "3")
-        int reflection_count,
-        @Schema(description = "총 회고 횟수", example = "10")
-        int reflection_total
+        int reflection_count
 ){
 }

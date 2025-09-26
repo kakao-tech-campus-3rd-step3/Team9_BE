@@ -28,14 +28,13 @@ public class ProgressServiceImpl implements ProgressService {
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
     private final AttendanceRepository attendanceRepository;
-    private final ScheduleRepository scheduleRepository;
 
     @Override
     public ProgressRoadMapResponseDto getRoadMap(Long studyId, User user) {
         checkException(studyId, user, StudyMemberRole.MEMBER);
         List<Chapter> chapters = chapterRepository.findByStudyId(studyId);
         List<ProgressChapterDto> progressChapterDtos = chapters.stream().map(
-                chapter -> new ProgressChapterDto(chapter.getContent()))
+                chapter -> new ProgressChapterDto(chapter.getContent(), chapter.isCompleted()))
                 .toList();
 
         return new ProgressRoadMapResponseDto(progressChapterDtos);
@@ -88,13 +87,10 @@ public class ProgressServiceImpl implements ProgressService {
 
         List<StudyMember> studyMembers = studyMemberRepository.findByStudyIdFetchUser(studyId);
         Map<Long, Long> attendanceCountMap = attendanceRepository.countMapByStudy(studyId);
-        int attendanceTotal = scheduleRepository.countAllByStudyId(studyId);
 
         // quiz와 reflection 구현되면 수정
         int quizCount = 5;
-        int quizTotal = 10;
         int reflectionCount = 3;
-        int reflectionTotal = attendanceTotal;
 
 
         List<ProgressMemberStatusDto> progressMemberStatusDtos =  studyMembers.stream().map(
@@ -102,11 +98,8 @@ public class ProgressServiceImpl implements ProgressService {
                         studyMember.getUser().getNickname(),
                         studyMember.getRole(),
                         Math.toIntExact(attendanceCountMap.getOrDefault(studyMember.getUser().getId(), 0L)),
-                        attendanceTotal,
                         quizCount,
-                        quizTotal,
-                        reflectionCount,
-                        reflectionTotal
+                        reflectionCount
                         )
         ).toList();
         return new ProgressStatusResponseDto(progressMemberStatusDtos);
