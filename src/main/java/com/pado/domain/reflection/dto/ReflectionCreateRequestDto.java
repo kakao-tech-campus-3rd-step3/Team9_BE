@@ -8,16 +8,16 @@ public record ReflectionCreateRequestDto(
     @Schema(description = "연관된 스터디 일정 ID (선택)", example = "10")
     Long scheduleId,
 
-    @Schema(description = "스터디 만족도 점수 (1~5)", example = "5")
-    @NotNull @Min(1) @Max(5)
+    @Schema(description = "스터디 만족도 점수 (1~10)", example = "8")
+    @NotNull @Min(1) @Max(10)
     Integer satisfactionScore,
 
-    @Schema(description = "스터디 이해도 점수 (1~5)", example = "4")
-    @NotNull @Min(1) @Max(5)
+    @Schema(description = "스터디 이해도 점수 (1~10)", example = "9")
+    @NotNull @Min(1) @Max(10)
     Integer understandingScore,
 
-    @Schema(description = "스터디 참여도 점수 (1~5)", example = "5")
-    @NotNull @Min(1) @Max(5)
+    @Schema(description = "스터디 참여도 점수 (1~10)", example = "10")
+    @NotNull @Min(1) @Max(10)
     Integer participationScore,
 
     @Schema(description = "배운 내용", example = "JPA 영속성 컨텍스트에 대해 깊이 이해했습니다.")

@@ -74,7 +74,7 @@ public enum ErrorCode {
         "본인만 수정/삭제할 수 있습니다."),
     ALREADY_REFLECTED(HttpStatus.CONFLICT, "ALREADY_REFLECTED", "이미 해당 일정에 회고를 작성했습니다."),
     INVALID_REFLECTION_SCORE(HttpStatus.BAD_REQUEST, "INVALID_REFLECTION_SCORE",
-        "점수는 1~5 사이여야 합니다."),
+        "점수는 1~10 사이여야 합니다."),
 
 
     // File/S3 Domain
