@@ -84,6 +84,17 @@ public enum ErrorCode {
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_FILE_FORMAT", "지원하지 않는 파일 형식입니다."),
     S3_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3_SERVICE_ERROR", "파일 서비스 오류가 발생했습니다."),
 
+    // QUIZ
+    QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "QUIZ_NOT_FOUND", "퀴즈를 찾을 수 없습니다."),
+    FILE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_PROCESSING_FAILED", "파일 처리 중 오류가 발생했습니다."),
+    API_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "API_RESPONSE_INVALID", "Gemini AI API가 유효하지 않은 결과를 반환하였습니다."),
+    UNSUPPORTED_QUESTION_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_QUESTION_TYPE", "지원하지 않는 문제 형식입니다."),
+    QUIZ_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "QUIZ_NOT_ACTIVE", "퀴즈 상태가 Active가 아닙니다."),
+    QUIZ_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_COMPLETED", "이미 완료된 퀴즈입니다."),
+    SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", "제출 정보를 찾을 수 없습니다."),
+    FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "FORBIDDEN_ACCESS", "권한이 없는 사용자입니다."),
+    QUIZ_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_PROCESSED", "퀴즈가 이미 처리되었습니다."),
+
     //Progress Domain
     CHAPTER_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAPTER_NOT_FOUND", "로드맵 차시를 찾을 수 없습니다."),
 

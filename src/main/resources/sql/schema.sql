@@ -122,14 +122,18 @@ CREATE TABLE material (
 CREATE INDEX idx_material_main_search
     ON material(study_id, material_category, created_at DESC);
 
-CREATE TABLE material_file (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    file_key VARCHAR(255) NOT NULL UNIQUE,
-    size BIGINT NOT NULL,
-    file_type VARCHAR(50) NOT NULL,
-    material_id BIGINT NOT NULL,
+CREATE TABLE material_file
+(
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(255) NOT NULL,
+    file_key    VARCHAR(255) NOT NULL UNIQUE,
+    size        BIGINT       NOT NULL,
+    file_type   VARCHAR(50)  NOT NULL,
+    processing_status VARCHAR(50),
+    extracted_text    TEXT,
+    material_id BIGINT       NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
+);
 
 CREATE TABLE attendance (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

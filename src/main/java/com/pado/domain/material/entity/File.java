@@ -28,6 +28,13 @@ public class File {
     @Column(name = "file_type", nullable = false)
     private String fileType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "processing_status")
+    private ProcessingStatus processingStatus;
+
+    @Column(name = "extracted_text")
+    private String extractedText;
+
     // Material 생성 이후 setter를 통해 연관관계를 지어줘야 함
     @Setter
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,4 +47,15 @@ public class File {
         this.size = size;
         this.fileType = fileType;
     }
+
+    public void markAsCompleted(String extractedText, String detectedMimeType) {
+        this.extractedText = extractedText;
+        this.fileType = detectedMimeType;
+        this.processingStatus = ProcessingStatus.COMPLETED;
+    }
+
+    public void markAsFailed() {
+        this.processingStatus = ProcessingStatus.FAILED;
+    }
+
 }

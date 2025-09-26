@@ -57,6 +57,14 @@ dependencies {
 	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
 	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
 
+    // Quiz
+    implementation 'org.apache.tika:tika-core:3.2.3'
+    implementation 'org.apache.tika:tika-parsers-standard-package:3.2.3'
+
+    // Google AI
+    implementation 'com.google.genai:google-genai:1.15.0'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
     // AWS
     implementation platform('software.amazon.awssdk:bom:2.25.56')
     implementation 'software.amazon.awssdk:s3'
