@@ -1,15 +1,18 @@
 package com.pado.domain.study.service;
 
+import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
-import com.pado.domain.study.entity.Study;
-import com.pado.domain.study.entity.StudyApplication;
-import com.pado.domain.study.entity.StudyApplicationStatus;
-import com.pado.domain.study.entity.StudyStatus;
+import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
+import com.pado.domain.study.dto.response.StudyMemberDetailDto;
+import com.pado.domain.study.entity.*;
 import com.pado.domain.study.exception.*;
 import com.pado.domain.study.repository.StudyApplicationRepository;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
+import com.pado.domain.user.repository.UserRepository;
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +62,39 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         }
 
         return studyMemberRepository.existsByStudyAndUser(study, user);
+    }
+
+    @Transactional
+    @Override
+    public void updateApplicationStatus(
+            User user,
+            Long studyId,
+            Long applicationId,
+            StudyApplicationStatusChangeRequestDto request)
+    {
+        Study study = studyRepository.findById(studyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
+        StudyApplication application = studyApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_APPLICATION_NOT_FOUND));
+
+        if (!isStudyLeader(user, study)){
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
+        StudyApplicationStatus newRole = StudyApplicationStatus.fromString(request.status());
+
+        if (newRole.equals(StudyApplicationStatus.APPROVED)){
+            StudyMember member = new StudyMember(study, application.getUser(), StudyMemberRole.MEMBER, application.getMessage(), 0);
+            studyMemberRepository.save(member);
+            studyApplicationRepository.delete(application);
+        }
+        else if (newRole.equals(StudyApplicationStatus.REJECTED)) {
+            studyApplicationRepository.delete(application);
+        }
+        else {
+            throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE);
+        }
     }
 
     private void validateApplication(Study study, User user) {

@@ -1,5 +1,6 @@
 package com.pado.domain.study.controller;
 
+import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
 import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
 import com.pado.domain.study.dto.response.StudyMemberDetailDto;
@@ -109,29 +110,11 @@ public class StudyMemberController {
     @Api404StudyOrMemberNotFoundError
     @Operation(
             summary = "스터디원 상태 변경",
-            description = "특정 스터디원의 역할을 변경하거나, 신청 대기 중인 사용자를 수락합니다. (스터디 리더만 가능)"
+            description = "특정 스터디원의 역할을 변경합니다. (스터디 리더만 가능)"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
-            @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponseDto.class),
-                            examples = @ExampleObject(
-                                    name = "상태 변경 충돌 예시",
-                                    value = """
-                                        {
-                                          "code": "INVALID_STATE_CHANGE",
-                                          "message": "상태 변경이 유효하지 않습니다.",
-                                          "errors": [
-                                            "role: 이미 스터디원인 사용자를 신청 대기 상태로 변경할 수 없습니다."
-                                          ],
-                                          "timestamp": "2025-09-07T08:15:30.123Z",
-                                          "path": "/api/users/change-status"
-                                        }
-                                        """
-                            )
-                    )
-            )
+            @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경")
     })
     @Parameters({
             @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
@@ -143,7 +126,32 @@ public class StudyMemberController {
             @PathVariable("member_id") Long memberId,
             @Valid @RequestBody StudyMemberRoleChangeRequestDto request
     ) {
-        // TODO: 스터디원 상태 변경/신청 수락 로직 구현
+        // TODO: 스터디원 상태 변경
+        return ResponseEntity.ok().build();
+    }
+
+    @Api403ForbiddenStudyLeaderOnlyError
+    @Api404StudyOrMemberNotFoundError
+    @Operation(
+            summary = "스터디원 상태 변경",
+            description = "특정 스터디원의 역할을 변경합니다. (스터디 리더만 가능)"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
+            @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경")
+    })
+    @Parameters({
+            @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
+            @Parameter(name = "member_id", description = "역할을 변경할 스터디원의 ID", required = true, example = "2")
+    })
+    @PatchMapping("/applications/{application_id}")
+    public ResponseEntity<Void> updateMemberApplicationStatus(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable("study_id") Long studyId,
+            @PathVariable("application_id") Long applicationId,
+            @Valid @RequestBody StudyApplicationStatusChangeRequestDto request
+    ) {
+        studyMemberService.updateApplicationStatus(user, studyId, applicationId, request);
         return ResponseEntity.ok().build();
     }
 }
