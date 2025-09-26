@@ -75,6 +75,9 @@ public enum ErrorCode {
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "FORBIDDEN_ACCESS", "권한이 없는 사용자입니다."),
     QUIZ_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_PROCESSED", "퀴즈가 이미 처리되었습니다."),
 
+    //Progress Domain
+    CHAPTER_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAPTER_NOT_FOUND", "로드맵 차시를 찾을 수 없습니다."),
+
     //Redis
     REDIS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "REDIS_UNAVAILABLE", "Redis 연결에 실패했습니다.");
 
