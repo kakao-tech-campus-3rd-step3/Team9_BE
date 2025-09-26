@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/schedules/**").authenticated()
                 .requestMatchers("/api/schedule-tunes/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/studies/**").permitAll()
+                .requestMatchers("/ws/**", "/ws").permitAll()
+                .requestMatchers("/chat-test.html", "/static/**", "/*.html").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(
