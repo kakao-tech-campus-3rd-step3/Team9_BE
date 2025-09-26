@@ -28,7 +28,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
-@Tag(name = "10. Attendance", description = "출석 관리 관련 API")
+@Tag(name = "14. Attendance", description = "출석 관리 관련 API")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
