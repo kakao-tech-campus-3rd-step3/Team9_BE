@@ -185,8 +185,8 @@
             
             log('WebSocket 연결 시도...');
             
-            // WebSocket + STOMP 연결 (SockJS 없이 순수 WebSocket 사용)
-            const socket = new WebSocket(`ws://localhost:8080/ws`);
+            // WebSocket + STOMP 연결 (SockJS 사용)
+            const socket = new SockJS(`http://localhost:8080/ws`);
             stompClient = Stomp.over(socket);
             
             // 헤더에 인증 토큰 추가
