@@ -4,6 +4,10 @@ import com.pado.domain.attendance.repository.AttendanceRepository;
 import com.pado.domain.progress.dto.*;
 import com.pado.domain.progress.entity.Chapter;
 import com.pado.domain.progress.repository.ChapterRepository;
+import com.pado.domain.quiz.entity.Quiz;
+import com.pado.domain.quiz.repository.QuizSubmissionRepository;
+import com.pado.domain.reflection.entity.Reflection;
+import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
@@ -28,6 +32,8 @@ public class ProgressServiceImpl implements ProgressService {
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
     private final AttendanceRepository attendanceRepository;
+    private final QuizSubmissionRepository quizSubmissionRepository;
+    private final ReflectionRepository reflectionRepository;
 
     @Override
     public ProgressRoadMapResponseDto getRoadMap(Long studyId, User user) {
@@ -87,19 +93,18 @@ public class ProgressServiceImpl implements ProgressService {
 
         List<StudyMember> studyMembers = studyMemberRepository.findByStudyIdFetchUser(studyId);
         Map<Long, Long> attendanceCountMap = attendanceRepository.countMapByStudy(studyId);
+        Map<Long, Long> quizCountMap = quizSubmissionRepository.countMapByStudy(studyId);
+        Map<Long, Long> reflectionCountMap = reflectionRepository.countMapByStudy(studyId);
 
-        // quiz와 reflection 구현되면 수정
-        int quizCount = 5;
-        int reflectionCount = 3;
+        List<Reflection> reflections = reflectionRepository.findByStudyId(studyId);
 
-
-        List<ProgressMemberStatusDto> progressMemberStatusDtos =  studyMembers.stream().map(
+        List<ProgressMemberStatusDto> progressMemberStatusDtos = studyMembers.stream().map(
                 studyMember -> new ProgressMemberStatusDto(
                         studyMember.getUser().getNickname(),
                         studyMember.getRole(),
                         Math.toIntExact(attendanceCountMap.getOrDefault(studyMember.getUser().getId(), 0L)),
-                        quizCount,
-                        reflectionCount
+                        Math.toIntExact(quizCountMap.getOrDefault(studyMember.getUser().getId(), 0L)),
+                        Math.toIntExact(reflectionCountMap.getOrDefault(studyMember.getUser().getId(), 0L))
                         )
         ).toList();
         return new ProgressStatusResponseDto(progressMemberStatusDtos);
