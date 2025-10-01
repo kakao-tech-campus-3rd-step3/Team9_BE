@@ -10,12 +10,15 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     boolean existsByScheduleAndUser(Schedule schedule, User user);
+
+    Optional<Attendance> findByScheduleAndUser(Schedule schedule, User user);
 
     @Query("""
         select a
@@ -25,6 +28,15 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
         where s.studyId = :studyId
     """)
     List<Attendance> findAllByStudyIdWithScheduleAndUser(@Param("studyId") Long studyId);
+
+    @Query("""
+        select a
+        from Attendance a
+        join fetch a.schedule
+        join fetch a.user
+        where a.schedule = :schedule
+    """)
+    List<Attendance> findAllByScheduleWithScheduleAndUser (@Param("schedule") Schedule schedule);
 
     int countByScheduleId(Long scheduleId);
 
