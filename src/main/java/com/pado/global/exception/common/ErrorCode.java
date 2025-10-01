@@ -57,7 +57,6 @@ public enum ErrorCode {
     PENDING_SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "PENDING_SCHEDULE_NOT_FOUND",
         "승인 대기 중인 일정을 찾을 수 없습니다."),
     INVALID_STATE_CHANGE(HttpStatus.CONFLICT, "INVALID_STATE_CHANGE", "상태 변경이 유효하지 않습니다."),
-    ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "ALREADY_CHECKED_IN", "이미 출석 체크되었습니다."),
     ALREADY_MEMBER(HttpStatus.CONFLICT, "ALREADY_MEMBER", "이미 스터디의 멤버입니다."),
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 스터디에 참여 신청했습니다."),
     STUDY_NOT_RECRUITING(HttpStatus.BAD_REQUEST, "STUDY_NOT_RECRUITING", "모집 중인 스터디가 아닙니다."),
