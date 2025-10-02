@@ -65,9 +65,9 @@ public class AuthServiceImpl implements AuthService{
     public TokenWithRefreshResponseDto login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.email())
             .orElseThrow(
-                () -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "Invalid credentials"));
+                () -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER));
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "Invalid credentials");
+            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER);
         }
 
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail());
