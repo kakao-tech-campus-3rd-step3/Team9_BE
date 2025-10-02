@@ -1,18 +1,19 @@
 package com.pado.domain.attendance.controller;
 
-import com.pado.domain.attendance.dto.*;
+import com.pado.domain.attendance.dto.AttendanceListResponseDto;
+import com.pado.domain.attendance.dto.AttendanceMemberStatusRequestDto;
+import com.pado.domain.attendance.dto.AttendanceStatusRequestDto;
+import com.pado.domain.attendance.dto.AttendanceStatusResponseDto;
 import com.pado.domain.attendance.service.AttendanceService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.annotation.CurrentUser;
-import com.pado.global.exception.dto.ErrorResponseDto;
-import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
 import com.pado.global.swagger.annotation.schedule.Api404ScheduleNotFoundError;
+import com.pado.global.swagger.annotation.study.Api403ForbiddenStudyMemberOnlyError;
 import com.pado.global.swagger.annotation.study.Api404StudyNotFoundError;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -22,9 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 
 @Tag(name = "14. Attendance", description = "출석 관리 관련 API")
 @RestController
