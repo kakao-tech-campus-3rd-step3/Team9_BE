@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface LastReadMessageRepository extends JpaRepository<LastReadMessage, Long> {
+public interface LastReadMessageRepository extends JpaRepository<LastReadMessage, Long>, LastReadMessageRepositoryCustom {
     
     Optional<LastReadMessage> findByStudyMember(StudyMember studyMember);
 }
