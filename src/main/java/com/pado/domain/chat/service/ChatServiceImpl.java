@@ -3,6 +3,7 @@ package com.pado.domain.chat.service;
 import com.pado.domain.chat.dto.request.ChatMessageRequestDto;
 import com.pado.domain.chat.dto.response.ChatMessageListResponseDto;
 import com.pado.domain.chat.dto.response.ChatMessageResponseDto;
+import com.pado.domain.chat.dto.response.LastReadMessageResponseDto;
 import com.pado.domain.chat.dto.response.UnreadCountResponseDto;
 import com.pado.domain.chat.entity.ChatMessage;
 import com.pado.domain.chat.entity.LastReadMessage;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -56,17 +58,23 @@ public class ChatServiceImpl implements ChatService {
 
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
-        // 현재 채팅방에 접속하고 있는 멤버 대상으로만 메세지 전송 및 마지막 메세지 id 업데이트
+        // 현재 채팅방에 접속하고 있는 멤버 대상으로만 마지막으로 읽은 메세지 id 업데이트
         modalManager.getOpenModalUserIds(studyId).forEach(userId -> {
-
-            ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(savedMessage);
-            messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/chats", responseDto);
-
             studyMemberRepository.findByStudyIdAndUserId(studyId, userId)
                     .ifPresent(member -> {
-                        updateLastReadMessage(member, savedMessage.getId());
+                        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(member)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
+
+                        lastReadMessage.updateLastReadMessageId(savedMessage.getId());
                     });
         });
+
+        // 스터디 전체 멤버 - 채팅방 접속 중인 멤버 방식으로 계산
+        Long unreadMemberCount = lastReadRepository.countUnreadMembers(studyId, savedMessage.getId());
+
+        // 채팅 전송
+        ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(savedMessage, unreadMemberCount);
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/chats", responseDto);
 
         // 현재 채팅방에 접속하고 있지 않은 사용자들에게 안읽은 메시지 수 알림
         sendUnreadCountToClosedModalUsers(studyId);
@@ -83,8 +91,17 @@ public class ChatServiceImpl implements ChatService {
             chatMessages = chatMessages.subList(0, size);
         }
 
+        List<Long> messageIds = chatMessages.stream()
+                .map(ChatMessage::getId)
+                .toList();
+
+        Map<Long, Long> unreadCounts = lastReadRepository.getUnreadCountsForMessages(studyId, messageIds);
+
         List<ChatMessageResponseDto> messageDtos = chatMessages.stream()
-                .map(ChatMessageResponseDto::from)
+                .map(msg-> ChatMessageResponseDto.from(
+                        msg,
+                        unreadCounts.getOrDefault(msg.getId(), 0L)
+                ))
                 .toList();
 
         Long nextCursor;
@@ -109,9 +126,22 @@ public class ChatServiceImpl implements ChatService {
         StudyMember studyMember = studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
 
+        // 현재 채팅방에서 가장 최신 메시지 아이디 추출
         Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
-        Long lastMessageId = latestMessage.isPresent() ? latestMessage.get().getId() : 0L;
-        updateLastReadMessage(studyMember, lastMessageId);
+        long lastestChatMessageId = latestMessage.isPresent() ? latestMessage.get().getId() : 0L;
+
+        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 추출
+        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(studyMember)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
+        long lastReadMessageId = lastReadMessage.getLastReadMessageId();
+
+        lastReadMessage.updateLastReadMessageId(lastestChatMessageId);
+
+        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 전송
+        // 프론트에서 이보다 큰 메세지들의 읽지 않은 멤버 수에 -1 수행
+        messagingTemplate.convertAndSend(
+                "/topic/studies/" + studyId + "/unread", new LastReadMessageResponseDto(lastReadMessageId)
+        );
     }
 
     @Override
@@ -128,33 +158,6 @@ public class ChatServiceImpl implements ChatService {
 
         modalManager.refreshModal(studyId, currentUser.getId());
     }
-
-    private void updateLastReadMessage(StudyMember studyMember, Long messageId) {
-
-        LastReadMessage lastRead = lastReadRepository.findByStudyMember(studyMember)
-                .orElse(LastReadMessage.builder()
-                        .studyMember(studyMember)
-                        .lastReadMessageId(0L)
-                        .build());
-
-        lastRead.updateLastReadMessageId(messageId);
-        lastReadRepository.save(lastRead);
-    }
-
-    // 메시지 전송 후 처리 로직
-    private void handleAfterMessageSent(Long studyId, Long messageId) {
-        modalManager.getOpenModalUserIds(studyId).forEach(userId -> {
-
-                studyMemberRepository.findByStudyIdAndUserId(studyId, userId)
-                        .ifPresent(member -> {
-                            updateLastReadMessage(member, messageId);
-                        });
-        });
-
-        // 3. 모달을 열지 않은 사용자들에게 안읽은 메시지 수 알림
-        sendUnreadCountToClosedModalUsers(studyId);
-    }
-
 
     // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송
     private void sendUnreadCountToClosedModalUsers(Long studyId) {
