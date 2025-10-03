@@ -167,7 +167,9 @@ jobs:
             sudo docker pull "$IMAGE"
             sudo docker rm -f "$NAME" 2>/dev/null || true
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
-            sudo docker network connect pado-net redis || true
+            if ! sudo docker network inspect pado-net | grep -q redis; then
+              sudo docker network connect pado-net redis
+            fi
             
             # Create PR env file on remote (prevent expansion with quoted heredoc)
             cat > /tmp/pado-pr.env <<'EOF'
@@ -219,6 +221,7 @@ jobs:
               exit 1
             fi
             
+            sudo docker logs "$NAME" > /tmp/pr-smoke.log || true
             sudo docker rm -f "$NAME" || true
             sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
             echo "PR EC2 smoke passed."
