@@ -164,14 +164,21 @@ jobs:
             NAME="pado-pr-${{ github.run_id }}"
             
             echo "Pull $IMAGE and run on localhost:${PORT} ..."
+            
+            # [자동 정리] 스모크 테스트 포트(18080)를 사용하는 기존 컨테이너가 있다면 강제 삭제
+            OLD_CONTAINER_ID=$(sudo docker ps -q --filter "publish=${PORT}")
+            if [ -n "$OLD_CONTAINER_ID" ]; then
+              echo "Found and stopping stale container using port ${PORT}: ${OLD_CONTAINER_ID}"
+              sudo docker rm -f "$OLD_CONTAINER_ID"
+            fi
+            
             sudo docker pull "$IMAGE"
-            sudo docker rm -f "$NAME" 2>/dev/null || true
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
             if ! sudo docker inspect redis -f '{{json .NetworkSettings.Networks}}' | grep -q "pado-net"; then
               sudo docker network connect pado-net redis
             fi
             
-            # Create PR env file on remote (prevent expansion with quoted heredoc)
+            # .env 파일 생성
             cat > /tmp/pado-pr.env <<'EOF'
             SPRING_PROFILES_ACTIVE=prod
             DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -191,22 +198,20 @@ jobs:
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             EOF
             
-            echo "--- Debugging .env file contents ---"
-            grep -E '= *$' /tmp/pado-pr.env && echo "!!! FATAL: EMPTY SECRET DETECTED ABOVE !!!" || echo "OK: No empty secrets found."
-            echo "--- End of debug ---"
-            
+            # [원상 복구] 정상적인 애플리케이션 실행
             NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
               --network pado-net \
               --add-host host.docker.internal:host-gateway \
               --env-file /tmp/pado-pr.env \
               "$IMAGE")
-
+            
             if [ -z "$NEW_ID" ]; then
               echo "docker run failed"
               sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
               exit 1
             fi
             
+            # [원상 복구] 헬스 체크 루프
             HEALTH="http://127.0.0.1:${PORT}/actuator/health"
             for i in $(seq 1 12); do
               echo "PR EC2 health check #$i ..."
@@ -214,6 +219,7 @@ jobs:
               sleep 5
             done
             
+            # [원상 복구] 실패 시 로그 출력
             if [ "${OK:-false}" != true ]; then
               echo "--- Health check failed. Displaying debug information. ---"
               echo "--- Health endpoint response: ---"
@@ -226,7 +232,7 @@ jobs:
               exit 1
             fi
             
-            sudo docker logs "$NAME" > /tmp/pr-smoke.log || true
+            # 성공 시 정리
             sudo docker rm -f "$NAME" || true
             sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
             echo "PR EC2 smoke passed."
