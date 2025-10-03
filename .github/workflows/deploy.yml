@@ -167,7 +167,7 @@ jobs:
             sudo docker pull "$IMAGE"
             sudo docker rm -f "$NAME" 2>/dev/null || true
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
-            if ! sudo docker network inspect pado-net -f '{{json .Containers}}' | grep -q '"Name": "redis"'; then
+            if ! sudo docker inspect redis -f '{{json .NetworkSettings.Networks}}' | grep -q "pado-net"; then
               sudo docker network connect pado-net redis
             fi
             
@@ -298,7 +298,7 @@ jobs:
               sudo docker rm -f "$NEW_NAME"
             fi
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
-            if ! sudo docker network inspect pado-net -f '{{json .Containers}}' | grep -q '"Name": "redis"'; then
+            if ! sudo docker inspect redis -f '{{json .NetworkSettings.Networks}}' | grep -q "pado-net"; then
               sudo docker network connect pado-net redis
             fi
 
