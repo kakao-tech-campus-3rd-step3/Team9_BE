@@ -211,11 +211,12 @@ jobs:
             done
             
             if [ "${OK:-false}" != true ]; then
-              echo "--- Health response ---"
-              curl -s "$HEALTH" || true
+              echo "--- Health check failed. Displaying debug information. ---"
+              echo "--- Health endpoint response: ---"
+              curl -v "$HEALTH" || echo "curl command failed"
               echo
-              echo "--- Logs ---"
-              sudo docker logs "$NAME" || true
+              echo "--- Application container logs: ---"
+              sudo docker logs "$NAME"
               sudo docker rm -f "$NAME" || true
               sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
               exit 1
