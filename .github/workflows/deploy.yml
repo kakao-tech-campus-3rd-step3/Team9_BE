@@ -163,16 +163,18 @@ jobs:
             PORT=18080
             NAME="pado-pr-${{ github.run_id }}"
             
-            echo "Pull $IMAGE and run on localhost:${PORT} ..."
+            echo "Pulling image..."
+            sudo docker pull "$IMAGE"
             
-            # [자동 정리] 스모크 테스트 포트(18080)를 사용하는 기존 컨테이너가 있다면 강제 삭제
+            # 포트 충돌 방지용 기존 컨테이너 삭제
             OLD_CONTAINER_ID=$(sudo docker ps -q --filter "publish=${PORT}")
             if [ -n "$OLD_CONTAINER_ID" ]; then
               echo "Found and stopping stale container using port ${PORT}: ${OLD_CONTAINER_ID}"
               sudo docker rm -f "$OLD_CONTAINER_ID"
             fi
-            
-            sudo docker pull "$IMAGE"
+            sudo docker rm -f "$NAME" 2>/dev/null || true
+
+            # 네트워크 설정
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
             if ! sudo docker inspect redis -f '{{json .NetworkSettings.Networks}}' | grep -q "pado-net"; then
               sudo docker network connect pado-net redis
@@ -198,12 +200,14 @@ jobs:
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             EOF
             
-            # [원상 복구] 정상적인 애플리케이션 실행
-            NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
+            echo "--- Attempting to run the container in the foreground to capture startup logs ---"
+            # 컨테이너를 포그라운드에서 실행하여 모든 시작 로그를 직접 확인합니다.
+            # 이 단계에서 워크플로우가 타임아웃으로 실패하는 것은 정상적인 디버깅 과정입니다.
+            sudo docker run --rm --name "$NAME" -p ${PORT}:8080 \
               --network pado-net \
               --add-host host.docker.internal:host-gateway \
               --env-file /tmp/pado-pr.env \
-              "$IMAGE")
+              "$IMAGE"
             
             if [ -z "$NEW_ID" ]; then
               echo "docker run failed"
