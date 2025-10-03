@@ -78,7 +78,7 @@ jobs:
       - name: Wait for health (status:UP)
         run: |
           set -euo pipefail
-          for i in $(seq 1 72); do
+          for i in $(seq 1 12); do
             echo "Health check #$i ..."
             if curl -s --fail http://127.0.0.1:18080/actuator/health | grep -q '"status":"UP"'; then
               exit 0
@@ -213,7 +213,7 @@ jobs:
             fi
             
             HEALTH="http://127.0.0.1:${PORT}/actuator/health"
-            for i in $(seq 1 72); do
+            for i in $(seq 1 12); do
               echo "PR EC2 health check #$i ..."
               if curl -s --fail "$HEALTH" | grep -q '"status":"UP"'; then OK=true; break; fi
               sleep 5
@@ -346,7 +346,7 @@ jobs:
             
             echo "Started $NEW_NAME ($NEW_CONTAINER_ID) on :$TARGET_PORT. Health check..."
             HEALTH_CHECK_URL="http://127.0.0.1:${TARGET_PORT}/actuator/health"
-            for i in $(seq 1 72); do
+            for i in $(seq 1 12); do
               echo "Health check #$i ..."
               if curl -s --fail "$HEALTH_CHECK_URL" | grep -q '"status":"UP"'; then
                 HEALTH_OK=true; break
