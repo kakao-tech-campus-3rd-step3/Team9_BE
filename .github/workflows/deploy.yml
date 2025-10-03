@@ -192,15 +192,24 @@ jobs:
             EOF
             
             echo "--- Debugging .env file contents ---"
-            # .env 파일에서 값이 비어있는 (=으로 끝나는) 라인이 있는지 확인합니다.
             grep -E '= *$' /tmp/pado-pr.env && echo "!!! FATAL: EMPTY SECRET DETECTED ABOVE !!!" || echo "OK: No empty secrets found."
             echo "--- End of debug ---"
             
-            NEW_ID=$(sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
-              --network pado-net \
-              --add-host host.docker.internal:host-gateway \
-              --env-file /tmp/pado-pr.env \
-              "$IMAGE")
+            echo "--- Starting container in debug mode to inspect environment variables ---"
+            sudo docker run -d --name "$NAME" -p ${PORT}:8080 \
+            --network pado-net \
+            --add-host host.docker.internal:host-gateway \
+            --env-file /tmp/pado-pr.env \
+            --entrypoint "sh" \
+            "$IMAGE" \
+            -c "echo '--- Container Environment Variables ---'; env; echo '--- Sleeping to keep container alive for inspection ---'; sleep 3600"
+
+            sleep 5
+            echo "--- Initial logs from debug container ---"
+            sudo docker logs "$NAME"
+            
+            echo "Forcing failure to view debug logs."
+            exit 1
 
             if [ -z "$NEW_ID" ]; then
               echo "docker run failed"
