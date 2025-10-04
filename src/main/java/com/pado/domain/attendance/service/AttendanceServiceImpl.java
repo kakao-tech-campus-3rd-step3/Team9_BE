@@ -1,9 +1,6 @@
 package com.pado.domain.attendance.service;
 
-import com.pado.domain.attendance.dto.AttendanceListResponseDto;
-import com.pado.domain.attendance.dto.AttendanceStatusDto;
-import com.pado.domain.attendance.dto.AttendanceStatusResponseDto;
-import com.pado.domain.attendance.dto.MemberAttendanceDto;
+import com.pado.domain.attendance.dto.*;
 import com.pado.domain.attendance.entity.Attendance;
 import com.pado.domain.attendance.repository.AttendanceRepository;
 import com.pado.domain.schedule.entity.Schedule;
@@ -14,14 +11,14 @@ import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
+import com.pado.domain.user.repository.UserRepository;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +29,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final ScheduleRepository scheduleRepository;
     private final StudyMemberRepository studyMemberRepository;
     private final StudyRepository studyRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -84,30 +82,81 @@ public class AttendanceServiceImpl implements AttendanceService {
 
 
     @Override
-    public AttendanceStatusResponseDto getIndividualAttendanceStatus(Long scheduleId, User user) {
-        Schedule schedule = checkException(scheduleId, user);
-        return new AttendanceStatusResponseDto(
-            attendanceRepository.existsByScheduleAndUser(schedule, user));
-    }
+    public AttendanceStatusResponseDto getMyAttendanceStatus(Long scheduleId, User user) {
+        Schedule schedule = checkException(scheduleId, user, StudyMemberRole.MEMBER);
+        Optional<Attendance> existingAttendance = attendanceRepository.findByScheduleAndUser(schedule, user);
 
+        if (existingAttendance.isPresent()) {
+            Attendance attendance = existingAttendance.get();
+            return new AttendanceStatusResponseDto(attendance.isStatus());
+        }
+        else {
+            return new AttendanceStatusResponseDto(false);
+        }
+    }
 
     @Override
-    public AttendanceStatusResponseDto checkIn(Long scheduleId, User user) {
-        Schedule schedule = checkException(scheduleId, user);
+    @Transactional
+    public AttendanceListResponseDto getScheduleAttendance(Long studyId, Long scheduleId, User user) {
+        Schedule schedule = checkException(scheduleId, user, StudyMemberRole.LEADER);
+        List<Attendance> attendances = attendanceRepository.findAllByScheduleWithScheduleAndUser(schedule);
+        Study study = studyRepository.findById(studyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+        Long leaderId = studyMemberRepository.findLeaderUserIdByStudy(study, StudyMemberRole.LEADER);
+        List<StudyMember> studyMembers = studyMemberRepository.findByStudyWithUser(study);
+        List<StudyMember> orderedMembers = studyMembers.stream()
+                .sorted(Comparator.comparing(sm -> !sm.getUser().getId().equals(leaderId)))
+                .toList();
 
-        // 출석 여부 확인
-        if (attendanceRepository.existsByScheduleAndUser(schedule, user)) {
-            throw new BusinessException(ErrorCode.ALREADY_CHECKED_IN);
-        }
+        Map<Long, Attendance> attendanceByUser = attendances.stream()
+                .collect(Collectors.toMap(a -> a.getUser().getId(), a->a));
 
-        Attendance attendance = Attendance.createCheckIn(schedule, user);
-        attendanceRepository.save(attendance);
+        List<MemberAttendanceDto> memberAttendanceDtoList = orderedMembers.stream()
+                .map(studyMember -> {
+                    User targetuser = studyMember.getUser();
+                    Attendance attendance = attendanceByUser.get(targetuser.getId());
+                    boolean status = attendance != null && attendance.isStatus();
+                    AttendanceStatusDto attendanceStatusDto = new AttendanceStatusDto(status, schedule.getStartTime());
+                    return new MemberAttendanceDto(targetuser.getNickname(), targetuser.getImage_key(), List.of(attendanceStatusDto));
+                })
+                .toList();
 
-        return new AttendanceStatusResponseDto(true);
+        return new AttendanceListResponseDto(memberAttendanceDtoList);
     }
 
+    @Override
+    @Transactional
+    public void changeMemberAttendanceStatus(Long scheduleId, AttendanceMemberStatusRequestDto dto, User user) {
+        Schedule schedule = checkException(scheduleId, user, StudyMemberRole.LEADER);
+        User targetUser = userRepository.findByNickname(dto.nickname()).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        updateAttendanceStatus(schedule, dto.status(), targetUser);
+    }
+
+    @Override
+    @Transactional
+    public void changeMyAttendanceStatus(Long scheduleId, AttendanceStatusRequestDto dto, User user) {
+        Schedule schedule = checkException(scheduleId, user, StudyMemberRole.MEMBER);
+        updateAttendanceStatus(schedule, dto.status(), user);
+
+    }
+
+    // 공통 참석 여부 변경 코드
+    private void updateAttendanceStatus(Schedule schedule, boolean status, User user) {
+        Optional<Attendance> existingAttendance = attendanceRepository.findByScheduleAndUser(schedule, user);
+
+        if (existingAttendance.isPresent()) {
+            Attendance attendance = existingAttendance.get();
+            attendance.changestatus(status);
+        }
+        else {
+            Attendance attendance = Attendance.createCheckIn(schedule, status, user);
+            attendanceRepository.save(attendance);
+        }
+    }
+
+
     // 공통 예외 검증
-    private Schedule checkException(Long scheduleId, User user) {
+    private Schedule checkException(Long scheduleId, User user, StudyMemberRole required) {
         // 스케줄 검증
         Schedule schedule = scheduleRepository.findById(scheduleId)
             .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
@@ -117,8 +166,12 @@ public class AttendanceServiceImpl implements AttendanceService {
             .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
 
         // 스터디 멤버 검증
-        if (!studyMemberRepository.existsByStudyAndUser(study, user)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        Collection<StudyMemberRole> allowed =
+                (required == StudyMemberRole.LEADER) ? List.of(StudyMemberRole.LEADER) : List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER);
+        if (!studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(study.getId(), user.getId(), allowed)) {
+            throw new BusinessException(
+                    (required == StudyMemberRole.LEADER) ? ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY
+                            : ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
 
         return schedule;
