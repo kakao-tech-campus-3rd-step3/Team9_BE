@@ -2,7 +2,10 @@ package com.pado.domain.quiz.repository;
 
 import com.pado.domain.quiz.dto.projection.QSubmissionStatusDto;
 import com.pado.domain.quiz.dto.projection.SubmissionStatusDto;
+import com.pado.domain.quiz.entity.QQuizSubmission;
 import com.pado.domain.quiz.entity.QuizSubmission;
+import com.pado.domain.quiz.repository.dto.UserQuizCountDto;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
@@ -47,5 +50,19 @@ public class QuizSubmissionRepositoryImpl implements QuizSubmissionRepositoryCus
                 .fetchOne();
 
         return Optional.ofNullable(result);
+    }
+
+    @Override
+    public List<UserQuizCountDto> countByStudyGroupByUser(Long studyId) {
+        QQuizSubmission qs = QQuizSubmission.quizSubmission;
+
+        return queryFactory
+                .select(Projections.constructor(UserQuizCountDto.class,
+                        qs.user.id,
+                        qs.count())) // count(qs)
+                .from(qs)
+                .where(qs.quiz.study.id.eq(studyId))
+                .groupBy(qs.user.id)
+                .fetch();
     }
 }

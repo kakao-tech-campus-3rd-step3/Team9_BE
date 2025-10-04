@@ -59,48 +59,47 @@ class AttendanceServiceImplTest {
 
     private User testUser(Long id) {
         User u = User.builder()
-            .email("test@test.com")
-            .passwordHash("hashed")
-            .nickname("tester")
-            .region(Region.SEOUL)
-            .gender(Gender.MALE)
-            .build();
+                .email("test@test.com")
+                .passwordHash("hashed")
+                .nickname("tester")
+                .region(Region.SEOUL)
+                .gender(Gender.MALE)
+                .build();
         ReflectionTestUtils.setField(u, "id", id);
         return u;
     }
 
     private User testUser(Long id, String name) {
         User u = User.builder()
-            .email("test@test.com")
-            .passwordHash("hashed")
-            .nickname(name)
-            .region(Region.SEOUL)
-            .gender(Gender.MALE)
-            .build();
+                .email("test@test.com")
+                .passwordHash("hashed")
+                .nickname(name)
+                .region(Region.SEOUL)
+                .gender(Gender.MALE)
+                .build();
         ReflectionTestUtils.setField(u, "id", id);
         return u;
     }
 
     private Schedule testSchedule(Long id, Long studyId, LocalDateTime startDate) {
-        Schedule s = Schedule.builder()
-            .studyId(studyId)
-            .title("스터디 일정")
-            .description("설명")
-            .startTime(startDate)
-            .endTime(startDate.plusDays(1))
-            .build();
+        Schedule s =  Schedule.builder()
+                .studyId(studyId)
+                .title("스터디 일정")
+                .description("설명")
+                .startTime(startDate)
+                .endTime(startDate.plusDays(1))
+                .build();
         ReflectionTestUtils.setField(s, "id", id);
         return s;
     }
-
     private Schedule testSchedule(Long studyId) {
         return Schedule.builder()
-            .studyId(studyId)
-            .title("스터디 일정")
-            .description("설명")
-            .startTime(LocalDateTime.now())
-            .endTime(LocalDateTime.now().plusHours(2))
-            .build();
+                .studyId(studyId)
+                .title("스터디 일정")
+                .description("설명")
+                .startTime(LocalDateTime.now())
+                .endTime(LocalDateTime.now().plusHours(2))
+                .build();
     }
 
     private Study testStudy(Long id) {
@@ -109,21 +108,21 @@ class AttendanceServiceImplTest {
 
     private Attendance testAttendance(Long id, Schedule schedule, User user, boolean status) {
         Attendance a = Attendance.builder()
-            .schedule(schedule)
-            .user(user)
-            .status(status)
-            .checkInTime(LocalDateTime.now())
-            .build();
+                .schedule(schedule)
+                .user(user)
+                .status(status)
+                .checkInTime(LocalDateTime.now())
+                .build();
         ReflectionTestUtils.setField(a, "id", id);
         return a;
     }
 
     private StudyMember testStudyMember(Study study, User user, StudyMemberRole role) {
         return StudyMember.builder()
-            .study(study)
-            .user(user)
-            .role(role)
-            .build();
+                .study(study)
+                .user(user)
+                .role(role)
+                .build();
     }
 
     @Test
@@ -150,6 +149,7 @@ class AttendanceServiceImplTest {
         Long studyId = 100L;
         User user = testUser(userId);
         Schedule schedule = testSchedule(studyId);
+
 
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
         given(studyRepository.findById(studyId)).willReturn(Optional.empty());
