@@ -1,5 +1,9 @@
 package com.pado.domain.study.service;
 
+import com.pado.domain.chat.entity.ChatMessage;
+import com.pado.domain.chat.entity.LastReadMessage;
+import com.pado.domain.chat.repository.ChatMessageRepository;
+import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
 import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
@@ -17,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class StudyMemberServiceImpl implements StudyMemberService {
@@ -24,6 +30,8 @@ public class StudyMemberServiceImpl implements StudyMemberService {
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
     private final StudyApplicationRepository studyApplicationRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final LastReadMessageRepository lastReadMessageRepository;
 
     @Override
     @Transactional
@@ -88,6 +96,14 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             StudyMember member = new StudyMember(study, application.getUser(), StudyMemberRole.MEMBER, application.getMessage(), 0);
             studyMemberRepository.save(member);
             studyApplicationRepository.delete(application);
+
+            // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
+            // 채팅방에 아무런 채팅이 없으면 0, 아니라면 가장 최신의 메세지 아이디를 가짐
+            Optional<ChatMessage> lastestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
+            long lastestMessageId = lastestMessage.isPresent() ? lastestMessage.get().getId() : 0L;
+
+            LastReadMessage lastReadMessage = new LastReadMessage(member, lastestMessageId);
+            lastReadMessageRepository.save(lastReadMessage);
         }
         else if (newRole.equals(StudyApplicationStatus.REJECTED)) {
             studyApplicationRepository.delete(application);
