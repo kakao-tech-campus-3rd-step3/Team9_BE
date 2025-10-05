@@ -4,6 +4,7 @@ import com.pado.domain.study.dto.response.MyApplicationResponseDto;
 import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyApplication;
+import com.pado.domain.study.entity.StudyApplicationStatus;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.repository.StudyApplicationRepository;
 import com.pado.domain.study.repository.StudyMemberRepository;
@@ -70,6 +71,7 @@ public class UserServiceImpl implements UserService {
     public List<MyApplicationResponseDto> getMyApplications(User user) {
         List<StudyApplication> applications = studyApplicationRepository.findByUserWithStudy(user);
         return applications.stream()
+            .filter(app -> app.getStatus() == StudyApplicationStatus.PENDING)
             .map(app -> MyApplicationResponseDto.builder()
                 .applicationId(app.getId())
                 .studyId(app.getStudy().getId())
