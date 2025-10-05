@@ -7,6 +7,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,20 +42,34 @@ public class LastReadMessageRepositoryCustomImpl implements LastReadMessageRepos
         QLastReadMessage lastReadMessage = QLastReadMessage.lastReadMessage;
         QStudyMember studyMember = QStudyMember.studyMember;
 
-        // 스터디의 모든 멤버의 LastReadMessage를 가져옴
-        List<LastReadMessage> allReads = queryFactory
-                .selectFrom(lastReadMessage)
-                .join(lastReadMessage.studyMember, studyMember).fetchJoin()
+        // 스터디의 모든 멤버의 lastReadMessageId를 가져옴
+        List<Long> lastReadIds = queryFactory
+                .select(lastReadMessage.lastReadMessageId)
+                .from(lastReadMessage)
+                .join(lastReadMessage.studyMember, studyMember)
                 .where(studyMember.study.id.eq(studyId))
                 .fetch();
 
-        // Java에서 계산
+        Collections.sort(lastReadIds);
+
         return messageIds.stream()
                 .collect(Collectors.toMap(
                         messageId -> messageId,
-                        messageId -> allReads.stream()
-                                .filter(read -> read.getLastReadMessageId() < messageId)
-                                .count()
+                        messageId -> calculateUnreadCount(messageId, lastReadIds)
                 ));
+    }
+
+    private long calculateUnreadCount(long messageId, List<Long> sortedLastReadIds) {
+        int idx = Collections.binarySearch(sortedLastReadIds, messageId);
+
+        if (idx >= 0) {
+            int firstOccurrence = idx;
+            while (firstOccurrence > 0 && sortedLastReadIds.get(firstOccurrence - 1).equals(messageId)) {
+                firstOccurrence--;
+            }
+            return firstOccurrence;
+        } else {
+            return -idx - 1;
+        }
     }
 }
