@@ -2,6 +2,8 @@ package com.pado.domain.chat.entity;
 
 import com.pado.domain.basetime.CreatedAtEntity;
 import com.pado.domain.study.entity.StudyMember;
+import com.pado.global.exception.common.BusinessException;
+import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,6 +37,10 @@ public class ChatReaction extends CreatedAtEntity {
     }
 
     public void changeReaction(ReactionType reactionType) {
+        if (this.reactionType == reactionType) {
+            throw new BusinessException(ErrorCode.ALREADY_REACTED);
+        }
+
         this.reactionType = reactionType;
     }
 }
