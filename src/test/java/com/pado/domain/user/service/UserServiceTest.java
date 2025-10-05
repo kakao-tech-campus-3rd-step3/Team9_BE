@@ -1,5 +1,6 @@
 package com.pado.domain.user.service;
 
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.entity.StudyMemberRole;
@@ -18,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +33,6 @@ class UserServiceTest {
     private StudyRepository studyRepository;
     @Mock
     private StudyMemberRepository studyMemberRepository;
-
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -45,30 +46,27 @@ class UserServiceTest {
             // given
             Long studyId = 1L;
             User user = User.builder()
-                    .nickname("baejw")
-                    .image_key("https://cdn.example.com/p.png")
-                    .build();
+                .nickname("baejw")
+                .image_key("https://cdn.example.com/p.png")
+                .build();
             ReflectionTestUtils.setField(user, "id", 1L);
 
             Study study = Study.builder()
-                    .id(studyId)
-                    .title("알고리즘 스터디")
-                    .build();
-
+                .id(studyId)
+                .title("알고리즘 스터디")
+                .build();
             StudyMember studyMember = StudyMember.builder()
-                    .study(study)
-                    .user(user)
-                    .role(StudyMemberRole.LEADER)
-                    .build();
+                .study(study)
+                .user(user)
+                .role(StudyMemberRole.LEADER)
+                .build();
             ReflectionTestUtils.setField(studyMember, "id", 100L);
 
             given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
             given(studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId()))
-                    .willReturn(Optional.of(studyMember));
-
+                .willReturn(Optional.of(studyMember));
             // when
             UserStudyResponseDto dto = userService.getUserStudy(studyId, user);
-
             // then
             assertThat(dto.nickname()).isEqualTo("baejw");
             assertThat(dto.image_key()).isEqualTo("https://cdn.example.com/p.png");
@@ -87,8 +85,8 @@ class UserServiceTest {
 
             // when & then
             assertThatThrownBy(() -> userService.getUserStudy(studyId, user))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
         }
 
         @Test
@@ -102,13 +100,36 @@ class UserServiceTest {
 
             given(studyRepository.findById(studyId)).willReturn(Optional.of(study));
             given(studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId()))
-                    .willReturn(Optional.empty());
-
+                .willReturn(Optional.empty());
             // when & then
             assertThatThrownBy(() -> userService.getUserStudy(studyId, user))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining(ErrorCode.USER_NOT_FOUND.message);
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.USER_NOT_FOUND.message);
+        }
+    }
+
+    @Nested
+    @DisplayName("findMyStudies()")
+    class FindMyStudies {
+
+        @Test
+        @DisplayName("정상: 참여중인 스터디 목록 조회 성공")
+        void findMyStudies_Success() {
+            // given
+            Long userId = 1L;
+            Study study1 = Study.builder().id(1L).title("스터디1").build();
+            Study study2 = Study.builder().id(2L).title("스터디2").build();
+
+            given(studyRepository.findByUserId(userId))
+                .willReturn(List.of(study1, study2));
+
+            // when
+            List<MyStudyResponseDto> result = userService.findMyStudies(userId);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).title()).isEqualTo("스터디1");
+            assertThat(result.get(1).title()).isEqualTo("스터디2");
         }
     }
 }
-
