@@ -1,6 +1,7 @@
 package com.pado.domain.user.service;
 
 import com.pado.domain.study.dto.response.MyApplicationResponseDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.user.dto.UserDetailResponseDto;
 import com.pado.domain.user.dto.UserSimpleResponseDto;
 import com.pado.domain.user.dto.UserStudyResponseDto;
@@ -20,4 +21,6 @@ public interface UserService {
     UserStudyResponseDto getUserStudy(Long studyId, User user);
 
     List<MyApplicationResponseDto> getMyApplications(User user);
+
+    List<MyStudyResponseDto> findMyStudies(Long userId);
 }

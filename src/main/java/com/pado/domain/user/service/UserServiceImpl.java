@@ -1,6 +1,7 @@
 package com.pado.domain.user.service;
 
 import com.pado.domain.study.dto.response.MyApplicationResponseDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyApplication;
 import com.pado.domain.study.entity.StudyMember;
@@ -76,6 +77,18 @@ public class UserServiceImpl implements UserService {
                 .status(app.getStatus().name())
                 .message(app.getMessage())
                 .build())
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MyStudyResponseDto> findMyStudies(Long userId) {
+        List<Study> studies = studyRepository.findByUserId(userId);
+        return studies.stream()
+            .map(study -> new MyStudyResponseDto(
+                study.getId(),
+                study.getTitle()
+            ))
             .collect(Collectors.toList());
     }
 }

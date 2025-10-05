@@ -131,13 +131,13 @@ public class StudyMemberController {
     })
     @Parameters({
         @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
-        @Parameter(name = "application_id", description = "처리할 신청서의 ID", required = true, example = "1")
+        @Parameter(name = "app_id", description = "처리할 신청서의 ID", required = true, example = "1")
     })
-    @PatchMapping("/applications/{application_id}")
+    @PatchMapping("/applications/{app_id}")
     public ResponseEntity<Void> updateMemberApplicationStatus(
         @Parameter(hidden = true) @CurrentUser User user,
         @PathVariable("study_id") Long studyId,
-        @PathVariable("application_id") Long applicationId,
+        @PathVariable("app_id") Long applicationId,
         @Valid @RequestBody StudyApplicationStatusChangeRequestDto request
     ) {
         studyMemberService.updateApplicationStatus(user, studyId, applicationId, request);

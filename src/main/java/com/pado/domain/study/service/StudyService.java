@@ -14,8 +14,6 @@ public interface StudyService {
 
     void createStudy(User user, StudyCreateRequestDto requestDto);
 
-    List<MyStudyResponseDto> findMyStudies(Long userId);
-
     StudyListResponseDto findStudies(User user, String keyword, List<Category> categories,
         List<Region> regions, int page, int size);
 

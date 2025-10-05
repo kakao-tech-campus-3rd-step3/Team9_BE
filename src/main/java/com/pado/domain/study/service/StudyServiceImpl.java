@@ -58,16 +58,6 @@ public class StudyServiceImpl implements StudyService {
         studyMemberRepository.save(leaderMember);
     }
 
-    public List<MyStudyResponseDto> findMyStudies(Long userId) {
-        List<Study> studies = studyRepository.findByUserId(userId);
-        return studies.stream()
-            .map(study -> new MyStudyResponseDto(
-                study.getId(),
-                study.getTitle()
-            ))
-            .collect(Collectors.toList());
-    }
-
     @Override
     @Transactional(readOnly = true)
     public StudyListResponseDto findStudies(User user, String keyword, List<Category> categories,
