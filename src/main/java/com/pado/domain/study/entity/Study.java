@@ -60,6 +60,20 @@ public class Study extends AuditingEntity {
     @Builder.Default
     private List<StudyMember> studyMembers = new ArrayList<>();
 
+    public void update(String title, String description, String detailDescription, Region region,
+        String studyTime, Integer maxMembers, String fileKey, List<Category> interests,
+        List<String> conditions) {
+        this.title = title;
+        this.description = description;
+        this.detailDescription = detailDescription;
+        this.region = region;
+        this.studyTime = studyTime;
+        this.maxMembers = maxMembers;
+        this.fileKey = fileKey;
+        addInterests(interests);
+        addConditions(conditions);
+    }
+
     public void addInterests(List<Category> categories) {
         this.interests.clear();
         if (categories != null) {

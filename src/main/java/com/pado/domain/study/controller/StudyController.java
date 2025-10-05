@@ -111,10 +111,11 @@ public class StudyController {
     })
     @PatchMapping("/{study_id}")
     public ResponseEntity<Void> updateStudy(
+        @Parameter(hidden = true) @CurrentUser User user,
         @PathVariable("study_id") Long studyId,
         @Valid @RequestBody StudyCreateRequestDto request
     ) {
-        // TODO: 스터디 정보 수정 기능 구현
+        studyService.updateStudy(user, studyId, request);
         return ResponseEntity.ok().build();
     }
 

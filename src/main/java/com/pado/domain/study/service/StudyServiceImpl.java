@@ -3,7 +3,6 @@ package com.pado.domain.study.service;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
-import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
@@ -118,6 +117,29 @@ public class StudyServiceImpl implements StudyService {
         }
 
         studyMemberRepository.delete(studyMember);
+    }
+
+    @Override
+    @Transactional
+    public void updateStudy(User user, Long studyId, StudyCreateRequestDto requestDto) {
+        Study study = studyRepository.findById(studyId)
+            .orElseThrow(StudyNotFoundException::new);
+
+        if (!study.getLeader().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
+        study.update(
+            requestDto.title(),
+            requestDto.description(),
+            requestDto.detail_description(),
+            requestDto.region(),
+            requestDto.study_time(),
+            requestDto.max_members(),
+            requestDto.file_key(),
+            requestDto.interests(),
+            requestDto.conditions()
+        );
     }
 
     private Pageable createPageable(int page, int size) {

@@ -11,7 +11,6 @@ import com.pado.domain.study.repository.StudyApplicationRepository;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
-import com.pado.domain.user.entity.UserInterest;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
