@@ -1,6 +1,5 @@
 package com.pado.domain.chat.entity;
 
-import com.pado.domain.basetime.AuditingEntity;
 import com.pado.domain.study.entity.StudyMember;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -11,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "chat_message_read")
+@Table(name = "chat_message_last_read")
 public class LastReadMessage{
     
     @Id
