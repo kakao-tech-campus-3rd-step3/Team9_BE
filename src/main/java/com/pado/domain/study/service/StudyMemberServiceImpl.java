@@ -181,6 +181,20 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         newLeaderMember.updateRole(StudyMemberRole.LEADER);
     }
 
+    @Override
+    @Transactional
+    public void cancelApplication(User user, Long studyId) {
+        Study study = studyRepository.findById(studyId)
+            .orElseThrow(StudyNotFoundException::new);
+
+        StudyApplication application = studyApplicationRepository.findByStudyAndUserAndStatus(study,
+                user, StudyApplicationStatus.PENDING)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_APPLICATION_NOT_FOUND,
+                "대기 중인 스터디 신청이 없습니다."));
+
+        studyApplicationRepository.delete(application);
+    }
+
     private UserDetailDto mapToUserDetailDto(User user) {
         return new UserDetailDto(
             user.getImage_key(),

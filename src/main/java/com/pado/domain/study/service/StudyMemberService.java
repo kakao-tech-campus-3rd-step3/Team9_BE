@@ -22,4 +22,6 @@ public interface StudyMemberService {
     void kickMember(User user, Long studyId, Long memberId);
 
     void delegateLeadership(User user, Long studyId, Long newLeaderMemberId);
+
+    void cancelApplication(User user, Long studyId);
 }

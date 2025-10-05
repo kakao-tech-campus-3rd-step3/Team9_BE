@@ -6,6 +6,7 @@ import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.shared.entity.Region;
+import com.pado.domain.study.service.StudyMemberService;
 import com.pado.domain.study.service.StudyService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.annotation.CurrentUser;
@@ -34,6 +35,7 @@ import java.util.List;
 public class StudyController {
 
     private final StudyService studyService;
+    private final StudyMemberService studyMemberService;
 
     @Operation(summary = "스터디 생성", description = "새로운 스터디를 생성 (스터디 이름, 한 줄 소개, 스터디 설명, 카테고리, 제한 인원, 이미지)")
     @ApiResponse(
@@ -136,6 +138,20 @@ public class StudyController {
         @Parameter(hidden = true) @CurrentUser User user,
         @PathVariable("study_id") Long studyId) {
         studyService.leaveStudy(user, studyId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "스터디 신청 취소", description = "사용자가 승인 대기 중인 스터디 신청을 스스로 취소합니다.")
+    @ApiResponse(responseCode = "204", description = "신청 취소 성공")
+    @Parameters({
+        @Parameter(name = "study_id", description = "신청을 취소할 스터디의 ID", required = true, example = "1")
+    })
+    @DeleteMapping("/{study_id}/applications/me")
+    public ResponseEntity<Void> cancelApplication(
+        @Parameter(hidden = true) @CurrentUser User user,
+        @PathVariable("study_id") Long studyId
+    ) {
+        studyMemberService.cancelApplication(user, studyId);
         return ResponseEntity.noContent().build();
     }
 }
