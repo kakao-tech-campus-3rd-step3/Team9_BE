@@ -1,6 +1,8 @@
 package com.pado.domain.schedule.service;
 
+import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
+import com.pado.domain.schedule.dto.response.PastScheduleResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
@@ -16,8 +18,10 @@ import com.pado.global.exception.common.ErrorCode;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,6 +36,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final StudyRepository studyRepository;
     private final StudyMemberService studyMemberService;
+    private final ReflectionRepository reflectionRepository;
 
     @Override
     public void createSchedule(Long studyId, ScheduleCreateRequestDto request) {
@@ -49,7 +54,6 @@ public class ScheduleServiceImpl implements ScheduleService {
             .startTime(request.start_time())
             .endTime(request.end_time())
             .build();
-
         scheduleRepository.save(schedule);
     }
 
@@ -59,14 +63,11 @@ public class ScheduleServiceImpl implements ScheduleService {
         int month) {
         // 1. 요청받은 달의 1일 찾기
         LocalDate firstDayOfMonth = LocalDate.of(year, month, 1);
-
         // 2. 그 1일이 포함된 주의 일요일 찾기 (캘린더의 시작일)
         LocalDate startDate = firstDayOfMonth.with(
             TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
-
         // 3. 캘린더의 종료일 찾기 (시작일 + 6주 - 1일)
         LocalDate endDate = startDate.plusWeeks(6).minusDays(1);
-
         List<Schedule> schedules = scheduleRepository.findAllByUserIdAndPeriod(
             userId,
             startDate.atStartOfDay(),
@@ -88,7 +89,6 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Transactional(readOnly = true)
     public List<ScheduleResponseDto> findAllSchedulesByStudyId(Long studyId) {
         User currentUser = getCurrentUser();
-
         if (!studyMemberService.isStudyMember(currentUser, studyId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
@@ -144,6 +144,30 @@ public class ScheduleServiceImpl implements ScheduleService {
         }
         scheduleRepository.delete(schedule);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PastScheduleResponseDto> findPastSchedulesForReflection(Long studyId, User user) {
+        if (!studyMemberService.isStudyMember(user, studyId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
+
+        // 1. 이미 회고가 작성된 스케줄 ID 목록 조회
+        Set<Long> writtenScheduleIds =
+            reflectionRepository.findExistingScheduleIdsByStudyId(studyId).stream()
+                .collect(Collectors.toSet());
+
+        // 2. 현재 시간 이전의 모든 스케줄 조회
+        List<Schedule> pastSchedules =
+            scheduleRepository.findByStudyIdAndStartTimeBefore(studyId, LocalDateTime.now());
+
+        // 3. 회고가 작성되지 않은 스케줄만 필터링 후 DTO로 변환
+        return pastSchedules.stream()
+            .filter(schedule -> !writtenScheduleIds.contains(schedule.getId()))
+            .map(schedule -> new PastScheduleResponseDto(schedule.getId(), schedule.getTitle()))
+            .collect(Collectors.toList());
+    }
+
 
     private User getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
