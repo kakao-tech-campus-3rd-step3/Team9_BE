@@ -133,14 +133,16 @@ public class ChatServiceImpl implements ChatService {
 
         // 현재 채팅방에서 가장 최신 메시지 아이디 추출
         Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
-        long lastestChatMessageId = latestMessage.isPresent() ? latestMessage.get().getId() : 0L;
+        long latestChatMessageId = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId)
+                .map(ChatMessage::getId)
+                .orElse(0L);
 
         // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 추출
         LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(studyMember)
                         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
         long lastReadMessageId = lastReadMessage.getLastReadMessageId();
 
-        lastReadMessage.updateLastReadMessageId(lastestChatMessageId);
+        lastReadMessage.updateLastReadMessageId(latestChatMessageId);
 
         // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 전송
         // 프론트에서 이보다 큰 메세지들의 읽지 않은 멤버 수에 -1 수행
