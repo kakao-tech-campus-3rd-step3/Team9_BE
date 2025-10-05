@@ -11,8 +11,15 @@ import com.pado.domain.user.entity.User;
 import java.util.List;
 
 public interface StudyService {
+
     void createStudy(User user, StudyCreateRequestDto requestDto);
+
     List<MyStudyResponseDto> findMyStudies(Long userId);
-    StudyListResponseDto findStudies(User user, String keyword, List<Category> categories, List<Region> regions, int page, int size);
+
+    StudyListResponseDto findStudies(User user, String keyword, List<Category> categories,
+        List<Region> regions, int page, int size);
+
     StudyDetailResponseDto getStudyDetail(Long studyId);
+
+    void leaveStudy(User user, Long studyId);
 }

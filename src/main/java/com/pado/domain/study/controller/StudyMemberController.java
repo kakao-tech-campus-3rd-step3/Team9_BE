@@ -2,6 +2,7 @@ package com.pado.domain.study.controller;
 
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
+import com.pado.domain.study.dto.request.StudyLeaderDelegateRequestDto;
 import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.service.StudyMemberService;
@@ -74,15 +75,15 @@ public class StudyMemberController {
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404StudyOrMemberNotFoundError
     @Operation(
-        summary = "특정 스터디원 탈퇴/신청 거부",
-        description = "특정 스터디원을 탈퇴시키거나, 스터디 신청을 거부합니다. (스터디 리더만 가능)"
+        summary = "특정 스터디원 강제 탈퇴",
+        description = "특정 스터디원을 탈퇴시킵니다. (스터디 리더만 가능)"
     )
     @ApiResponse(
-        responseCode = "204", description = "탈퇴/거부 성공"
+        responseCode = "204", description = "탈퇴 성공"
     )
     @Parameters({
         @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
-        @Parameter(name = "member_id", description = "탈퇴시키거나 거부할 스터디원의 ID", required = true, example = "2")
+        @Parameter(name = "member_id", description = "탈퇴시킬 스터디원의 ID", required = true, example = "2")
     })
     @DeleteMapping("/members/{member_id}")
     public ResponseEntity<Void> kickMember(
@@ -97,18 +98,18 @@ public class StudyMemberController {
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404StudyOrMemberNotFoundError
     @Operation(
-        summary = "스터디원 상태 변경",
-        description = "특정 스터디원의 역할을 변경합니다. (스터디 리더만 가능)"
+        summary = "스터디원 역할 변경",
+        description = "특정 스터디원의 역할을 변경합니다. (스터디 리더만 가능, 현재 미사용)"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
+        @ApiResponse(responseCode = "200", description = "역할 변경 성공"),
         @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경")
     })
     @Parameters({
         @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
         @Parameter(name = "member_id", description = "역할을 변경할 스터디원의 ID", required = true, example = "2")
     })
-    @PatchMapping("/member/{member_id}")
+    @PatchMapping("/members/{member_id}")
     public ResponseEntity<Void> updateMemberRole(
         @PathVariable("study_id") Long studyId,
         @PathVariable("member_id") Long memberId,
@@ -121,8 +122,8 @@ public class StudyMemberController {
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404StudyOrMemberNotFoundError
     @Operation(
-        summary = "스터디원 상태 변경",
-        description = "특정 스터디원의 역할을 변경합니다. (스터디 리더만 가능)"
+        summary = "스터디 신청 상태 변경 (수락/거절)",
+        description = "스터디 신청 대기 중인 사용자를 수락하거나 거절합니다. (스터디 리더만 가능)"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
@@ -130,7 +131,7 @@ public class StudyMemberController {
     })
     @Parameters({
         @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
-        @Parameter(name = "member_id", description = "역할을 변경할 스터디원의 ID", required = true, example = "2")
+        @Parameter(name = "application_id", description = "처리할 신청서의 ID", required = true, example = "1")
     })
     @PatchMapping("/applications/{application_id}")
     public ResponseEntity<Void> updateMemberApplicationStatus(
@@ -140,6 +141,26 @@ public class StudyMemberController {
         @Valid @RequestBody StudyApplicationStatusChangeRequestDto request
     ) {
         studyMemberService.updateApplicationStatus(user, studyId, applicationId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Api403ForbiddenStudyLeaderOnlyError
+    @Api404StudyOrMemberNotFoundError
+    @Operation(
+        summary = "스터디 리더 권한 위임",
+        description = "스터디 리더가 다른 멤버에게 리더 권한을 위임합니다. (스터디 리더만 가능)"
+    )
+    @ApiResponse(responseCode = "200", description = "리더 위임 성공")
+    @Parameters({
+        @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1")
+    })
+    @PutMapping("/leader")
+    public ResponseEntity<Void> delegateLeadership(
+        @Parameter(hidden = true) @CurrentUser User user,
+        @PathVariable("study_id") Long studyId,
+        @Valid @RequestBody StudyLeaderDelegateRequestDto request
+    ) {
+        studyMemberService.delegateLeadership(user, studyId, request.newLeaderMemberId());
         return ResponseEntity.ok().build();
     }
 }

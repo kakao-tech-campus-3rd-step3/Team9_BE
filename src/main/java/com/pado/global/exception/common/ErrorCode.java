@@ -65,6 +65,10 @@ public enum ErrorCode {
         "승인 요청중인 유저를 찾을 수 없습니다."),
     CANNOT_KICK_LEADER(HttpStatus.BAD_REQUEST, "CANNOT_KICK_LEADER",
         "스터디 리더는 탈퇴시킬 수 없습니다. 먼저 리더를 위임해야 합니다."),
+    CANNOT_LEAVE_AS_LEADER(HttpStatus.BAD_REQUEST, "CANNOT_LEAVE_AS_LEADER",
+        "스터디 리더는 탈퇴할 수 없습니다. 먼저 다른 멤버에게 리더를 위임해야 합니다."),
+    INVALID_LEADER_DELEGATION_TARGET(HttpStatus.BAD_REQUEST, "INVALID_LEADER_DELEGATION_TARGET",
+        "유효하지 않은 리더 위임 대상입니다."),
 
 
     // Material Domain

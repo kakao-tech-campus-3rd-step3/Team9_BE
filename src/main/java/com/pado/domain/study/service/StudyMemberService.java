@@ -20,4 +20,6 @@ public interface StudyMemberService {
     StudyMemberListResponseDto getStudyMembers(User user, Long studyId);
 
     void kickMember(User user, Long studyId, Long memberId);
+
+    void delegateLeadership(User user, Long studyId, Long newLeaderMemberId);
 }

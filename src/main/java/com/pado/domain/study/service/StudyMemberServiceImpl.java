@@ -152,6 +152,35 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         studyMemberRepository.delete(memberToKick);
     }
 
+    @Override
+    @Transactional
+    public void delegateLeadership(User user, Long studyId, Long newLeaderMemberId) {
+        Study study = studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
+        if (!isStudyLeader(user, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
+        StudyMember currentLeaderMember = studyMemberRepository.findByStudyAndUser(study, user)
+            .orElseThrow(
+                () -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "현재 리더 정보를 찾을 수 없습니다."));
+
+        StudyMember newLeaderMember = studyMemberRepository.findById(newLeaderMemberId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND,
+                "새로운 리더로 지정할 멤버를 찾을 수 없습니다."));
+
+        if (!newLeaderMember.getStudy().getId().equals(studyId)
+            || newLeaderMember.getRole() != StudyMemberRole.MEMBER) {
+            throw new BusinessException(ErrorCode.INVALID_LEADER_DELEGATION_TARGET);
+        }
+
+        // 1. Study 엔티티의 리더 변경
+        study.setLeader(newLeaderMember.getUser());
+        // 2. 기존 리더의 역할을 멤버로 변경
+        currentLeaderMember.updateRole(StudyMemberRole.MEMBER);
+        // 3. 새로운 리더의 역할을 리더로 변경
+        newLeaderMember.updateRole(StudyMemberRole.LEADER);
+    }
+
     private UserDetailDto mapToUserDetailDto(User user) {
         return new UserDetailDto(
             user.getImage_key(),
