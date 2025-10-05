@@ -1,12 +1,18 @@
 package com.pado.domain.chat.service;
 
 import com.pado.domain.chat.dto.request.ChatMessageRequestDto;
+import com.pado.domain.chat.dto.request.ReactionRequestDto;
 import com.pado.domain.chat.dto.response.ChatMessageListResponseDto;
 import com.pado.domain.chat.dto.response.ChatMessageResponseDto;
 import com.pado.domain.chat.dto.response.LastReadMessageResponseDto;
 import com.pado.domain.chat.dto.response.UnreadCountResponseDto;
+import com.pado.domain.chat.dto.response.UpdatedChatRoomResponseDto;
 import com.pado.domain.chat.entity.ChatMessage;
+import com.pado.domain.chat.entity.ChatReaction;
 import com.pado.domain.chat.entity.LastReadMessage;
+import com.pado.domain.chat.entity.ReactionType;
+import com.pado.domain.chat.entity.UpdateType;
+import com.pado.domain.chat.repository.ChatReactionRepository;
 import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.chat.repository.ChatMessageRepository;
 import com.pado.domain.study.entity.Study;
@@ -41,6 +47,7 @@ public class ChatServiceImpl implements ChatService {
     private final LastReadMessageRepository lastReadRepository;
     private final RedisChatModalManager modalManager;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatReactionRepository chatReactionRepository;
 
     @Override
     @Transactional
@@ -119,6 +126,115 @@ public class ChatServiceImpl implements ChatService {
         }
 
         return ChatMessageListResponseDto.of(messageDtos, hasNext, nextCursor);
+    }
+
+    @Transactional
+    @Override
+    public void createChatReaction(Long studyId, Long chatMessageId, ReactionRequestDto request, User user) {
+        validateStudyMemberPermission(studyId, user);
+
+        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        ChatMessage message = chatMessageRepository.findById(chatMessageId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
+        
+        ReactionType reactionType = ReactionType.fromString(request.reaction());
+
+        ChatReaction chatReaction = ChatReaction.builder()
+                .chatMessage(message)
+                .studyMember(member)
+                .reactionType(reactionType)
+                .build();
+
+        chatReactionRepository.save(chatReaction);
+
+        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.LIKE);
+        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.DISLIKE);
+
+        UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
+                UpdateType.IMOJI,
+                chatMessageId,
+                likeCount,
+                dislikeCount
+        );
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
+    }
+
+    @Transactional
+    @Override
+    public void updateChatReaction(Long studyId, Long chatMessageId, ReactionRequestDto request, User user) {
+        validateStudyMemberPermission(studyId, user);
+
+        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        ChatMessage message = chatMessageRepository.findById(chatMessageId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
+        ChatReaction chatReaction = chatReactionRepository.findByChatMessageAndStudyMember(message, member)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REACTION_NOT_FOUND));
+
+        ReactionType newReactionType = ReactionType.fromString(request.reaction());
+
+        chatReaction.changeReaction(newReactionType);
+
+        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.LIKE);
+        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.DISLIKE);
+
+        UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
+                UpdateType.IMOJI,
+                chatMessageId,
+                likeCount,
+                dislikeCount
+        );
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
+    }
+
+    @Transactional
+    @Override
+    public void deleteChatReaction(Long studyId, Long chatMessageId, User user) {
+        validateStudyMemberPermission(studyId, user);
+
+        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        ChatMessage message = chatMessageRepository.findById(chatMessageId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
+        ChatReaction chatReaction = chatReactionRepository.findByChatMessageAndStudyMember(message, member)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REACTION_NOT_FOUND));
+
+        chatReactionRepository.delete(chatReaction);
+
+        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.LIKE);
+        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.DISLIKE);
+
+        UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
+                UpdateType.IMOJI,
+                chatMessageId,
+                likeCount,
+                dislikeCount
+        );
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
+    }
+
+    @Transactional
+    @Override
+    public void deleteChatMessage(Long studyId, Long chatMessageId, User user) {
+        validateStudyMemberPermission(studyId, user);
+
+        ChatMessage message = chatMessageRepository.findById(chatMessageId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
+
+        if (!message.getSender().getUser().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_DELETE_MESSAGE);
+        }
+
+        chatMessageRepository.delete(message);
+
+        UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
+                UpdateType.DELETED,
+                chatMessageId,
+                null,
+                null
+        );
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
     }
 
     @Override
