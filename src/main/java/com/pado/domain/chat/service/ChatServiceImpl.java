@@ -19,6 +19,7 @@ import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,8 +81,8 @@ public class ChatServiceImpl implements ChatService {
         ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(savedMessage, unreadMemberCount);
         messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/chats", responseDto);
 
-        // 현재 채팅방에 접속하고 있지 않은 사용자들에게 안읽은 메시지 수 알림
-        sendUnreadCountToClosedModalUsers(studyId);
+        // 현재 채팅방에 접속하고 있지 않은 사용자들에게 안읽은 메시지 수 알림을 비동기 처리
+        sendUnreadCountToClosedModalUsersAsync(studyId);
     }
 
     @Override
@@ -161,6 +162,13 @@ public class ChatServiceImpl implements ChatService {
         validateStudyMemberPermission(studyId, currentUser);
 
         modalManager.refreshModal(studyId, currentUser.getId());
+    }
+
+    // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송을 비동기 처리
+    @Async
+    public void sendUnreadCountToClosedModalUsersAsync(Long studyId){
+
+        sendUnreadCountToClosedModalUsers(studyId);
     }
 
     // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송
