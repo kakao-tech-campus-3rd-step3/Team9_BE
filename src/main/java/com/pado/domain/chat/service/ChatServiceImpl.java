@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -59,15 +61,17 @@ public class ChatServiceImpl implements ChatService {
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
         // 현재 채팅방에 접속하고 있는 멤버 대상으로만 마지막으로 읽은 메세지 id 업데이트
-        modalManager.getOpenModalUserIds(studyId).forEach(userId -> {
-            studyMemberRepository.findByStudyIdAndUserId(studyId, userId)
-                    .ifPresent(member -> {
-                        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(member)
-                                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
+        Set<Long> onlineUserIds = modalManager.getOpenModalUserIds(studyId);
+        if (!onlineUserIds.isEmpty()) {
+            // 1. 채팅방에 접속한 유저의 StudyMember 목록을 한 번에 조회
+            List<StudyMember> onlineMembers = studyMemberRepository.findByStudyIdAndUserIdIn(studyId, onlineUserIds);
 
-                        lastReadMessage.updateLastReadMessageId(savedMessage.getId());
-                    });
-        });
+            // 2. StudyMember 목록으로 LastReadMessage 목록을 한 번에 조회
+            List<LastReadMessage> lastReadMessages = lastReadRepository.findByStudyMemberIn(onlineMembers);
+
+            // 3. DB 업데이트
+            lastReadMessages.forEach(lrm -> lrm.updateLastReadMessageId(savedMessage.getId()));
+        }
 
         // 스터디 전체 멤버 - 채팅방 접속 중인 멤버 방식으로 계산
         Long unreadMemberCount = lastReadRepository.countUnreadMembers(studyId, savedMessage.getId());
@@ -163,28 +167,41 @@ public class ChatServiceImpl implements ChatService {
     private void sendUnreadCountToClosedModalUsers(Long studyId) {
         List<StudyMember> allMembers = studyMemberRepository.findByStudyId(studyId);
 
-        allMembers.forEach(member -> {
+        // 채팅방에 접속한 유저 목록을 한 번에 조회
+        Set<Long> onlineUserIds = modalManager.getOpenModalUserIds(studyId); // 메서드 내부에서 null을 반환하지 않도록 처리해야 함
+
+        // 채팅방에 미접속 상태인 멤버들을 필터링
+        List<StudyMember> offlineMembers = allMembers.stream()
+                .filter(member -> !onlineUserIds.contains(member.getUser().getId()))
+                .toList();
+
+        // 미접속 멤버가 없다면 아무것도 하지 않고 종료
+        if (offlineMembers.isEmpty()) {
+            return;
+        }
+
+        // 미접속 멤버들의 LastReadMessage 정보를 <studyMemberId, LastReadMessageId> 형식으로 DB에서 한 번에 조회
+        Map<Long, Long> lastReadMessageIdMap = lastReadRepository.findByStudyMemberIn(offlineMembers)
+                .stream()
+                .collect(Collectors.toMap(
+                        lrm -> lrm.getStudyMember().getId(),
+                        LastReadMessage::getLastReadMessageId
+                ));
+
+        // 5. 미접속 멤버들을 순회하며 알림 전송 로직 수행
+        offlineMembers.forEach(member -> {
             User user = member.getUser();
+            Long lastReadId = lastReadMessageIdMap.getOrDefault(member.getId(), 0L);
+            long unreadCount = chatMessageRepository.countByIdGreaterThanAndStudyId(lastReadId, studyId);
 
-            if (!modalManager.isModalOpen(studyId, user.getId())) {
+            if (unreadCount > 0) {
+                UnreadCountResponseDto response = new UnreadCountResponseDto(unreadCount);
 
-                LastReadMessage lastRead = lastReadRepository.findByStudyMember(member)
-                        .orElse(LastReadMessage.builder()
-                                .studyMember(member)
-                                .lastReadMessageId(0L)
-                                .build());
-
-                long unreadCount = chatMessageRepository.countByIdGreaterThanAndStudyId(lastRead.getLastReadMessageId(), studyId);
-
-                if (unreadCount > 0) {
-                    UnreadCountResponseDto response = new UnreadCountResponseDto(unreadCount);
-
-                    messagingTemplate.convertAndSendToUser(
-                            user.getEmail(),
-                            "/queue/studies/" + studyId + "/unread",
-                            response
-                    );
-                }
+                messagingTemplate.convertAndSendToUser(
+                        user.getEmail(),
+                        "/queue/studies/" + studyId + "/unread",
+                        response
+                );
             }
         });
     }
