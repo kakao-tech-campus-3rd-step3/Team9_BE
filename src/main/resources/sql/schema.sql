@@ -230,3 +230,10 @@ CREATE TABLE IF NOT EXISTS chapter (
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT fk_chapter_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE
 );
+
+CREATE TABLE chat_message_last_read (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_member_id BIGINT NOT NULL,
+    last_read_message_id BIGINT NOT NULL,
+    CONSTRAINT chat_message_read_member FOREIGN KEY (study_member_id) REFERENCES study_member (id) ON DELETE CASCADE
+);

@@ -1,5 +1,9 @@
 package com.pado.domain.study.service;
 
+import com.pado.domain.chat.entity.ChatMessage;
+import com.pado.domain.chat.entity.LastReadMessage;
+import com.pado.domain.chat.repository.ChatMessageRepository;
+import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +33,8 @@ public class StudyServiceImpl implements StudyService {
 
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final LastReadMessageRepository lastReadMessageRepository;
 
     private static final int MAX_PAGE_SIZE = 50;
 
@@ -54,8 +61,12 @@ public class StudyServiceImpl implements StudyService {
                 .role(StudyMemberRole.LEADER)
                 .build();
 
-        studyRepository.save(newStudy);
-        studyMemberRepository.save(leaderMember);
+        Study savedStudy = studyRepository.save(newStudy);
+        StudyMember savedLeader = studyMemberRepository.save(leaderMember);
+
+        // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
+        LastReadMessage lastReadMessage = new LastReadMessage(savedLeader, 0L);
+        lastReadMessageRepository.save(lastReadMessage);
     }
 
     public List<MyStudyResponseDto> findMyStudies(Long userId) {
