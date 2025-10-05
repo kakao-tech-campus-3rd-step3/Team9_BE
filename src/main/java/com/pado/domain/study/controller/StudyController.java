@@ -2,7 +2,6 @@ package com.pado.domain.study.controller;
 
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
-import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.shared.entity.Region;
