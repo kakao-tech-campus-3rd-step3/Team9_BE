@@ -65,11 +65,7 @@ public class StudyServiceImpl implements StudyService {
         StudyMember savedLeader = studyMemberRepository.save(leaderMember);
 
         // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
-        // 채팅방에 아무런 채팅이 없으면 0, 아니라면 가장 최신의 메세지 아이디를 가짐
-        Optional<ChatMessage> lastestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(savedStudy.getId());
-        long lastestMessageId = lastestMessage.isPresent() ? lastestMessage.get().getId() : 0L;
-
-        LastReadMessage lastReadMessage = new LastReadMessage(savedLeader, lastestMessageId);
+        LastReadMessage lastReadMessage = new LastReadMessage(savedLeader, 0L);
         lastReadMessageRepository.save(lastReadMessage);
     }
 
