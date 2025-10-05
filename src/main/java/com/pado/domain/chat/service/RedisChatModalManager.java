@@ -1,7 +1,10 @@
 package com.pado.domain.chat.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -43,9 +46,7 @@ public class RedisChatModalManager {
     // 모달이 열려있는 상태면 주기적으로 TTL 갱신
     public void refreshModal(Long studyId, Long userId) {
         String key = getModalKey(studyId, userId);
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            redisTemplate.expire(key, MODAL_TTL, TimeUnit.SECONDS);
-        }
+        redisTemplate.expire(key, MODAL_TTL, TimeUnit.SECONDS);
     }
 
 
@@ -53,6 +54,13 @@ public class RedisChatModalManager {
     public Set<Long> getOpenModalUserIds(Long studyId) {
         String pattern = MODAL_KEY_PREFIX + studyId + ":*";
         Set<String> keys = redisTemplate.keys(pattern);
+
+        redisTemplate.execute((RedisConnection connection) -> {
+            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(pattern).count(1000).build())) {
+                cursor.forEachRemaining(key -> keys.add(new String(key)));
+            }
+            return null;
+        });
 
         if (keys.isEmpty()) {
             return Set.of();
