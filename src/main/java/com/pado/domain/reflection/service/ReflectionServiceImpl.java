@@ -1,6 +1,7 @@
 package com.pado.domain.reflection.service;
 
 import com.pado.domain.reflection.dto.*;
+import com.pado.domain.reflection.dto.ReflectionListResponseDto;
 import com.pado.domain.reflection.entity.Reflection;
 import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.study.entity.Study;
@@ -13,8 +14,10 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,34 +57,44 @@ public class ReflectionServiceImpl implements ReflectionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReflectionResponseDto> getReflections(Long studyId, User user) {
+    public ReflectionListResponseDto getReflections(Long studyId, User user, String author,
+        Pageable pageable) {
         checkStudyMember(studyId, user);
-        return reflectionRepository.findByStudyId(studyId).stream()
-            .map(this::toDto)
-            .collect(Collectors.toList());
+        // TODO: 다음 커밋에서 페이지네이션 및 필터링 로직으로 교체될 예정
+        return new ReflectionListResponseDto(Collections.emptyList(), 0, 0, false);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ReflectionResponseDto getReflection(Long reflectionId, User user) {
+    public ReflectionResponseDto getReflection(Long studyId, Long reflectionId, User user) {
+        checkStudyMember(studyId, user);
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
-        checkStudyMember(reflection.getStudy().getId(), user);
+
+        // URL로 받은 studyId와 회고의 studyId가 일치하는지 확인
+        if (!reflection.getStudy().getId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
+        }
         return toDto(reflection);
     }
 
     @Override
     @Transactional
-    public ReflectionResponseDto updateReflection(Long reflectionId, User user,
+    public ReflectionResponseDto updateReflection(Long studyId, Long reflectionId, User user,
         ReflectionCreateRequestDto request) {
+        checkStudyMember(studyId, user);
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
+
+        if (!reflection.getStudy().getId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
+        }
         checkReflectionOwner(reflection, user);
 
         Schedule schedule = request.scheduleId() != null ?
             scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
         reflection.update(
-            request.title(), // title 추가
+            request.title(),
             schedule,
             request.satisfactionScore(),
             request.understandingScore(),
@@ -94,9 +107,14 @@ public class ReflectionServiceImpl implements ReflectionService {
 
     @Override
     @Transactional
-    public void deleteReflection(Long reflectionId, User user) {
+    public void deleteReflection(Long studyId, Long reflectionId, User user) {
+        checkStudyMember(studyId, user);
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
+
+        if (!reflection.getStudy().getId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
+        }
         checkReflectionOwner(reflection, user);
         reflectionRepository.deleteById(reflectionId);
     }
@@ -115,7 +133,7 @@ public class ReflectionServiceImpl implements ReflectionService {
     private ReflectionResponseDto toDto(Reflection r) {
         return new ReflectionResponseDto(
             r.getId(),
-            r.getTitle(), // title 추가
+            r.getTitle(),
             r.getStudy().getId(),
             r.getStudyMember().getId(),
             r.getSchedule() != null ? r.getSchedule().getId() : null,

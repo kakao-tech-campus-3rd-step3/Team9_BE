@@ -1,21 +1,22 @@
 package com.pado.domain.reflection.service;
 
 import com.pado.domain.reflection.dto.*;
+import com.pado.domain.reflection.dto.ReflectionListResponseDto;
 import com.pado.domain.user.entity.User;
-
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface ReflectionService {
 
     ReflectionResponseDto createReflection(Long studyId, User user,
         ReflectionCreateRequestDto request);
 
-    List<ReflectionResponseDto> getReflections(Long studyId, User user);
+    ReflectionListResponseDto getReflections(Long studyId, User user, String author,
+        Pageable pageable);
 
-    ReflectionResponseDto getReflection(Long reflectionId, User user);
+    ReflectionResponseDto getReflection(Long studyId, Long reflectionId, User user);
 
-    ReflectionResponseDto updateReflection(Long reflectionId, User user,
+    ReflectionResponseDto updateReflection(Long studyId, Long reflectionId, User user,
         ReflectionCreateRequestDto request);
 
-    void deleteReflection(Long reflectionId, User user);
+    void deleteReflection(Long studyId, Long reflectionId, User user);
 }
