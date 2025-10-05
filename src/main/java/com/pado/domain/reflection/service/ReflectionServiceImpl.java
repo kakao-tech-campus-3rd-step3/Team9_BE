@@ -34,11 +34,10 @@ public class ReflectionServiceImpl implements ReflectionService {
         StudyMember member = checkStudyMember(studyId, user);
         Study study = studyRepository.findById(studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
-
         Schedule schedule = request.scheduleId() != null ?
             scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
-
         Reflection reflection = Reflection.builder()
+            .title(request.title())
             .study(study)
             .studyMember(member)
             .schedule(schedule)
@@ -81,8 +80,8 @@ public class ReflectionServiceImpl implements ReflectionService {
 
         Schedule schedule = request.scheduleId() != null ?
             scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
-
         reflection.update(
+            request.title(), // title 추가
             schedule,
             request.satisfactionScore(),
             request.understandingScore(),
@@ -116,6 +115,7 @@ public class ReflectionServiceImpl implements ReflectionService {
     private ReflectionResponseDto toDto(Reflection r) {
         return new ReflectionResponseDto(
             r.getId(),
+            r.getTitle(), // title 추가
             r.getStudy().getId(),
             r.getStudyMember().getId(),
             r.getSchedule() != null ? r.getSchedule().getId() : null,

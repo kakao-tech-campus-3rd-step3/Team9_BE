@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 public record ReflectionResponseDto(
     @Schema(description = "회고 ID", example = "1")
     Long id,
+    @Schema(description = "회고 제목", example = "1주차 스터디를 마치고")
+    String title,
     @Schema(description = "스터디 ID", example = "1")
     Long studyId,
     @Schema(description = "스터디 멤버 ID", example = "1")

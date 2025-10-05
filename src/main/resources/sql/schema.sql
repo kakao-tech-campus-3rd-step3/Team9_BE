@@ -230,3 +230,21 @@ CREATE TABLE IF NOT EXISTS chapter (
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT fk_chapter_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS reflection (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    study_id BIGINT NOT NULL,
+    study_member_id BIGINT NOT NULL,
+    schedule_id BIGINT NULL,
+    satisfaction_score INT NOT NULL,
+    understanding_score INT NOT NULL,
+    participation_score INT NOT NULL,
+    learned_content VARCHAR(1000) NOT NULL,
+    improvement VARCHAR(1000) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reflection_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reflection_study_member FOREIGN KEY (study_member_id) REFERENCES study_member(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reflection_schedule FOREIGN KEY (schedule_id) REFERENCES schedule(id) ON DELETE SET NULL
+);
