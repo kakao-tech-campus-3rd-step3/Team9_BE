@@ -1,7 +1,9 @@
 package com.pado.domain.reflection.service;
 
-import com.pado.domain.reflection.dto.*;
-import com.pado.domain.reflection.dto.ReflectionListResponseDto;
+import com.pado.domain.reflection.dto.request.ReflectionCreateRequestDto;
+import com.pado.domain.reflection.dto.response.ReflectionListResponseDto;
+import com.pado.domain.reflection.dto.response.ReflectionResponseDto;
+import com.pado.domain.reflection.dto.response.ReflectionSimpleResponseDto;
 import com.pado.domain.reflection.entity.Reflection;
 import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.study.entity.Study;
@@ -14,10 +16,11 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Collections;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -60,8 +63,21 @@ public class ReflectionServiceImpl implements ReflectionService {
     public ReflectionListResponseDto getReflections(Long studyId, User user, String author,
         Pageable pageable) {
         checkStudyMember(studyId, user);
-        // TODO: 다음 커밋에서 페이지네이션 및 필터링 로직으로 교체될 예정
-        return new ReflectionListResponseDto(Collections.emptyList(), 0, 0, false);
+
+        Long filterByUserId = null;
+        if ("me".equalsIgnoreCase(author)) {
+            filterByUserId = user.getId();
+        }
+
+        Page<Reflection> reflectionPage = reflectionRepository.findReflectionsByStudy(studyId,
+            filterByUserId, pageable);
+
+        List<ReflectionSimpleResponseDto> dtoList = reflectionPage.getContent().stream()
+            .map(this::toSimpleDto)
+            .collect(Collectors.toList());
+
+        return new ReflectionListResponseDto(dtoList, reflectionPage.getNumber(),
+            reflectionPage.getSize(), reflectionPage.hasNext());
     }
 
     @Override
@@ -71,7 +87,6 @@ public class ReflectionServiceImpl implements ReflectionService {
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
 
-        // URL로 받은 studyId와 회고의 studyId가 일치하는지 확인
         if (!reflection.getStudy().getId().equals(studyId)) {
             throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
         }
@@ -145,5 +160,15 @@ public class ReflectionServiceImpl implements ReflectionService {
             r.getCreatedAt(),
             r.getUpdatedAt()
         );
+    }
+
+    private ReflectionSimpleResponseDto toSimpleDto(Reflection r) {
+        return ReflectionSimpleResponseDto.builder()
+            .reflectionId(r.getId())
+            .title(r.getTitle())
+            .authorName(r.getStudyMember().getUser().getNickname())
+            .scheduleTitle(r.getSchedule() != null ? r.getSchedule().getTitle() : null)
+            .updatedAt(r.getUpdatedAt())
+            .build();
     }
 }

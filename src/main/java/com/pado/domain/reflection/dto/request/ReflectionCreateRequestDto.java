@@ -1,4 +1,4 @@
-package com.pado.domain.reflection.dto;
+package com.pado.domain.reflection.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;

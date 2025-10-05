@@ -1,7 +1,8 @@
 package com.pado.domain.reflection.service;
 
-import com.pado.domain.reflection.dto.*;
-import com.pado.domain.reflection.dto.ReflectionListResponseDto;
+import com.pado.domain.reflection.dto.response.ReflectionListResponseDto;
+import com.pado.domain.reflection.dto.request.ReflectionCreateRequestDto;
+import com.pado.domain.reflection.dto.response.ReflectionResponseDto;
 import com.pado.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
 

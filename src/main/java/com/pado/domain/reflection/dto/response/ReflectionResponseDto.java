@@ -1,4 +1,4 @@
-package com.pado.domain.reflection.dto;
+package com.pado.domain.reflection.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;

@@ -1,7 +1,8 @@
 package com.pado.domain.reflection.controller;
 
-import com.pado.domain.reflection.dto.*;
-import com.pado.domain.reflection.dto.ReflectionListResponseDto;
+import com.pado.domain.reflection.dto.response.ReflectionListResponseDto;
+import com.pado.domain.reflection.dto.request.ReflectionCreateRequestDto;
+import com.pado.domain.reflection.dto.response.ReflectionResponseDto;
 import com.pado.domain.reflection.service.ReflectionService;
 import com.pado.global.auth.annotation.CurrentUser;
 import com.pado.domain.user.entity.User;

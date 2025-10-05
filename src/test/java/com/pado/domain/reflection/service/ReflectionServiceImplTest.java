@@ -1,6 +1,6 @@
 package com.pado.domain.reflection.service;
 
-import com.pado.domain.reflection.dto.ReflectionCreateRequestDto;
+import com.pado.domain.reflection.dto.request.ReflectionCreateRequestDto;
 import com.pado.domain.reflection.entity.Reflection;
 import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.schedule.repository.ScheduleRepository;
