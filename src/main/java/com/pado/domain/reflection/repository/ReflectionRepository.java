@@ -11,7 +11,8 @@ public interface ReflectionRepository extends JpaRepository<Reflection, Long>,
     ReflectionRepositoryCustom {
 
     List<Reflection> findByStudyId(Long studyId);
-
-    @Query("SELECT r.schedule.id FROM Reflection r WHERE r.study.id = :studyId AND r.schedule.id IS NOT NULL")
-    List<Long> findExistingScheduleIdsByStudyId(@Param("studyId") Long studyId);
+    
+    @Query("SELECT r.schedule.id FROM Reflection r WHERE r.study.id = :studyId AND r.studyMember.id = :studyMemberId AND r.schedule.id IS NOT NULL")
+    List<Long> findExistingScheduleIdsByStudyMember(@Param("studyId") Long studyId,
+        @Param("studyMemberId") Long studyMemberId);
 }

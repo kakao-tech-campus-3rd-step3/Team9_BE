@@ -9,12 +9,18 @@ import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
+import com.pado.domain.study.entity.StudyMember;
+import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.study.service.StudyMemberService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.userdetails.CustomUserDetails;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -23,10 +29,6 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     private final StudyRepository studyRepository;
     private final StudyMemberService studyMemberService;
     private final ReflectionRepository reflectionRepository;
+    private final StudyMemberRepository studyMemberRepository;
 
     @Override
     public void createSchedule(Long studyId, ScheduleCreateRequestDto request) {
@@ -148,26 +151,26 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     @Transactional(readOnly = true)
     public List<PastScheduleResponseDto> findPastSchedulesForReflection(Long studyId, User user) {
-        if (!studyMemberService.isStudyMember(user, studyId)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
-        }
+        // 1. 스터디 멤버인지 확인하면서 StudyMember 정보 가져오기
+        StudyMember studyMember = studyMemberRepository.findByStudyIdAndUserId(studyId,
+                user.getId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
 
-        // 1. 이미 회고가 작성된 스케줄 ID 목록 조회
+        // 2. '내가' 이미 회고를 작성한 스케줄 ID 목록 조회
         Set<Long> writtenScheduleIds =
-            reflectionRepository.findExistingScheduleIdsByStudyId(studyId).stream()
-                .collect(Collectors.toSet());
+            reflectionRepository.findExistingScheduleIdsByStudyMember(studyId, studyMember.getId())
+                .stream().collect(Collectors.toSet());
 
-        // 2. 현재 시간 이전의 모든 스케줄 조회
+        // 3. 현재 시간 이전의 모든 스케줄 조회 (시작 시간 기준)
         List<Schedule> pastSchedules =
             scheduleRepository.findByStudyIdAndStartTimeBefore(studyId, LocalDateTime.now());
 
-        // 3. 회고가 작성되지 않은 스케줄만 필터링 후 DTO로 변환
+        // 4. 회고가 작성되지 않은 스케줄만 필터링 후 DTO로 변환
         return pastSchedules.stream()
             .filter(schedule -> !writtenScheduleIds.contains(schedule.getId()))
             .map(schedule -> new PastScheduleResponseDto(schedule.getId(), schedule.getTitle()))
             .collect(Collectors.toList());
     }
-
 
     private User getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
