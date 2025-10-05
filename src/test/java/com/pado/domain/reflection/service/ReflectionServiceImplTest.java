@@ -69,6 +69,7 @@ class ReflectionServiceImplTest {
         reflection = Reflection.builder()
             .study(study)
             .studyMember(authorMember)
+            .title("테스트 회고")
             .learnedContent("배운 점")
             .improvement("개선할 점")
             .satisfactionScore(5)
@@ -82,8 +83,8 @@ class ReflectionServiceImplTest {
     @DisplayName("스터디 멤버가 회고를 성공적으로 생성한다.")
     void createReflection_Success() {
         // given
-        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto(null, 5, 5, 5, "배운 점",
-            "개선할 점");
+        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto("새로운 회고", null, 5, 5, 5,
+            "배운 점", "개선할 점");
         given(
             studyMemberRepository.findByStudyIdAndUserId(study.getId(), author.getId())).willReturn(
             Optional.of(authorMember));
@@ -92,7 +93,6 @@ class ReflectionServiceImplTest {
 
         // when
         reflectionService.createReflection(study.getId(), author, request);
-
         // then
         verify(reflectionRepository).save(any(Reflection.class));
     }
@@ -101,11 +101,10 @@ class ReflectionServiceImplTest {
     @DisplayName("스터디 멤버가 아닐 경우 회고 생성에 실패한다.")
     void createReflection_Fail_NotStudyMember() {
         // given
-        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto(null, 5, 5, 5, "배운 점",
-            "개선할 점");
+        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto("실패할 회고", null, 5, 5, 5,
+            "배운 점", "개선할 점");
         given(studyMemberRepository.findByStudyIdAndUserId(study.getId(),
             nonMember.getId())).willReturn(Optional.empty());
-
         // when & then
         assertThatThrownBy(
             () -> reflectionService.createReflection(study.getId(), nonMember, request))
@@ -117,15 +116,18 @@ class ReflectionServiceImplTest {
     @DisplayName("회고 작성자가 본인의 회고를 수정하면 성공한다.")
     void updateReflection_Success_ByOwner() {
         // given
-        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto(null, 4, 4, 4, "수정된 내용",
-            "수정된 내용");
+        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto("수정된 제목", null, 4, 4, 4,
+            "수정된 내용", "수정된 내용");
         given(reflectionRepository.findById(reflection.getId())).willReturn(
             Optional.of(reflection));
+        given(
+            studyMemberRepository.findByStudyIdAndUserId(study.getId(), author.getId())).willReturn(
+            Optional.of(authorMember));
 
         // when
-        reflectionService.updateReflection(reflection.getId(), author, request);
-
+        reflectionService.updateReflection(study.getId(), reflection.getId(), author, request);
         // then
+        assertThat(reflection.getTitle()).isEqualTo("수정된 제목");
         assertThat(reflection.getSatisfactionScore()).isEqualTo(4);
         assertThat(reflection.getLearnedContent()).isEqualTo("수정된 내용");
     }
@@ -134,14 +136,18 @@ class ReflectionServiceImplTest {
     @DisplayName("회고 작성자가 아닌 경우 회고 수정에 실패한다.")
     void updateReflection_Fail_NotOwner() {
         // given
-        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto(null, 4, 4, 4, "수정된 내용",
-            "수정된 내용");
+        ReflectionCreateRequestDto request = new ReflectionCreateRequestDto("수정될 수 없는 제목", null, 4,
+            4, 4, "수정된 내용", "수정된 내용");
         given(reflectionRepository.findById(reflection.getId())).willReturn(
             Optional.of(reflection));
-
+        // 수정: new StudyMember() 대신 builder 사용
+        given(studyMemberRepository.findByStudyIdAndUserId(study.getId(),
+            anotherMember.getId())).willReturn(
+            Optional.of(StudyMember.builder().user(anotherMember).study(study).build()));
         // when & then
         assertThatThrownBy(
-            () -> reflectionService.updateReflection(reflection.getId(), anotherMember, request))
+            () -> reflectionService.updateReflection(study.getId(), reflection.getId(),
+                anotherMember, request))
             .isInstanceOf(BusinessException.class)
             .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN_REFLECTION_OWNER_ONLY);
     }
@@ -152,10 +158,12 @@ class ReflectionServiceImplTest {
         // given
         given(reflectionRepository.findById(reflection.getId())).willReturn(
             Optional.of(reflection));
+        given(
+            studyMemberRepository.findByStudyIdAndUserId(study.getId(), author.getId())).willReturn(
+            Optional.of(authorMember));
 
         // when
-        reflectionService.deleteReflection(reflection.getId(), author);
-
+        reflectionService.deleteReflection(study.getId(), reflection.getId(), author);
         // then
         verify(reflectionRepository).deleteById(reflection.getId());
     }
@@ -166,10 +174,14 @@ class ReflectionServiceImplTest {
         // given
         given(reflectionRepository.findById(reflection.getId())).willReturn(
             Optional.of(reflection));
-
+        // 수정: new StudyMember() 대신 builder 사용
+        given(studyMemberRepository.findByStudyIdAndUserId(study.getId(),
+            anotherMember.getId())).willReturn(
+            Optional.of(StudyMember.builder().user(anotherMember).study(study).build()));
         // when & then
         assertThatThrownBy(
-            () -> reflectionService.deleteReflection(reflection.getId(), anotherMember))
+            () -> reflectionService.deleteReflection(study.getId(), reflection.getId(),
+                anotherMember))
             .isInstanceOf(BusinessException.class)
             .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN_REFLECTION_OWNER_ONLY);
     }
@@ -185,8 +197,7 @@ class ReflectionServiceImplTest {
         given(studyMemberRepository.findByStudyIdAndUserId(study.getId(), anotherMember.getId()))
             .willReturn(Optional.of(anotherStudyMember));
         // when
-        reflectionService.getReflection(reflection.getId(), anotherMember);
-
+        reflectionService.getReflection(study.getId(), reflection.getId(), anotherMember);
         // then
         verify(reflectionRepository).findById(anyLong());
     }
@@ -195,13 +206,11 @@ class ReflectionServiceImplTest {
     @DisplayName("스터디 멤버가 아니면 회고 상세 조회에 실패한다.")
     void getReflection_Fail_ByNonMember() {
         // given
-        given(reflectionRepository.findById(reflection.getId())).willReturn(
-            Optional.of(reflection));
         given(studyMemberRepository.findByStudyIdAndUserId(study.getId(),
             nonMember.getId())).willReturn(Optional.empty());
-
         // when & then
-        assertThatThrownBy(() -> reflectionService.getReflection(reflection.getId(), nonMember))
+        assertThatThrownBy(
+            () -> reflectionService.getReflection(study.getId(), reflection.getId(), nonMember))
             .isInstanceOf(BusinessException.class)
             .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
     }
