@@ -1,5 +1,7 @@
 package com.pado.domain.study.service;
 
+import com.pado.domain.chat.repository.ChatMessageRepository;
+import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
@@ -48,6 +50,13 @@ class StudyServiceImplTest {
     @Mock
     private StudyMemberRepository studyMemberRepository;
 
+    @Mock
+    private ChatMessageRepository chatMessageRepository;
+
+    // LastReadMessageRepository도 사용되므로 함께 추가해주는 것이 좋습니다.
+    @Mock
+    private LastReadMessageRepository lastReadMessageRepository;
+
     private static final int MAX_PAGE_SIZE = 50;
 
     @Test
@@ -65,6 +74,20 @@ class StudyServiceImplTest {
                 List.of("열심히 하실 분만"),
                 "image_url"
         );
+
+        Study dummySavedStudy = Study.builder()
+                .id(1L) // ID 설정
+                .leader(user)
+                .title(dto.title())
+                .description(dto.description())
+                .detailDescription(dto.detail_description())
+                .studyTime(dto.study_time())
+                .region(dto.region())
+                .maxMembers(dto.max_members())
+                .fileKey(dto.file_key())
+                .build();
+
+        when(studyRepository.save(any(Study.class))).thenReturn(dummySavedStudy);
 
         // when
         studyService.createStudy(user, dto);

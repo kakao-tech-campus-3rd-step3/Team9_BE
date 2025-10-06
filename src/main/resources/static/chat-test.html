@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pado 채팅 테스트</title>
+    <title>Pado 채팅 테스트 (Redis 모달 관리 + 안 읽은 멤버 수)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -17,6 +18,20 @@
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
+        }
+        .modal-status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .modal-status.open {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .modal-status.closed {
+            background-color: #f8d7da;
+            color: #721c24;
         }
         .chat-messages {
             height: 400px;
@@ -31,14 +46,36 @@
             padding: 8px;
             border-radius: 4px;
             background-color: white;
+            position: relative;
         }
         .message-header {
             font-size: 12px;
             color: #666;
             margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .message-content {
             font-size: 14px;
+        }
+        .unread-badge {
+            background-color: #ff4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .unread-count {
+            background-color: #ff4444;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 10px 0;
+            font-weight: bold;
+            display: inline-block;
         }
         .input-group {
             display: flex;
@@ -56,6 +93,7 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
         }
         .btn-primary {
             background-color: #007bff;
@@ -67,6 +105,14 @@
         }
         .btn-danger {
             background-color: #dc3545;
+            color: white;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: black;
+        }
+        .btn-info {
+            background-color: #17a2b8;
             color: white;
         }
         .status {
@@ -91,256 +137,481 @@
             font-family: monospace;
             font-size: 12px;
         }
+        .highlight {
+            background-color: yellow;
+            padding: 2px 4px;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .info-box h4 {
+            margin-top: 0;
+            color: #007bff;
+        }
     </style>
 </head>
 <body>
-    <h1>🌊 Pado 채팅 시스템 테스트</h1>
+<h1>🌊 Pado 채팅 테스트 (Redis 모달 관리 + 안 읽은 멤버 수)</h1>
+
+<div class="container">
+    <h2>연결 설정</h2>
+    <div class="input-group">
+        <input type="number" id="studyId" placeholder="스터디 ID (예: 1)" value="1">
+        <input type="text" id="authToken" placeholder="JWT 토큰 (Bearer 제외)">
+    </div>
+    <div class="input-group">
+        <button class="btn btn-success" onclick="connect()">WebSocket 연결</button>
+        <button class="btn btn-danger" onclick="disconnect()">연결 해제</button>
+    </div>
+    <div id="connectionStatus" class="status disconnected">연결되지 않음</div>
+</div>
+
+<div class="container">
+    <h2>채팅 모달 제어 (Redis)</h2>
+    <div class="input-group">
+        <button class="btn btn-info" onclick="openModal()">📂 모달 열기</button>
+        <button class="btn btn-warning" onclick="closeModal()">📁 모달 닫기</button>
+        <button class="btn btn-primary" onclick="loadChatHistory()">📋 채팅 기록</button>
+    </div>
+    <div id="modalStatus" class="modal-status closed">모달 상태: 닫힘</div>
+    <div id="unreadCount" style="display: none;">
+        <span class="unread-count">안읽은 메시지: 0개</span>
+    </div>
     
-    <div class="container">
-        <h2>연결 설정</h2>
-        <div class="input-group">
-            <input type="number" id="studyId" placeholder="스터디 ID (예: 1)" value="1">
-            <input type="text" id="authToken" placeholder="JWT 토큰 (Bearer 제외)">
-        </div>
-        <div class="input-group">
-            <button class="btn btn-success" onclick="connect()">연결</button>
-            <button class="btn btn-danger" onclick="disconnect()">연결 해제</button>
-            <button class="btn btn-primary" onclick="loadChatHistory()">채팅 기록 불러오기</button>
-        </div>
-        <div id="connectionStatus" class="status disconnected">연결되지 않음</div>
-    </div>
-
-    <div class="container">
-        <h2>채팅</h2>
-        <div id="chatMessages" class="chat-messages"></div>
-        <div class="input-group">
-            <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." maxlength="1000">
-            <button class="btn btn-primary" onclick="sendMessage()">전송</button>
-        </div>
-    </div>
-
-    <div class="container">
-        <h2>로그</h2>
-        <div id="logs" class="logs"></div>
-        <button class="btn btn-primary" onclick="clearLogs()">로그 지우기</button>
-    </div>
-
-    <div class="container">
-        <h2>사용법</h2>
-        <ol>
-            <li><strong>JWT 토큰 발급:</strong> 로그인 API로 토큰을 받아서 위에 입력</li>
-            <li><strong>스터디 ID:</strong> 테스트할 스터디의 ID 입력</li>
-            <li><strong>연결:</strong> "연결" 버튼 클릭</li>
-            <li><strong>메시지 전송:</strong> 메시지 입력 후 "전송" 버튼 클릭</li>
-            <li><strong>DB 확인:</strong> "채팅 기록 불러오기"로 저장된 메시지 확인</li>
-        </ol>
-        <p><strong>API 엔드포인트:</strong></p>
+    <div class="info-box">
+        <h4>✨ 새로운 기능: 안 읽은 멤버 수 표시</h4>
+        <p>각 메시지 옆에 <span class="unread-badge">3명 안 읽음</span> 형태로 표시됩니다!</p>
         <ul>
-            <li>WebSocket: <code>ws://localhost:8080/ws</code></li>
-            <li>채팅 기록: <code>GET /api/studies/{studyId}/chats</code></li>
+            <li>💬 메시지 전송 시: 자동으로 안 읽은 멤버 수 표시</li>
+            <li>📖 다른 사용자가 읽으면: 실시간으로 숫자 감소</li>
+            <li>📋 채팅 기록 불러오기: 현재 시점의 안 읽은 멤버 수 표시</li>
         </ul>
     </div>
+    
+    <p style="font-size: 14px; color: #666; margin-top: 10px;">
+        💡 모달이 닫힌 상태에서 메시지가 오면 안읽은 메시지 수가 자동으로 표시됩니다.
+    </p>
+    <p style="font-size: 12px; color: #666;">
+        💡 모달을 열면 자동으로 최신 메시지까지 읽음 처리됩니다.<br>
+        💡 모달을 열면 Heartbeat가 자동으로 전송됩니다 (4분마다).
+    </p>
+</div>
 
-    <script>
-        let stompClient = null;
-        let currentStudyId = null;
+<div class="container">
+    <h2>채팅</h2>
+    <div id="chatMessages" class="chat-messages"></div>
+    <div class="input-group">
+        <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." maxlength="1000">
+        <button class="btn btn-primary" onclick="sendMessage()">전송</button>
+    </div>
+</div>
 
-        function log(message) {
-            const logs = document.getElementById('logs');
-            const timestamp = new Date().toLocaleTimeString();
-            logs.innerHTML += `[${timestamp}] ${message}\n`;
-            logs.scrollTop = logs.scrollHeight;
+<div class="container">
+    <h2>로그</h2>
+    <div id="logs" class="logs"></div>
+    <button class="btn btn-primary" onclick="clearLogs()">로그 지우기</button>
+</div>
+
+<div class="container">
+    <h2>동작 방식</h2>
+    <ol>
+        <li><strong>WebSocket 연결:</strong> "WebSocket 연결" 버튼으로 서버와 연결</li>
+        <li><strong>모달 열기:</strong> "모달 열기" 버튼 클릭 → Redis에 상태 저장 + 읽음 처리</li>
+        <li><strong>메시지 전송:</strong> 채팅 입력 후 "전송" 버튼 클릭</li>
+        <li><strong>모달 닫기:</strong> "모달 닫기" 버튼 클릭 → Redis에서 상태 삭제</li>
+        <li><strong>안읽은 메시지:</strong> 모달이 닫힌 상태에서 메시지가 오면 자동으로 알림</li>
+        <li><strong>안 읽은 멤버 수:</strong> 각 메시지 옆에 실시간으로 표시</li>
+    </ol>
+
+    <h3>Redis 기반 모달 관리 특징</h3>
+    <ul>
+        <li>✅ Redis에 "chat:modal:{studyId}:{userId}" 키로 모달 상태 저장</li>
+        <li>✅ TTL 5분 설정 (자동 만료)</li>
+        <li>✅ Heartbeat로 4분마다 TTL 갱신 (모달 열려있는 동안)</li>
+        <li>✅ 멀티 서버 환경에서도 동일한 상태 공유</li>
+        <li>✅ 모달 열린 사용자: 메시지 자동 읽음 처리</li>
+        <li>✅ 모달 닫힌 사용자: 안읽은 메시지 수 알림 수신 (자동)</li>
+        <li>✨ <strong>안 읽은 멤버 수 실시간 표시 (카카오톡 스타일)</strong></li>
+    </ul>
+
+    <h3>테스트 시나리오</h3>
+    <ol>
+        <li><strong>단일 사용자:</strong>
+            <ul>
+                <li>모달 열기 → 메시지 전송 → 자동 읽음 처리 확인</li>
+                <li>모달 닫기 → 다른 탭에서 메시지 전송 → 안읽은 수 알림 확인</li>
+            </ul>
+        </li>
+        <li><strong>여러 사용자 (다른 브라우저/탭):</strong>
+            <ul>
+                <li>사용자 A: 모달 열고 있음</li>
+                <li>사용자 B: 모달 닫고 있음</li>
+                <li>사용자 C: 메시지 전송</li>
+                <li>결과: A는 자동 읽음, B는 안읽은 메시지 수 알림, 메시지 옆에 "1명 안 읽음" 표시</li>
+            </ul>
+        </li>
+        <li><strong>안 읽은 멤버 수 테스트:</strong>
+            <ul>
+                <li>여러 탭에서 서로 다른 사용자로 접속</li>
+                <li>일부는 모달 열기, 일부는 모달 닫기</li>
+                <li>메시지 전송 후 안 읽은 멤버 수 확인</li>
+                <li>다른 사용자가 모달을 열면 숫자가 실시간으로 감소하는지 확인</li>
+            </ul>
+        </li>
+    </ol>
+
+    <p><strong>API 엔드포인트:</strong></p>
+    <ul>
+        <li>WebSocket: <code>http://localhost:8080/ws</code> (SockJS)</li>
+        <li>채팅 기록: <code>GET /api/studies/{studyId}/chats</code></li>
+    </ul>
+
+    <p><strong>WebSocket 메시지:</strong></p>
+    <ul>
+        <li>메시지 전송: <code>/app/studies/{studyId}/chats</code></li>
+        <li>모달 열기: <code>/app/studies/{studyId}/modal/open</code></li>
+        <li>모달 닫기: <code>/app/studies/{studyId}/modal/close</code></li>
+        <li>Heartbeat: <code>/app/studies/{studyId}/modal/heartbeat</code></li>
+    </ul>
+
+    <p><strong>WebSocket 구독:</strong></p>
+    <ul>
+        <li>채팅 메시지: <code>/topic/studies/{studyId}/chats</code> (unreadMemberCount 포함)</li>
+        <li>읽음 상태 업데이트: <code>/topic/studies/{studyId}/unread</code> (lastReadMessageId)</li>
+        <li>안읽은 메시지 수: <code>/user/queue/studies/{studyId}/unread</code> (개인 메시지, 자동)</li>
+    </ul>
+</div>
+
+<script>
+    let stompClient = null;
+    let currentStudyId = null;
+    let isModalOpen = false;
+    let heartbeatInterval = null;
+    let messageMap = new Map(); // messageId -> DOM element 매핑
+
+    function log(message, highlight = false) {
+        const logs = document.getElementById('logs');
+        const timestamp = new Date().toLocaleTimeString();
+        const className = highlight ? 'class="highlight"' : '';
+        logs.innerHTML += `<span ${className}>[${timestamp}] ${message}</span>\n`;
+        logs.scrollTop = logs.scrollHeight;
+    }
+
+    function clearLogs() {
+        document.getElementById('logs').innerHTML = '';
+    }
+
+    function updateConnectionStatus(connected) {
+        const status = document.getElementById('connectionStatus');
+        if (connected) {
+            status.className = 'status connected';
+            status.textContent = `스터디 ${currentStudyId} WebSocket 연결됨 (SockJS + Redis)`;
+        } else {
+            status.className = 'status disconnected';
+            status.textContent = '연결되지 않음';
+        }
+    }
+
+    function updateModalStatus(open) {
+        isModalOpen = open;
+        const status = document.getElementById('modalStatus');
+        if (open) {
+            status.className = 'modal-status open';
+            status.textContent = '모달 상태: 열림 (Redis에 저장됨)';
+        } else {
+            status.className = 'modal-status closed';
+            status.textContent = '모달 상태: 닫힘 (Redis에서 삭제됨)';
+        }
+    }
+
+    function updateUnreadCount(count) {
+        const unreadDiv = document.getElementById('unreadCount');
+        if (count > 0) {
+            unreadDiv.innerHTML = `<span class="unread-count">안읽은 메시지: ${count}개</span>`;
+            unreadDiv.style.display = 'block';
+        } else {
+            unreadDiv.style.display = 'none';
+        }
+    }
+
+    function startHeartbeat() {
+        if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
         }
 
-        function clearLogs() {
-            document.getElementById('logs').innerHTML = '';
+        // 4분마다 heartbeat 전송 (TTL이 5분이므로)
+        heartbeatInterval = setInterval(() => {
+            if (stompClient && stompClient.connected && isModalOpen) {
+                stompClient.send(`/app/studies/${currentStudyId}/modal/heartbeat`, {}, JSON.stringify({}));
+                log('💓 Heartbeat 전송 (Redis TTL 갱신)');
+            }
+        }, 240000); // 4분
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+            log('💔 Heartbeat 중지');
+        }
+    }
+
+    function connect() {
+        const studyId = document.getElementById('studyId').value;
+        const authToken = document.getElementById('authToken').value;
+
+        if (!studyId) {
+            alert('스터디 ID를 입력해주세요');
+            return;
         }
 
-        function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.className = 'status connected';
-                status.textContent = `스터디 ${currentStudyId} 채팅방에 연결됨`;
-            } else {
-                status.className = 'status disconnected';
-                status.textContent = '연결되지 않음';
-            }
+        if (!authToken) {
+            alert('JWT 토큰을 입력해주세요');
+            return;
         }
 
-        function connect() {
-            const studyId = document.getElementById('studyId').value;
-            const authToken = document.getElementById('authToken').value;
+        currentStudyId = studyId;
 
-            if (!studyId) {
-                alert('스터디 ID를 입력해주세요');
-                return;
-            }
+        log('🔌 SockJS + WebSocket 연결 시도...');
 
-            if (!authToken) {
-                alert('JWT 토큰을 입력해주세요');
-                return;
-            }
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
 
-            currentStudyId = studyId;
-            
-            log('WebSocket 연결 시도...');
-            
-            // WebSocket + STOMP 연결 (SockJS 없이 순수 WebSocket 사용)
-            const socket = new WebSocket(`ws://localhost:8080/ws`);
-            stompClient = Stomp.over(socket);
-            
-            // 헤더에 인증 토큰 추가
-            const headers = {
-                'Authorization': `Bearer ${authToken}`
-            };
-
-            stompClient.connect(headers, function(frame) {
-                log('WebSocket 연결 성공: ' + frame);
-                updateConnectionStatus(true);
-                
-                // 스터디 채팅방 구독
-                stompClient.subscribe(`/topic/studies/${studyId}/chats`, function(message) {
-                    const chatMessage = JSON.parse(message.body);
-                    displayMessage(chatMessage);
-                    log('메시지 수신: ' + JSON.stringify(chatMessage));
-                });
-
-                // 에러 메시지 구독
-                stompClient.subscribe('/user/queue/errors', function(message) {
-                    const error = JSON.parse(message.body);
-                    log('에러 수신: ' + JSON.stringify(error));
-                    alert(`에러: ${error.message}`);
-                });
-
-                log(`스터디 ${studyId} 채팅방 구독 완료`);
-                
-            }, function(error) {
-                log('WebSocket 연결 실패: ' + error);
-                updateConnectionStatus(false);
-                alert('연결 실패: ' + error);
-            });
-        }
-
-        function disconnect() {
-            if (stompClient !== null) {
-                stompClient.disconnect();
-                log('WebSocket 연결 해제');
-            }
-            updateConnectionStatus(false);
-            currentStudyId = null;
-        }
-
-        function sendMessage() {
-            const messageInput = document.getElementById('messageInput');
-            const content = messageInput.value.trim();
-
-            if (!content) {
-                alert('메시지를 입력해주세요');
-                return;
-            }
-
-            if (!stompClient || !stompClient.connected) {
-                alert('먼저 채팅방에 연결해주세요');
-                return;
-            }
-
-            const message = {
-                content: content
-            };
-
-            log(`메시지 전송 시도: ${content}`);
-            
-            // 메시지 전송
-            stompClient.send(`/app/studies/${currentStudyId}/chats`, {}, JSON.stringify(message));
-            
-            messageInput.value = '';
-        }
-
-        function displayMessage(message) {
-            const chatMessages = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            
-            const timestamp = new Date(message.createdAt).toLocaleString();
-            
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <strong>${message.senderName}</strong> - ${timestamp}
-                </div>
-                <div class="message-content">${escapeHtml(message.content)}</div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function loadChatHistory() {
-            const authToken = document.getElementById('authToken').value;
-            const studyId = document.getElementById('studyId').value;
-
-            if (!authToken || !studyId) {
-                alert('스터디 ID와 JWT 토큰을 입력해주세요');
-                return;
-            }
-
-            try {
-                log('채팅 기록 불러오는 중...');
-                
-                const response = await fetch(`/api/studies/${studyId}/chats?size=50`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    log(`채팅 기록 ${data.messages.length}개 불러옴`);
-                    
-                    // 기존 메시지 지우기
-                    document.getElementById('chatMessages').innerHTML = '';
-                    
-                    // 메시지 표시 (오래된 순서대로)
-                    data.messages.reverse().forEach(message => {
-                        displayMessage(message);
-                    });
-                    
-                } else {
-                    const errorText = await response.text();
-                    log(`채팅 기록 불러오기 실패: ${response.status} ${errorText}`);
-                    alert(`채팅 기록 불러오기 실패: ${response.status}`);
-                }
-            } catch (error) {
-                log('채팅 기록 불러오기 에러: ' + error);
-                alert('채팅 기록 불러오기 에러: ' + error.message);
-            }
-        }
-
-        // Enter 키로 메시지 전송
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        // 페이지 로드 시
-        window.onload = function() {
-            log('채팅 테스트 페이지 로드됨');
-            log('사용 전에 JWT 토큰과 스터디 ID를 입력하세요');
+        const headers = {
+            'Authorization': `Bearer ${authToken}`
         };
 
-        // 페이지 종료 시 연결 해제
-        window.addEventListener('beforeunload', function() {
-            if (stompClient !== null) {
-                stompClient.disconnect();
+        stompClient.connect(headers, function(frame) {
+            log('✅ WebSocket 연결 성공!');
+            updateConnectionStatus(true);
+
+            // 채팅 메시지 구독
+            stompClient.subscribe(`/topic/studies/${studyId}/chats`, function(message) {
+                const chatMessage = JSON.parse(message.body);
+                displayMessage(chatMessage);
+                log(`💬 채팅 메시지 수신: ${chatMessage.senderName} (안 읽은 멤버: ${chatMessage.unreadMemberCount}명)`);
+            });
+
+            // 읽음 상태 업데이트 구독 (누군가 모달을 열었을 때)
+            stompClient.subscribe(`/topic/studies/${studyId}/unread`, function(message) {
+                const readData = JSON.parse(message.body);
+                updateUnreadCountForMessagesAfter(readData.lastReadMessageId);
+                log(`📖 읽음 상태 업데이트: messageId ${readData.lastReadMessageId} 이후 메시지 업데이트`, true);
+            });
+
+            // 안읽은 메시지 수 구독 (개인 메시지)
+            stompClient.subscribe(`/user/queue/studies/${studyId}/unread`, function(message) {
+                const unreadData = JSON.parse(message.body);
+                updateUnreadCount(unreadData.unreadCount);
+                log(`🔔 안읽은 메시지 수 자동 수신: ${unreadData.unreadCount}개`, true);
+            });
+
+            // 에러 메시지 구독
+            stompClient.subscribe('/user/queue/errors', function(message) {
+                const error = JSON.parse(message.body);
+                log('❌ 에러: ' + JSON.stringify(error), true);
+                alert(`에러: ${error.message}`);
+            });
+
+            log(`📡 스터디 ${studyId} 구독 완료 (채팅, 읽음 상태, 안읽은 수)`);
+
+        }, function(error) {
+            log('❌ WebSocket 연결 실패: ' + error, true);
+            updateConnectionStatus(false);
+            alert('연결 실패: ' + error);
+        });
+    }
+
+    function disconnect() {
+        if (isModalOpen) {
+            closeModal();
+        }
+
+        if (stompClient !== null) {
+            stompClient.disconnect();
+            log('🔌 WebSocket 연결 해제');
+        }
+        updateConnectionStatus(false);
+        stopHeartbeat();
+        currentStudyId = null;
+        messageMap.clear();
+    }
+
+    function openModal() {
+        if (!stompClient || !stompClient.connected) {
+            alert('먼저 WebSocket에 연결해주세요');
+            return;
+        }
+
+        log('📂 모달 열기 요청...');
+        stompClient.send(`/app/studies/${currentStudyId}/modal/open`, {}, JSON.stringify({}));
+        updateModalStatus(true);
+        updateUnreadCount(0); // 모달 열면 안읽은 메시지 0으로 초기화
+        startHeartbeat();
+        log('✅ 모달 열림 + Redis 저장 + Heartbeat 시작 + 안읽은 메시지 초기화', true);
+    }
+
+    function closeModal() {
+        if (!stompClient || !stompClient.connected) {
+            alert('먼저 WebSocket에 연결해주세요');
+            return;
+        }
+
+        log('📁 모달 닫기 요청...');
+        stompClient.send(`/app/studies/${currentStudyId}/modal/close`, {}, JSON.stringify({}));
+        updateModalStatus(false);
+        stopHeartbeat();
+        log('✅ 모달 닫힘 + Redis 삭제', true);
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const content = messageInput.value.trim();
+
+        if (!content) {
+            alert('메시지를 입력해주세요');
+            return;
+        }
+
+        if (!stompClient || !stompClient.connected) {
+            alert('먼저 WebSocket에 연결해주세요');
+            return;
+        }
+
+        const message = {
+            content: content
+        };
+
+        log(`📤 메시지 전송: ${content}`);
+        stompClient.send(`/app/studies/${currentStudyId}/chats`, {}, JSON.stringify(message));
+        messageInput.value = '';
+    }
+
+    function displayMessage(message) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+        messageDiv.dataset.messageId = message.messageId;
+
+        const timestamp = new Date(message.createdAt).toLocaleString();
+        
+        // 안 읽은 멤버 수 표시
+        const unreadBadge = message.unreadMemberCount > 0 
+            ? `<span class="unread-badge" data-message-id="${message.messageId}">${message.unreadMemberCount}명 안 읽음</span>`
+            : '';
+
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                <div>
+                    <strong>${message.senderName}</strong> - ${timestamp}
+                </div>
+                ${unreadBadge}
+            </div>
+            <div class="message-content">${escapeHtml(message.content)}</div>
+        `;
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Map에 저장
+        messageMap.set(message.messageId, messageDiv);
+    }
+
+    function updateUnreadCountForMessagesAfter(previousLastReadMessageId) {
+        // previousLastReadMessageId 초과(>) 메시지만 unreadCount를 -1
+        messageMap.forEach((messageDiv, messageId) => {
+            if (messageId > previousLastReadMessageId) {
+                const badge = messageDiv.querySelector('.unread-badge');
+                if (badge) {
+                    const currentCount = parseInt(badge.textContent);
+                    const newCount = Math.max(0, currentCount - 1);
+                    
+                    if (newCount === 0) {
+                        // 0이 되면 배지 제거
+                        badge.remove();
+                    } else {
+                        badge.textContent = `${newCount}명 안 읽음`;
+                    }
+                }
             }
         });
-    </script>
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async function loadChatHistory() {
+        const authToken = document.getElementById('authToken').value;
+        const studyId = document.getElementById('studyId').value;
+
+        if (!authToken || !studyId) {
+            alert('스터디 ID와 JWT 토큰을 입력해주세요');
+            return;
+        }
+
+        try {
+            log('📋 채팅 기록 불러오는 중...');
+
+            const response = await fetch(`/api/studies/${studyId}/chats?size=50`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                log(`✅ 채팅 기록 ${data.messages.length}개 불러옴 (안 읽은 멤버 수 포함)`);
+
+                document.getElementById('chatMessages').innerHTML = '';
+                messageMap.clear();
+
+                data.messages.reverse().forEach(message => {
+                    displayMessage(message);
+                });
+
+            } else {
+                const errorText = await response.text();
+                log(`❌ 채팅 기록 불러오기 실패: ${response.status}`, true);
+                alert(`채팅 기록 불러오기 실패: ${response.status}`);
+            }
+        } catch (error) {
+            log('❌ 채팅 기록 불러오기 에러: ' + error, true);
+            alert('채팅 기록 불러오기 에러: ' + error.message);
+        }
+    }
+
+    // Enter 키로 메시지 전송
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    // 페이지 로드 시
+    window.onload = function() {
+        log('🌊 Pado 채팅 테스트 페이지 로드됨 (Redis 모달 관리 + 안 읽은 멤버 수)');
+        log('📝 사용 전에 JWT 토큰과 스터디 ID를 입력하세요');
+        log('💡 모달이 닫힌 상태에서 메시지가 오면 안읽은 메시지 수가 자동으로 표시됩니다!');
+        log('✨ 각 메시지 옆에 안 읽은 멤버 수가 실시간으로 표시됩니다!');
+    };
+
+    // 페이지 종료 시 연결 해제
+    window.addEventListener('beforeunload', function() {
+        if (isModalOpen) {
+            closeModal();
+        }
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        stopHeartbeat();
+    });
+</script>
 </body>
 </html>
