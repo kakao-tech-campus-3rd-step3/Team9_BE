@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ChatReactionRepository extends JpaRepository<ChatReaction, Long> {
+public interface ChatReactionRepository extends JpaRepository<ChatReaction, Long>, ChatReactionRepositoryCustom {
 
     Optional<ChatReaction> findByChatMessageAndStudyMember(ChatMessage chatMessage, StudyMember studyMember);
 
