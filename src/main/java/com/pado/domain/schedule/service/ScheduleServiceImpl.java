@@ -5,6 +5,7 @@ import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
+import com.pado.domain.schedule.event.ScheduleCreatedEvent;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyRepository;
@@ -20,6 +21,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final StudyRepository studyRepository;
     private final StudyMemberService studyMemberService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void createSchedule(Long studyId, ScheduleCreateRequestDto request) {
@@ -50,7 +53,15 @@ public class ScheduleServiceImpl implements ScheduleService {
             .endTime(request.end_time())
             .build();
 
-        scheduleRepository.save(schedule);
+        Schedule savedSchedule = scheduleRepository.save(schedule);
+
+        eventPublisher.publishEvent(
+                new ScheduleCreatedEvent(
+                        studyId,
+                        savedSchedule.getId(),
+                        savedSchedule.getTitle()
+                )
+        );
     }
 
     @Override
