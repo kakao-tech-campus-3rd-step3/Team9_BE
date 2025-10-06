@@ -115,8 +115,9 @@ public enum ErrorCode {
     INVALID_SUBSCRIBE_PATH(HttpStatus.BAD_REQUEST, "INVALID_SUBSCRIBE_PATH", "구독 경로가 잘못되었습니다."),
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_NOT_FOUND", "채팅 메시지를 찾을 수 없습니다."),
     CHAT_MESSAGE_TOO_LONG(HttpStatus.BAD_REQUEST, "CHAT_MESSAGE_TOO_LONG", "메시지가 너무 깁니다."),
-    WEBSOCKET_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "WEBSOCKET_CONNECTION_FAILED",
-        "웹소켓 연결에 실패했습니다.");
+    NOT_FOUND_LAST_READ_CHAT(HttpStatus.NOT_FOUND, "NOT_FOUND_LAST_READ_CHAT", "해당 유저가 가장 마지막으로 읽는 메세지를 찾을 수 없습니다."),
+    WEBSOCKET_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "WEBSOCKET_CONNECTION_FAILED", "웹소켓 연결에 실패했습니다.");
+
     public final HttpStatus status;
     public final String code;
     public final String message;

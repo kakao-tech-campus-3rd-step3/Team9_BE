@@ -3,13 +3,14 @@ package com.pado.domain.chat.service;
 import com.pado.domain.chat.dto.request.ChatMessageRequestDto;
 import com.pado.domain.chat.dto.response.ChatMessageListResponseDto;
 import com.pado.domain.chat.dto.response.ChatMessageResponseDto;
+import com.pado.domain.chat.dto.response.LastReadMessageResponseDto;
+import com.pado.domain.chat.dto.response.UnreadCountResponseDto;
 import com.pado.domain.chat.entity.ChatMessage;
+import com.pado.domain.chat.entity.LastReadMessage;
+import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.chat.repository.ChatMessageRepository;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.entity.StudyMember;
-import com.pado.domain.study.entity.StudyMemberRole;
-import com.pado.domain.study.entity.StudyStatus;
-import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.domain.user.entity.User;
@@ -17,10 +18,16 @@ import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,14 +38,15 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
+    private final LastReadMessageRepository lastReadRepository;
+    private final RedisChatModalManager modalManager;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
-    public ChatMessageResponseDto sendMessage(Long studyId, ChatMessageRequestDto requestDto, User currentUser) {
-
-        // 인터셉터에서 1차 검증, 서비스 로직에서 2차 검증
+    public void sendMessage(Long studyId, ChatMessageRequestDto requestDto, User currentUser) {
         validateMessageContent(requestDto.content());
-        
+
         Study study = studyRepository.findById(studyId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
 
@@ -53,12 +61,32 @@ public class ChatServiceImpl implements ChatService {
 
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
-        return ChatMessageResponseDto.from(savedMessage);
+        // 현재 채팅방에 접속하고 있는 멤버 대상으로만 마지막으로 읽은 메세지 id 업데이트
+        Set<Long> onlineUserIds = modalManager.getOpenModalUserIds(studyId);
+        if (!onlineUserIds.isEmpty()) {
+            // 1. 채팅방에 접속한 유저의 StudyMember 목록을 한 번에 조회
+            List<StudyMember> onlineMembers = studyMemberRepository.findByStudyIdAndUserIdIn(studyId, onlineUserIds);
+
+            // 2. StudyMember 목록으로 LastReadMessage 목록을 한 번에 조회
+            List<LastReadMessage> lastReadMessages = lastReadRepository.findByStudyMemberIn(onlineMembers);
+
+            // 3. DB 업데이트
+            lastReadMessages.forEach(lrm -> lrm.updateLastReadMessageId(savedMessage.getId()));
+        }
+
+        // 스터디 전체 멤버 - 채팅방 접속 중인 멤버 방식으로 계산
+        Long unreadMemberCount = lastReadRepository.countUnreadMembers(studyId, savedMessage.getId());
+
+        // 채팅 전송
+        ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(savedMessage, unreadMemberCount);
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/chats", responseDto);
+
+        // 현재 채팅방에 접속하고 있지 않은 사용자들에게 안읽은 메시지 수 알림을 비동기 처리
+        sendUnreadCountToClosedModalUsersAsync(studyId);
     }
 
     @Override
     public ChatMessageListResponseDto getChatMessages(Long studyId, Long cursor, int size, User currentUser) {
-        // 2차 검증
         validateStudyMemberPermission(studyId, currentUser);
 
         List<ChatMessage> chatMessages = chatMessageRepository.findChatMessagesWithCursor(studyId, cursor, size);
@@ -68,8 +96,17 @@ public class ChatServiceImpl implements ChatService {
             chatMessages = chatMessages.subList(0, size);
         }
 
+        List<Long> messageIds = chatMessages.stream()
+                .map(ChatMessage::getId)
+                .toList();
+
+        Map<Long, Long> unreadCounts = lastReadRepository.getUnreadCountsForMessages(studyId, messageIds);
+
         List<ChatMessageResponseDto> messageDtos = chatMessages.stream()
-                .map(ChatMessageResponseDto::from)
+                .map(msg-> ChatMessageResponseDto.from(
+                        msg,
+                        unreadCounts.getOrDefault(msg.getId(), 0L)
+                ))
                 .toList();
 
         Long nextCursor;
@@ -84,6 +121,101 @@ public class ChatServiceImpl implements ChatService {
         return ChatMessageListResponseDto.of(messageDtos, hasNext, nextCursor);
     }
 
+    @Override
+    @Transactional
+    public void openChatModal(Long studyId, User currentUser) {
+        validateStudyMemberPermission(studyId, currentUser);
+
+        modalManager.openModal(studyId, currentUser.getId());
+
+        StudyMember studyMember = studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
+
+        // 현재 채팅방에서 가장 최신 메시지 아이디 추출
+        Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
+        long latestChatMessageId = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId)
+                .map(ChatMessage::getId)
+                .orElse(0L);
+
+        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 추출
+        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(studyMember)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
+        long lastReadMessageId = lastReadMessage.getLastReadMessageId();
+
+        lastReadMessage.updateLastReadMessageId(latestChatMessageId);
+
+        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 전송
+        // 프론트에서 이보다 큰 메세지들의 읽지 않은 멤버 수에 -1 수행
+        messagingTemplate.convertAndSend(
+                "/topic/studies/" + studyId + "/unread", new LastReadMessageResponseDto(lastReadMessageId)
+        );
+    }
+
+    @Override
+    @Transactional
+    public void closeChatModal(Long studyId, User currentUser) {
+        validateStudyMemberPermission(studyId, currentUser);
+
+        modalManager.closeModal(studyId, currentUser.getId());
+    }
+
+    @Override
+    public void refreshModalState(Long studyId, User currentUser) {
+        validateStudyMemberPermission(studyId, currentUser);
+
+        modalManager.refreshModal(studyId, currentUser.getId());
+    }
+
+    // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송을 비동기 처리
+    @Async
+    public void sendUnreadCountToClosedModalUsersAsync(Long studyId){
+
+        sendUnreadCountToClosedModalUsers(studyId);
+    }
+
+    // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송
+    private void sendUnreadCountToClosedModalUsers(Long studyId) {
+        List<StudyMember> allMembers = studyMemberRepository.findByStudyId(studyId);
+
+        // 채팅방에 접속한 유저 목록을 한 번에 조회
+        Set<Long> onlineUserIds = modalManager.getOpenModalUserIds(studyId); // 메서드 내부에서 null을 반환하지 않도록 처리해야 함
+
+        // 채팅방에 미접속 상태인 멤버들을 필터링
+        List<StudyMember> offlineMembers = allMembers.stream()
+                .filter(member -> !onlineUserIds.contains(member.getUser().getId()))
+                .toList();
+
+        // 미접속 멤버가 없다면 아무것도 하지 않고 종료
+        if (offlineMembers.isEmpty()) {
+            return;
+        }
+
+        // 미접속 멤버들의 LastReadMessage 정보를 <studyMemberId, LastReadMessageId> 형식으로 DB에서 한 번에 조회
+        Map<Long, Long> lastReadMessageIdMap = lastReadRepository.findByStudyMemberIn(offlineMembers)
+                .stream()
+                .collect(Collectors.toMap(
+                        lrm -> lrm.getStudyMember().getId(),
+                        LastReadMessage::getLastReadMessageId
+                ));
+
+        // 5. 미접속 멤버들을 순회하며 알림 전송 로직 수행
+        offlineMembers.forEach(member -> {
+            User user = member.getUser();
+            Long lastReadId = lastReadMessageIdMap.getOrDefault(member.getId(), 0L);
+            long unreadCount = chatMessageRepository.countByIdGreaterThanAndStudyId(lastReadId, studyId);
+
+            if (unreadCount > 0) {
+                UnreadCountResponseDto response = new UnreadCountResponseDto(unreadCount);
+
+                messagingTemplate.convertAndSendToUser(
+                        user.getEmail(),
+                        "/queue/studies/" + studyId + "/unread",
+                        response
+                );
+            }
+        });
+    }
+
     private void validateMessageContent(String content) {
         if (content == null || content.trim().isEmpty()) {
             throw new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND);
@@ -94,7 +226,7 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
-    public void validateStudyMemberPermission(Long studyId, User currentUser) {
+    private void validateStudyMemberPermission(Long studyId, User currentUser) {
         if (!studyRepository.existsById(studyId)) {
             throw new BusinessException(ErrorCode.STUDY_NOT_FOUND);
         }
