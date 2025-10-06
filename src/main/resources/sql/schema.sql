@@ -212,16 +212,18 @@ CREATE INDEX IF NOT EXISTS idx_schedule_tune_slot__tune_index ON schedule_tune_s
 CREATE TABLE chat_message (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     study_id BIGINT NOT NULL,
-    sender_id BIGINT NOT NULL,
+    sender_id BIGINT,
     content TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    link VARCHAR(500),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_message_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE,
     CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES study_member (id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_chat_message_study_id ON chat_message (study_id, id);
-CREATE INDEX idx_chat_message_study_created_at ON chat_message (study_id, created_at);
+CREATE INDEX idx_study_id ON chat_message (study_id, id);
+CREATE INDEX idx_study_created_at ON chat_message (study_id, created_at);
 
 CREATE TABLE IF NOT EXISTS chapter (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -237,3 +239,17 @@ CREATE TABLE chat_message_last_read (
     last_read_message_id BIGINT NOT NULL,
     CONSTRAINT chat_message_read_member FOREIGN KEY (study_member_id) REFERENCES study_member (id) ON DELETE CASCADE
 );
+
+CREATE TABLE chat_reaction (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    chat_message_id BIGINT NOT NULL,
+    study_member_id BIGINT NOT NULL,
+    reaction_type VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_chat_reaction UNIQUE (chat_message_id, study_member_id),
+    CONSTRAINT fk_chat_reaction_message FOREIGN KEY (chat_message_id) REFERENCES chat_message (id) ON DELETE CASCADE,
+    CONSTRAINT fk_chat_reaction_member FOREIGN KEY (study_member_id) REFERENCES study_member (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_chat_reaction_message ON chat_reaction (chat_message_id);
+CREATE INDEX idx_chat_reaction_member ON chat_reaction (study_member_id);
