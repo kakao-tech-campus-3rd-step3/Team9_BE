@@ -351,3 +351,17 @@ ALTER TABLE answer_submission ADD CONSTRAINT fk_as_submission FOREIGN KEY (submi
 ALTER TABLE answer_submission ADD CONSTRAINT fk_as_question FOREIGN KEY (question_id) REFERENCES quiz_question(id) ON DELETE CASCADE;
 ALTER TABLE quiz_point_log ADD CONSTRAINT fk_qpl_studymember FOREIGN KEY (study_member_id) REFERENCES study_member(id) ON DELETE CASCADE;
 ALTER TABLE quiz_point_log ADD CONSTRAINT fk_qpl_quizsubmission FOREIGN KEY (quiz_submission_id) REFERENCES quiz_submission(id) ON DELETE CASCADE;
+
+-- chat_message_last_read 테이블 추가
+CREATE TABLE chat_message_last_read (
+                                        id BIGINT NOT NULL AUTO_INCREMENT,
+                                        study_member_id BIGINT NOT NULL,
+                                        last_read_message_id BIGINT NOT NULL,
+                                        PRIMARY KEY (id),
+                                        UNIQUE KEY uk_last_read_study_member (study_member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 외래 키 추가
+ALTER TABLE chat_message_last_read
+    ADD CONSTRAINT fk_last_read_study_member
+        FOREIGN KEY (study_member_id) REFERENCES study_member(id) ON DELETE CASCADE;
