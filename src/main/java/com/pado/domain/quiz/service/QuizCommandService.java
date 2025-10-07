@@ -90,6 +90,66 @@ public class QuizCommandService {
         return quizDtoMapper.toQuizProgressDto(quiz, submission);
     }
 
+    @Transactional
+    public void saveInProgressAnswers(Long submissionId, User user, List<AnswerRequestDto> answers) {
+        // 1. Submission 조회
+        QuizSubmission submission = quizSubmissionRepository.findForInProgressById(submissionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUBMISSION_NOT_FOUND));
+
+        // 2. 권한 & 상태 확인
+        if (!submission.getUser().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+        submission.validateIsNotCompleted();
+
+        // 3. 답안 유효성 검증
+        validateAnswers(submission.getQuiz(), answers);
+
+        // 4. 퀴즈에 속한 모든 문제들을 <문제ID, 문제 객체>로 변환
+        Map<Long, QuizQuestion> questionMap = submission.getQuiz().getQuestions().stream()
+                .collect(Collectors.toMap(QuizQuestion::getId, q -> q));
+
+        // 5. 사용자가 새로 보낸 답안들을 <문제 ID, 사용자가 입력한 답>으로 변환, 중복 값은 새로운 값으로 덮어 씀
+        Map<Long, String> userAnswerMap = answers.stream()
+                .collect(Collectors.toMap(
+                        AnswerRequestDto::questionId,
+                        AnswerRequestDto::userAnswer,
+                        (oldValue, newValue) -> newValue
+                ));
+
+        // 6. 이미 저장된 답안들을 <문제Id, 저장된 답안 객체>로 변환
+        Map<Long, AnswerSubmission> existingAnswers = submission.getAnswers().stream()
+                .collect(Collectors.toMap(ans -> ans.getQuestion().getId(), ans -> ans));
+
+        // 7. 답안 업데이트 또는 새로 생성
+        for (Map.Entry<Long, String> entry : userAnswerMap.entrySet()) {
+            Long questionId = entry.getKey();
+            String userAnswerText = entry.getValue();
+
+            // 유효한 questionId인지 확인
+            if (!questionMap.containsKey(questionId)) {
+                log.warn("Attempt to save answer for a non-existent questionId: {}", questionId);
+                continue;
+            }
+
+            AnswerSubmission answerToUpdate = existingAnswers.get(questionId);
+            if (answerToUpdate != null) {
+                // 이미 있던 답 -> 내용만 갱신
+                answerToUpdate.updateAnswer(userAnswerText);
+            } else {
+                // 없던 답 -> 새로 생성
+                QuizQuestion question = questionMap.get(questionId);
+                AnswerSubmission newAnswer = AnswerSubmission.builder()
+                        .submission(submission)
+                        .question(question)
+                        .submittedAnswer(userAnswerText)
+                        .isCorrect(false)
+                        .build();
+                submission.addAnswerSubmission(newAnswer);
+            }
+        }
+    }
+
     private void validateMember(Long studyId, Long userId) {
         if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
             if (!studyRepository.existsById(studyId)) {
@@ -110,6 +170,41 @@ public class QuizCommandService {
                         log.info("Async task for quizId {} completed successfully.", quizId);
                     }
                 });
+    }
+
+    private void validateAnswers(Quiz quiz, List<AnswerRequestDto> answers) {
+        // <문제 ID, 문제 객체> 매핑
+        Map<Long, QuizQuestion> questionMap = quiz.getQuestions().stream()
+                .collect(Collectors.toMap(QuizQuestion::getId, q -> q));
+
+        // 제출된 답안 수 검증
+        if (answers.size() > questionMap.size()) {
+            throw new BusinessException(ErrorCode.INVALID_ANSWER_SUBMISSION, "제출된 답안의 수가 퀴즈의 총 문제 수보다 많습니다.");
+        }
+
+        // 제출된 각 답안 검증
+        for (AnswerRequestDto answerDto : answers) {
+            QuizQuestion question = questionMap.get(answerDto.questionId());
+            // 존재하지 않는 문제 ID 제출 검증
+            if (question == null) {
+                throw new BusinessException(ErrorCode.INVALID_ANSWER_SUBMISSION, "퀴즈에 존재하지 않는 문제 ID가 포함되어 있습니다: " + answerDto.questionId());
+            }
+
+            if (question instanceof MultipleChoiceQuestion mcq) {
+                Long userAnswerChoiceId;
+                try {
+                    userAnswerChoiceId = Long.parseLong(answerDto.userAnswer());
+                } catch (NumberFormatException e) {
+                    throw new BusinessException(ErrorCode.INVALID_ANSWER_SUBMISSION, "객관식 답안은 숫자(선택지 ID) 형식이어야 합니다.");
+                }
+
+                boolean isValidChoice = mcq.getChoices().stream()
+                        .anyMatch(choice -> choice.getId().equals(userAnswerChoiceId));
+                if (!isValidChoice) {
+                    throw new BusinessException(ErrorCode.INVALID_ANSWER_SUBMISSION, "문제 " + mcq.getId() + "에 존재하지 않는 선택지 ID가 제출되었습니다: " + userAnswerChoiceId);
+                }
+            }
+        }
     }
 
     @Transactional
@@ -152,113 +247,5 @@ public class QuizCommandService {
         }
         rankPointService.revokePointsForQuiz(quizId);
         quizRepository.delete(quiz);
-    }
-
-    private int gradeAnswers(QuizSubmission submission, List<AnswerRequestDto> answers) {
-        int score = 0;
-
-        Map<Long, QuizQuestion> questionMap = submission.getQuiz().getQuestions().stream()
-                .collect(Collectors.toMap(QuizQuestion::getId, q -> q));
-
-        for (AnswerRequestDto userAnswerDto : answers) {
-            QuizQuestion question = questionMap.get(userAnswerDto.questionId());
-            if (question == null) continue;
-
-            boolean isCorrect = checkAnswer(question, userAnswerDto.userAnswer());
-            if (isCorrect) {
-                score++;
-            }
-
-            AnswerSubmission answerSubmission = AnswerSubmission.builder()
-                    .question(question)
-                    .submittedAnswer(userAnswerDto.userAnswer())
-                    .isCorrect(isCorrect)
-                    .build();
-
-            submission.addAnswerSubmission(answerSubmission);
-        }
-
-        return score;
-    }
-
-    private boolean checkAnswer(QuizQuestion question, String userAnswer) {
-        if (userAnswer == null || userAnswer.isBlank()) {
-            return false;
-        }
-
-        if (question instanceof MultipleChoiceQuestion mcq) {
-            return mcq.getCorrectChoice() != null &&
-                    mcq.getCorrectChoice()
-                            .getId()
-                            .toString()
-                            .equals(userAnswer);
-        } else if (question instanceof ShortAnswerQuestion saq) {
-            return saq.getAnswer().trim().equalsIgnoreCase(userAnswer.trim());
-        }
-
-        return false;
-    }
-
-    private QuizResultDto mapToResultDto(QuizSubmission submission) {
-        Map<Long, AnswerSubmission> userAnswersMap = submission.getAnswers().stream()
-                .collect(Collectors.toMap(
-                        answer -> answer.getQuestion().getId(),
-                        answer -> answer
-                ));
-
-        List<AnswerResultDto> results = submission.getQuiz().getQuestions().stream()
-                .map(question -> {
-                    AnswerSubmission userAnswer = userAnswersMap.get(question.getId());
-                    return mapToAnswerResultDto(question, userAnswer);
-                })
-                .toList();
-
-        return new QuizResultDto(
-                submission.getId(),
-                submission.getScore(),
-                submission.getQuiz().getQuestions().size(),
-                results
-        );
-    }
-
-    private AnswerResultDto mapToAnswerResultDto(QuizQuestion question, AnswerSubmission userAnswer) {
-        String userAnswerText = (userAnswer != null)
-                                ? userAnswer.getSubmittedAnswer()
-                                : null;
-
-        boolean isCorrect = (userAnswer != null)
-                            ? userAnswer.isCorrect()
-                            : false;
-
-        String correctAnswer = "";
-        List<ChoiceResultDto> choices = Collections.emptyList();
-
-        if (question instanceof MultipleChoiceQuestion mcq) {
-            correctAnswer = mcq.getCorrectChoice() != null
-                            ? mcq.getCorrectChoice().getId().toString()
-                            : null;
-
-            choices = mcq.getChoices().stream()
-                    .map(choice -> new ChoiceResultDto(
-                            choice.getId(),
-                            choice.getChoiceText(),
-                            choice.getId().equals(mcq.getCorrectChoice() != null
-                                                    ? mcq.getCorrectChoice().getId()
-                                                    : null),
-                            choice.getId().toString().equals(userAnswerText)
-                    ))
-                    .toList();
-        } else if (question instanceof ShortAnswerQuestion saq) {
-            correctAnswer = saq.getAnswer();
-        }
-
-        return new AnswerResultDto(
-                question.getId(),
-                question.getQuestionText(),
-                isCorrect,
-                userAnswerText,
-                correctAnswer,
-                choices
-        );
     }
 }
