@@ -1,10 +1,9 @@
 package com.pado.domain.quiz.service;
 
-import com.pado.domain.quiz.dto.projection.QuizInfoProjection;
-import com.pado.domain.quiz.dto.projection.SubmissionStatusDto;
 import com.pado.domain.quiz.dto.request.AnswerRequestDto;
 import com.pado.domain.quiz.dto.response.*;
 import com.pado.domain.quiz.entity.*;
+import com.pado.domain.quiz.mapper.QuizDtoMapper;
 import com.pado.domain.quiz.repository.AnswerSubmissionRepository;
 import com.pado.domain.quiz.repository.QuizRepository;
 import com.pado.domain.quiz.repository.QuizSubmissionRepository;
@@ -22,8 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -39,15 +36,11 @@ public class QuizCommandService {
     private final StudyMemberRepository studyMemberRepository;
     private final QuizRepository quizRepository;
     private final QuizSubmissionRepository quizSubmissionRepository;
-    private final AnswerSubmissionRepository answerSubmissionRepository;
     private final StudyRankingService rankPointService;
     private final QuizCreationService quizCreationService;
-    private final Clock clock;
     private final QuizTransactionService quizTransactionService;
     private final QuizAsyncService quizAsyncService;
-
-    private static final int MAX_PAGE_SIZE = 50;
-    private static final int DEFAULT_PAGE_SIZE = 10;
+    private final QuizDtoMapper quizDtoMapper;
 
     public void requestQuizGeneration(User creator, String title, List<Long> fileIds, Long studyId) {
         // 사용자 권한 확인
@@ -78,6 +71,25 @@ public class QuizCommandService {
         }
     }
 
+    @Transactional
+    public QuizProgressDto startQuiz(Long quizId, User user) {
+        // 1. 퀴즈 존재 & 상태 확인
+        Quiz quiz = quizRepository.findForStartQuizById(quizId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
+        quiz.validateIsActive();
+
+        // 2. 사용자 권한 확인
+        if (!studyMemberRepository.existsByStudyIdAndUserId(quiz.getStudy().getId(), user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
+
+        // 3. 기존 제출 기록 조회 또는 새로 생성
+        QuizSubmission submission = quiz.start(user);
+        quizSubmissionRepository.save(submission);
+
+        return quizDtoMapper.toQuizProgressDto(quiz, submission);
+    }
+
     private void validateMember(Long studyId, Long userId) {
         if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
             if (!studyRepository.existsById(studyId)) {
@@ -98,72 +110,6 @@ public class QuizCommandService {
                         log.info("Async task for quizId {} completed successfully.", quizId);
                     }
                 });
-    }
-
-    @Transactional(readOnly = true)
-    public CursorResponseDto<QuizInfoDto> findQuizzesByStudy(Long studyId, User user, Long cursor, int pageSize) {
-        // 1. 스터디 존재 & 권한 확인
-        validateMember(studyId, user.getId());
-
-        // 2. 페이지 사이즈 조정
-        int adjustedSize = clampPageSize(pageSize);
-
-        // 3. 퀴즈 조회(hasNext 계산을 위해 +1개 조회)
-        List<QuizInfoProjection> projections = quizRepository.findByStudyIdWithCursor(studyId, cursor, adjustedSize + 1);
-
-        // 4. hasNext 계산 & 반환 개수만큼 자르기
-        boolean hasNext = projections.size() > adjustedSize;
-        List<QuizInfoProjection> contentProjections = hasNext
-                                                    ? projections.subList(0, adjustedSize)
-                                                    : projections;
-
-        // 5. 퀴즈 ID 추출
-        List<Long> quizIds = contentProjections.stream()
-                                                .map(QuizInfoProjection::quizId)
-                                                .toList();
-
-        // 6. 퀴즈별 문항 개수 & 상태 조회
-        Map<Long, Long> questionCountMap = quizRepository.findQuestionCountsByQuizIds(quizIds);
-        Map<Long, SubmissionStatusDto> submissionInfoMap = fetchSubmissionInfo(quizIds, user.getId());
-
-        // 7. dto로 매핑
-        List<QuizInfoDto> dtos = mapToDtos(contentProjections, questionCountMap, submissionInfoMap);
-
-        // 8. nextCursor 계산
-        Long nextCursor = calculateNextCursor(dtos, hasNext);
-
-        return new CursorResponseDto<>(dtos, nextCursor, hasNext);
-    }
-
-    public QuizDetailDto getQuizDetail(Long quizId, User user) {
-        // 1. 퀴즈 조회
-        Quiz quiz = quizRepository.findDetailById(quizId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
-
-        // 2. 사용자 권한 확인
-        if (!studyMemberRepository.existsByStudyIdAndUserId(quiz.getStudy().getId(), user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
-        }
-
-        // 3. Dto에 매핑
-        return mapToQuizDetailDto(quiz);
-    }
-
-    @Transactional
-    public QuizProgressDto startQuiz(Long quizId, User user) {
-        // 1. 퀴즈 존재 확인
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
-
-        // 2. 사용자 권한 확인
-        if (!studyMemberRepository.existsByStudyIdAndUserId(quiz.getStudy().getId(), user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
-        }
-
-        // 3. 기존 제출 기록 조회 또는 새로 생성
-        QuizSubmission submission = findOrCreateSubmission(quiz, user);
-
-        return createQuizProgressDto(submission);
     }
 
     @Transactional
@@ -206,26 +152,6 @@ public class QuizCommandService {
         }
         rankPointService.revokePointsForQuiz(quizId);
         quizRepository.delete(quiz);
-    }
-
-    private QuizSubmission findOrCreateSubmission(Quiz quiz, User user) {
-        return quizSubmissionRepository
-                .findByQuizIdAndUserId(quiz.getId(), user.getId())
-                .map(submission -> {
-                    submission.validateIsNotCompleted();
-                    return submission;
-                })
-                .orElseGet(() -> createNewSubmission(quiz, user));
-    }
-
-    private QuizSubmission createNewSubmission(Quiz quiz, User user) {
-        QuizSubmission newSubmission = QuizSubmission.builder()
-                .quiz(quiz)
-                .user(user)
-                .status(SubmissionStatus.IN_PROGRESS)
-                .submittedAt(LocalDateTime.now(clock))
-                .build();
-        return quizSubmissionRepository.save(newSubmission);
     }
 
     private int gradeAnswers(QuizSubmission submission, List<AnswerRequestDto> answers) {
@@ -334,139 +260,5 @@ public class QuizCommandService {
                 correctAnswer,
                 choices
         );
-    }
-
-    private QuizProgressDto createQuizProgressDto(QuizSubmission submission) {
-        // 1. 현재 submission의 quiz 가져오기
-        Quiz quiz = submission.getQuiz();
-
-        // 2. 사용자가 제출한 모든 answerSubmission 불러오기
-        Map<Long, String> userAnswerMap = answerSubmissionRepository.findBySubmissionId(submission.getId()).stream()
-                .collect(Collectors.toMap(
-                        answer -> answer.getQuestion().getId(),
-                        AnswerSubmission::getSubmittedAnswer
-                ));
-
-        // 3. 퀴즈 문제별 DTO 생성
-        List<QuestionProgressDto> questionDtos = quiz.getQuestions().stream()
-                .map(question -> mapToQuestionProgressDto(question, userAnswerMap.get(question.getId())))
-                .toList();
-
-        // 4. 남은 시간 계산
-        Long remainingSeconds = calculateRemainingSeconds(quiz.getTimeLimitSeconds(), submission.getSubmittedAt());
-
-        return new QuizProgressDto(
-                submission.getId(),
-                quiz.getTitle(),
-                quiz.getTimeLimitSeconds(),
-                remainingSeconds,
-                questionDtos
-        );
-
-    }
-
-    private Long calculateRemainingSeconds(Integer timeLimitSeconds, LocalDateTime startTime) {
-        if (timeLimitSeconds == null || timeLimitSeconds <= 0) {
-            return null;
-        }
-
-        if (startTime == null) {
-            return timeLimitSeconds.longValue();
-        }
-
-        long secondsElapsed = Duration.between(startTime, LocalDateTime.now(clock)).getSeconds();
-        long secondsRemaining = timeLimitSeconds - secondsElapsed;
-
-        return Math.max(0, secondsRemaining);
-    }
-
-    private QuestionProgressDto mapToQuestionProgressDto(QuizQuestion question, String userAnswer) {
-        String questionType = "";
-        List<ChoiceDto> choices = Collections.emptyList();
-
-        if (question instanceof MultipleChoiceQuestion mcq) {
-            questionType = "MULTIPLE_CHOICE";
-            choices = mcq.getChoices().stream()
-                    .map(choice -> new ChoiceDto(choice.getId(), choice.getChoiceText()))
-                    .toList();
-        } else if (question instanceof ShortAnswerQuestion) {
-            questionType = "SHORT_ANSWER";
-        }
-
-        return new QuestionProgressDto(
-                question.getId(),
-                questionType,
-                question.getQuestionText(),
-                choices,
-                userAnswer
-        );
-    }
-
-    private QuizDetailDto mapToQuizDetailDto(Quiz quiz) {
-        List<QuestionDetailDto> questionDtos = quiz.getQuestions().stream()
-                .map(this::mapToQuestionDetailDto)
-                .toList();
-
-        return new QuizDetailDto(
-                quiz.getId(),
-                quiz.getTitle(),
-                quiz.getTimeLimitSeconds(),
-                questionDtos
-        );
-    }
-
-    private QuestionDetailDto mapToQuestionDetailDto(QuizQuestion question) {
-        QuestionType questionType;
-        List<ChoiceDto> choices = Collections.emptyList();
-
-        if (question instanceof MultipleChoiceQuestion mcq) {
-            questionType = QuestionType.MULTIPLE_CHOICE;
-            choices = mcq.getChoices().stream()
-                    .map(choice -> new ChoiceDto(choice.getId(), choice.getChoiceText()))
-                    .toList();
-        } else if (question instanceof ShortAnswerQuestion) {
-            questionType = QuestionType.SHORT_ANSWER;
-        } else {
-            throw new BusinessException(ErrorCode.UNSUPPORTED_QUESTION_TYPE,
-                    "지원하지 않는 문제 타입: " + question.getClass().getSimpleName());
-        }
-
-        return new QuestionDetailDto(
-                question.getId(),
-                questionType,
-                question.getQuestionText(),
-                choices
-        );
-    }
-
-    private int clampPageSize(int size) {
-        if (size <= 0) return DEFAULT_PAGE_SIZE;
-        return Math.min(size, MAX_PAGE_SIZE);
-    }
-
-    private Map<Long, SubmissionStatusDto> fetchSubmissionInfo(List<Long> quizIds, Long userId) {
-        if (quizIds.isEmpty()) return Map.of();
-
-        return quizSubmissionRepository.findSubmissionStatuses(quizIds, userId)
-                .stream()
-                .collect(Collectors.toMap(
-                        SubmissionStatusDto::quizId,
-                        dto -> dto
-                ));
-    }
-
-    private List<QuizInfoDto> mapToDtos(List<QuizInfoProjection> projections, Map<Long, Long> questionCountMap, Map<Long, SubmissionStatusDto> infoMap) {
-        return projections.stream()
-                .map(proj -> QuizInfoDto.of(
-                        proj,
-                        questionCountMap.getOrDefault(proj.quizId(), 0L).intValue(),
-                        infoMap.get(proj.quizId())
-                ))
-                .toList();
-    }
-
-    private Long calculateNextCursor(List<QuizInfoDto> dtos, boolean hasNext) {
-        if (!hasNext || dtos.isEmpty()) return null;
-        return dtos.get(dtos.size() - 1).getCursorId();
     }
 }
