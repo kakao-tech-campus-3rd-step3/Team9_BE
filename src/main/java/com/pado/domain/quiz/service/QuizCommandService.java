@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Clock;
 import java.util.Collections;
@@ -150,6 +151,35 @@ public class QuizCommandService {
         }
     }
 
+    @Transactional
+    public QuizResultDto completeQuiz(Long submissionId, User user, List<AnswerRequestDto> answers) {
+        // 1. Submission 조회
+        QuizSubmission submission = quizSubmissionRepository.findForGradingById(submissionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUBMISSION_NOT_FOUND));
+
+        // 2. 권한 & 상태 확인
+        if (!submission.getUser().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+        submission.validateIsNotCompleted();
+        StudyMember studyMember = studyMemberRepository.findByStudyAndUser(submission.getQuiz().getStudy(), user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
+
+        // 3. 답안 유효성 검증
+        validateAnswers(submission.getQuiz(), answers);
+
+        // 4. 점수 계산
+        int finalScore = gradeAnswers(submission, answers);
+
+        // 5. 제출 완료 처리
+        submission.complete(finalScore);
+
+        // 6. rank point 갱신
+        rankPointService.addPointsFromQuiz(studyMember, submission);
+
+        return quizDtoMapper.mapToResultDto(submission);
+    }
+
     private void validateMember(Long studyId, Long userId) {
         if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
             if (!studyRepository.existsById(studyId)) {
@@ -207,31 +237,27 @@ public class QuizCommandService {
         }
     }
 
-    @Transactional
-    public QuizResultDto completeQuiz(Long submissionId, User user, List<AnswerRequestDto> answers) {
-        // 1. Submission 조회
-        QuizSubmission submission = quizSubmissionRepository.findWithDetailsById(submissionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.SUBMISSION_NOT_FOUND));
+    private int gradeAnswers(QuizSubmission submission, List<AnswerRequestDto> answers) {
+        // 요청으로 받은 최종 답변 매핑 <문제ID, 사용자 답>
+        Map<Long, String> userAnswerMap = answers.stream()
+                .collect(Collectors.toMap(
+                        AnswerRequestDto::questionId,
+                        AnswerRequestDto::userAnswer,
+                        (oldValue, newValue) -> newValue
+                ));
 
-        // 2. 권한 & 상태 확인
-        if (!submission.getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS);
-        }
-        submission.validateIsNotCompleted();
+        return submission.getQuiz().getQuestions().stream()
+                .mapToInt(question -> {
+                    String userAnswer = userAnswerMap.get(question.getId());
 
-        // 3. 점수 계산
-        int finalScore = gradeAnswers(submission, answers);
+                    boolean isAnswered = StringUtils.hasText(userAnswer);
+                    int score = isAnswered ? question.calculateScore(userAnswer) : 0;
 
-        // 4. submission 갱신
-        submission.complete(finalScore);
-
-        // 5. rank point 갱신
-        StudyMember studyMember = studyMemberRepository.findByStudyAndUser(submission.getQuiz().getStudy(), user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
-        studyMember.addRankPoints(finalScore);
-        rankPointService.addPointsFromQuiz(studyMember, submission);
-
-        return mapToResultDto(submission);
+                    AnswerSubmission answer = submission.findOrCreateAnswer(question);
+                    answer.updateFinalAnswer(userAnswer, score > 0);
+                    return score;
+                })
+                .sum();
     }
 
     @Transactional
