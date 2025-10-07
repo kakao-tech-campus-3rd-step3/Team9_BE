@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class QuizService {
+public class QuizCommandService {
 
     private final StudyRepository studyRepository;
     private final StudyMemberRepository studyMemberRepository;
