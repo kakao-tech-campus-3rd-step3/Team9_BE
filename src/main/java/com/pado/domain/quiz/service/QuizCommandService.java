@@ -4,14 +4,12 @@ import com.pado.domain.quiz.dto.request.AnswerRequestDto;
 import com.pado.domain.quiz.dto.response.*;
 import com.pado.domain.quiz.entity.*;
 import com.pado.domain.quiz.mapper.QuizDtoMapper;
-import com.pado.domain.quiz.repository.AnswerSubmissionRepository;
 import com.pado.domain.quiz.repository.QuizRepository;
 import com.pado.domain.quiz.repository.QuizSubmissionRepository;
 import com.pado.domain.study.entity.StudyMember;
 import com.pado.domain.study.entity.StudyMemberRole;
 import com.pado.domain.study.repository.StudyMemberRepository;
 import com.pado.domain.study.repository.StudyRepository;
-import com.pado.domain.study.service.StudyRankingService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
@@ -21,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.Clock;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -37,10 +33,10 @@ public class QuizCommandService {
     private final StudyMemberRepository studyMemberRepository;
     private final QuizRepository quizRepository;
     private final QuizSubmissionRepository quizSubmissionRepository;
-    private final StudyRankingService rankPointService;
-    private final QuizCreationService quizCreationService;
+    private final RankPointService rankPointService;
     private final QuizTransactionService quizTransactionService;
     private final QuizAsyncService quizAsyncService;
+    private final QuizCreationService quizCreationService;
     private final QuizDtoMapper quizDtoMapper;
 
     public void requestQuizGeneration(User creator, String title, List<Long> fileIds, Long studyId) {
@@ -180,6 +176,27 @@ public class QuizCommandService {
         return quizDtoMapper.mapToResultDto(submission);
     }
 
+    @Transactional
+    public void deleteQuiz(Long quizId, User user) {
+        // 퀴즈 조회
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
+
+        // 권한 검증
+        StudyMember member = studyMemberRepository.findByStudyAndUser(quiz.getStudy(), user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
+
+        if (member.getRole() != StudyMemberRole.LEADER) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS, "삭제 권한이 없습니다.");
+        }
+
+        // 해당 퀴즈 점수 차감
+        rankPointService.revokePointsForQuiz(quizId);
+
+        // 퀴즈 삭제
+        quizRepository.delete(quiz);
+    }
+
     private void validateMember(Long studyId, Long userId) {
         if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
             if (!studyRepository.existsById(studyId)) {
@@ -258,20 +275,5 @@ public class QuizCommandService {
                     return score;
                 })
                 .sum();
-    }
-
-    @Transactional
-    public void deleteQuiz(Long quizId, User user) {
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
-
-        StudyMember member = studyMemberRepository.findByStudyAndUser(quiz.getStudy(), user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
-
-        if (member.getRole() != StudyMemberRole.LEADER) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS, "삭제 권한이 없습니다.");
-        }
-        rankPointService.revokePointsForQuiz(quizId);
-        quizRepository.delete(quiz);
     }
 }
