@@ -60,6 +60,24 @@ public class QuizCommandService {
         invokeAiQuizGeneration(quizId);
     }
 
+    @Transactional
+    public void requestQuizRegeneration(Long quizId, User user) {
+        // 퀴즈 조회
+        Quiz quiz = quizRepository.findWithLockById(quizId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
+
+        // 권한 검증(해당 스터디 멤버)
+        validateMember(quiz.getStudy().getId(), user.getId());
+
+        // 퀴즈 상태가 FAILED일 때만 재생성
+        if (quiz.getStatus() == QuizStatus.FAILED) {
+            quiz.updateStatus(QuizStatus.GENERATING);
+            invokeAiQuizGeneration(quizId);
+        } else {
+            throw new BusinessException(ErrorCode.QUIZ_ALREADY_PROCESSED);
+        }
+    }
+
     private void validateMember(Long studyId, Long userId) {
         if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
             if (!studyRepository.existsById(studyId)) {
@@ -173,20 +191,6 @@ public class QuizCommandService {
         rankPointService.addPointsFromQuiz(studyMember, submission);
 
         return mapToResultDto(submission);
-    }
-
-    @Transactional
-    public void requestQuizRegeneration(Long quizId, User user) {
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUIZ_NOT_FOUND));
-        validateMember(quiz.getStudy().getId(), user.getId());
-
-        if (quiz.getStatus() == QuizStatus.FAILED) {
-            quiz.updateStatus(QuizStatus.GENERATING);
-            quizGenerationService.processAndCallAiInBackground(quiz.getId());
-        } else {
-            throw new BusinessException(ErrorCode.QUIZ_ALREADY_PROCESSED);
-        }
     }
 
     @Transactional
