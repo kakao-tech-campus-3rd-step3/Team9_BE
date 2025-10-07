@@ -6,7 +6,6 @@ import com.pado.domain.quiz.dto.response.CursorResponseDto;
 import com.pado.domain.quiz.dto.response.QuizInfoDto;
 import com.pado.domain.quiz.dto.response.QuizProgressDto;
 import com.pado.domain.quiz.dto.response.QuizResultDto;
-import com.pado.domain.quiz.service.QuizGenerationService;
 import com.pado.domain.quiz.service.QuizService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.annotation.CurrentUser;

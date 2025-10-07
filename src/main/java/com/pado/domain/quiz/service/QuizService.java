@@ -17,6 +17,7 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +27,12 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QuizService {
 
     private final StudyRepository studyRepository;
@@ -38,11 +41,46 @@ public class QuizService {
     private final QuizSubmissionRepository quizSubmissionRepository;
     private final AnswerSubmissionRepository answerSubmissionRepository;
     private final StudyRankingService rankPointService;
-    private final QuizGenerationService quizGenerationService;
+    private final QuizCreationService quizCreationService;
     private final Clock clock;
+    private final QuizTransactionService quizTransactionService;
+    private final QuizAsyncService quizAsyncService;
 
     private static final int MAX_PAGE_SIZE = 50;
     private static final int DEFAULT_PAGE_SIZE = 10;
+
+    public void requestQuizGeneration(User creator, String title, List<Long> fileIds, Long studyId) {
+        // 사용자 권한 확인
+        validateMember(studyId, creator.getId());
+
+        // 퀴즈 객체 생성 & DB 저장
+        Long quizId = quizCreationService.createQuizRecord(creator, title, fileIds, studyId);
+
+        // 비동기 퀴즈 생성 호출
+        invokeAiQuizGeneration(quizId);
+    }
+
+    private void validateMember(Long studyId, Long userId) {
+        if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
+            if (!studyRepository.existsById(studyId)) {
+                throw new BusinessException(ErrorCode.STUDY_NOT_FOUND);
+            }
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+        }
+    }
+
+    private void invokeAiQuizGeneration(Long quizId) {
+        quizAsyncService.processAndCallAiInBackground(quizId)
+                .orTimeout(200, TimeUnit.SECONDS)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Async task for quizId {} failed.", quizId, ex);
+                        quizTransactionService.updateQuizStatusToFailed(quizId);
+                    } else {
+                        log.info("Async task for quizId {} completed successfully.", quizId);
+                    }
+                });
+    }
 
     @Transactional(readOnly = true)
     public CursorResponseDto<QuizInfoDto> findQuizzesByStudy(Long studyId, User user, Long cursor, int pageSize) {
@@ -395,15 +433,6 @@ public class QuizService {
                 question.getQuestionText(),
                 choices
         );
-    }
-
-    private void validateMember(Long studyId, Long userId) {
-        if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
-            if (!studyRepository.existsById(studyId)) {
-                throw new BusinessException(ErrorCode.STUDY_NOT_FOUND);
-            }
-            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
-        }
     }
 
     private int clampPageSize(int size) {
