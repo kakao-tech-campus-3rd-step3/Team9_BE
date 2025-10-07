@@ -2,10 +2,7 @@ package com.pado.domain.quiz.repository;
 
 import com.pado.domain.quiz.dto.projection.QSubmissionStatusDto;
 import com.pado.domain.quiz.dto.projection.SubmissionStatusDto;
-import com.pado.domain.quiz.entity.MultipleChoiceQuestion;
-import com.pado.domain.quiz.entity.QQuizSubmission;
-import com.pado.domain.quiz.entity.QuizQuestion;
-import com.pado.domain.quiz.entity.QuizSubmission;
+import com.pado.domain.quiz.entity.*;
 import com.pado.domain.quiz.repository.dto.UserQuizCountDto;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -14,8 +11,8 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 
+import static com.pado.domain.quiz.entity.QAnswerSubmission.answerSubmission;
 import static com.pado.domain.quiz.entity.QQuiz.quiz;
-import static com.pado.domain.quiz.entity.QQuizQuestion.quizQuestion;
 import static com.pado.domain.quiz.entity.QQuizSubmission.quizSubmission;
 
 @RequiredArgsConstructor
@@ -85,6 +82,7 @@ public class QuizSubmissionRepositoryImpl implements QuizSubmissionRepositoryCus
 
         return Optional.of(submission);
     }
+
     @Override
     public List<UserQuizCountDto> countByStudyGroupByUser(Long studyId) {
         QQuizSubmission qs = QQuizSubmission.quizSubmission;
