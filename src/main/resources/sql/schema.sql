@@ -125,7 +125,7 @@ CREATE TABLE material_file (
                                material_id BIGINT NOT NULL,
                                size BIGINT NOT NULL,
                                processing_status VARCHAR(50),
-                               extracted_text TEXT,
+                               extracted_text MEDIUMTEXT,
                                file_key VARCHAR(255) NOT NULL,
                                file_type VARCHAR(255) NOT NULL,
                                name VARCHAR(255) NOT NULL,
