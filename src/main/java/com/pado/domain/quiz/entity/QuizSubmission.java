@@ -44,30 +44,66 @@ public class QuizSubmission {
     @Column(nullable = false)
     private SubmissionStatus status;
 
+    @Version
+    private Long version;
+
+    @Column(name = "started_at", nullable = false, updatable = false)
+    private LocalDateTime startedAt;
+
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
+    @OneToOne(mappedBy = "quizSubmission", cascade = CascadeType.ALL, orphanRemoval = true)
+    private QuizPointLog pointLog;
+
     @Builder
-    public QuizSubmission(Quiz quiz, User user, SubmissionStatus status, LocalDateTime submittedAt) {
-        this.quiz = quiz;
+    public QuizSubmission(User user, LocalDateTime startedAt) {
+        this.quiz = null;
         this.user = user;
-        this.status = status;
+        this.status = SubmissionStatus.IN_PROGRESS;
         this.score = 0;
+        this.totalQuestions = 0;
+        this.startedAt = (startedAt != null)
+                ? startedAt
+                : LocalDateTime.now();
+    }
+
+    protected void setQuiz(Quiz quiz) {
+        this.quiz = quiz;
         this.totalQuestions = quiz.getQuestions().size();
-        this.submittedAt = submittedAt != null
-                                        ? submittedAt
-                                        : LocalDateTime.now();
     }
 
     public void complete(int finalScore) {
+        if (this.status == SubmissionStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.QUIZ_ALREADY_COMPLETED);
+        }
+
         this.score = finalScore;
         this.status = SubmissionStatus.COMPLETED;
         this.submittedAt = LocalDateTime.now();
     }
 
     public void addAnswerSubmission(AnswerSubmission answer) {
-        this.answers.add(answer);
-        answer.setSubmission(this);
+        if (answer.getSubmission() == null) {
+            answer.assignSubmission(this);
+        }
+        if (!answers.contains(answer)) {
+            this.answers.add(answer);
+        }
+    }
+
+    public AnswerSubmission findOrCreateAnswer(QuizQuestion question) {
+        return this.getAnswers().stream()
+                .filter(answer -> answer.getQuestion().getId().equals(question.getId()))
+                .findFirst()
+                .orElseGet(() -> {
+                    AnswerSubmission newAnswer = AnswerSubmission.builder()
+                            .submission(this)
+                            .question(question)
+                            .build();
+                    this.addAnswerSubmission(newAnswer);
+                    return newAnswer;
+                });
     }
 
     public void validateIsNotCompleted() {

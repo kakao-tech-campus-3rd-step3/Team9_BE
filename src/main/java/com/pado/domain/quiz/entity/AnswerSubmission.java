@@ -31,13 +31,23 @@ public class AnswerSubmission {
     private boolean isCorrect;
 
     @Builder
-    public AnswerSubmission(QuizQuestion question, String submittedAnswer, boolean isCorrect) {
+    public AnswerSubmission(QuizSubmission submission, QuizQuestion question, String submittedAnswer, boolean isCorrect) {
+        this.submission = submission;
         this.question = question;
         this.submittedAnswer = submittedAnswer;
         this.isCorrect = isCorrect;
     }
 
-    void setSubmission(QuizSubmission submission) {
+    public void updateAnswer(String submittedAnswer) {
+        this.submittedAnswer = submittedAnswer;
+    }
+
+    public void updateFinalAnswer(String userAnswer, boolean isCorrect) {
+        this.submittedAnswer = userAnswer;
+        this.isCorrect = isCorrect;
+    }
+
+    public void assignSubmission(QuizSubmission submission) {
         this.submission = submission;
     }
 }
