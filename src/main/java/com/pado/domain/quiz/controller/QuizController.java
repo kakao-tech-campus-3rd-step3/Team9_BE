@@ -3,7 +3,6 @@ package com.pado.domain.quiz.controller;
 import com.pado.domain.quiz.dto.request.QuizCreateRequestDto;
 import com.pado.domain.quiz.dto.request.QuizSubmissionRequestDto;
 import com.pado.domain.quiz.dto.response.CursorResponseDto;
-import com.pado.domain.quiz.dto.response.QuizDetailDto;
 import com.pado.domain.quiz.dto.response.QuizInfoDto;
 import com.pado.domain.quiz.dto.response.QuizProgressDto;
 import com.pado.domain.quiz.dto.response.QuizResultDto;
