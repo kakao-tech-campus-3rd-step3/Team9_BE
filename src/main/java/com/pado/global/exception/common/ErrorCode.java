@@ -61,7 +61,15 @@ public enum ErrorCode {
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 스터디에 참여 신청했습니다."),
     STUDY_NOT_RECRUITING(HttpStatus.BAD_REQUEST, "STUDY_NOT_RECRUITING", "모집 중인 스터디가 아닙니다."),
     STUDY_FULL(HttpStatus.BAD_REQUEST, "STUDY_FULL", "스터디 정원이 가득 찼습니다."),
-    STUDY_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_APPLICATION_NOT_FOUND", "승인 요청중인 유저를 찾을 수 없습니다."),
+    STUDY_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_APPLICATION_NOT_FOUND",
+        "승인 요청중인 유저를 찾을 수 없습니다."),
+    CANNOT_KICK_LEADER(HttpStatus.BAD_REQUEST, "CANNOT_KICK_LEADER",
+        "스터디 리더는 탈퇴시킬 수 없습니다. 먼저 리더를 위임해야 합니다."),
+    CANNOT_LEAVE_AS_LEADER(HttpStatus.BAD_REQUEST, "CANNOT_LEAVE_AS_LEADER",
+        "스터디 리더는 탈퇴할 수 없습니다. 먼저 다른 멤버에게 리더를 위임해야 합니다."),
+    INVALID_LEADER_DELEGATION_TARGET(HttpStatus.BAD_REQUEST, "INVALID_LEADER_DELEGATION_TARGET",
+        "유효하지 않은 리더 위임 대상입니다."),
+
 
     // Material Domain
     MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다."),
@@ -85,9 +93,12 @@ public enum ErrorCode {
 
     // QUIZ
     QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "QUIZ_NOT_FOUND", "퀴즈를 찾을 수 없습니다."),
-    FILE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_PROCESSING_FAILED", "파일 처리 중 오류가 발생했습니다."),
-    API_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "API_RESPONSE_INVALID", "Gemini AI API가 유효하지 않은 결과를 반환하였습니다."),
-    UNSUPPORTED_QUESTION_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_QUESTION_TYPE", "지원하지 않는 문제 형식입니다."),
+    FILE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_PROCESSING_FAILED",
+        "파일 처리 중 오류가 발생했습니다."),
+    API_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "API_RESPONSE_INVALID",
+        "Gemini AI API가 유효하지 않은 결과를 반환하였습니다."),
+    UNSUPPORTED_QUESTION_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_QUESTION_TYPE",
+        "지원하지 않는 문제 형식입니다."),
     QUIZ_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "QUIZ_NOT_ACTIVE", "퀴즈 상태가 Active가 아닙니다."),
     QUIZ_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_COMPLETED", "이미 완료된 퀴즈입니다."),
     SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", "제출 정보를 찾을 수 없습니다."),
