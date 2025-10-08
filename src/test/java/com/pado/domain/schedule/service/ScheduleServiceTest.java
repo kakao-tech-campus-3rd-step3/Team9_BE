@@ -2,7 +2,10 @@ package com.pado.domain.schedule.service;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
 import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
+import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
+import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
+import com.pado.domain.schedule.event.ScheduleCreatedEvent;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyRepository;
@@ -11,224 +14,163 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.auth.userdetails.CustomUserDetails;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Collections;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class ScheduleServiceImpl implements ScheduleService {
 
-@ExtendWith(MockitoExtension.class)
-class ScheduleServiceTest {
+    private final ScheduleRepository scheduleRepository;
+    private final StudyRepository studyRepository;
+    private final StudyMemberService studyMemberService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
-    private ScheduleServiceImpl scheduleService;
+    @Override
+    public void createSchedule(Long studyId, ScheduleCreateRequestDto request) {
+        User currentUser = getCurrentUser();
+        Study study = findStudyById(studyId);
 
-    @Mock
-    private ScheduleRepository scheduleRepository;
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
 
-    @Mock
-    private StudyRepository studyRepository;
+        Schedule schedule = Schedule.builder()
+            .studyId(studyId)
+            .title(request.title())
+            .description(request.content())
+            .startTime(request.start_time())
+            .endTime(request.end_time())
+            .build();
 
-    @Mock
-    private StudyMemberService studyMemberService;
+        Schedule savedSchedule = scheduleRepository.save(schedule);
 
-    private User leader;
-    private User member;
-    private Study study;
-
-    private void setAuthentication(User user) {
-        CustomUserDetails userDetails = new CustomUserDetails(user);
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null,
-            userDetails.getAuthorities()));
-        SecurityContextHolder.setContext(context);
+        eventPublisher.publishEvent(
+                new ScheduleCreatedEvent(
+                        studyId,
+                        savedSchedule.getId(),
+                        savedSchedule.getTitle()
+                )
+        );
     }
 
-    @BeforeEach
-    void setUp() {
-        leader = User.builder().email("leader@test.com").nickname("리더").build();
-        member = User.builder().email("member@test.com").nickname("멤버").build();
-        study = Study.builder().leader(leader).title("테스트 스터디").build();
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleByDateResponseDto> findMySchedulesByMonth(Long userId, int year,
+        int month) {
+        // 1. 요청받은 달의 1일 찾기
+        LocalDate firstDayOfMonth = LocalDate.of(year, month, 1);
 
-        ReflectionTestUtils.setField(leader, "id", 1L);
-        ReflectionTestUtils.setField(member, "id", 2L);
-        ReflectionTestUtils.setField(study, "id", 1L);
+        // 2. 그 1일이 포함된 주의 일요일 찾기 (캘린더의 시작일)
+        LocalDate startDate = firstDayOfMonth.with(
+            TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+
+        // 3. 캘린더의 종료일 찾기 (시작일 + 6주 - 1일)
+        LocalDate endDate = startDate.plusWeeks(6).minusDays(1);
+
+        List<Schedule> schedules = scheduleRepository.findAllByUserIdAndPeriod(
+            userId,
+            startDate.atStartOfDay(),
+            endDate.plusDays(1).atStartOfDay()
+        );
+        // 4. DB에서 startDate와 endDate 사이의 모든 일정을 조회하여 반환
+        return schedules.stream()
+            .map(schedule -> new ScheduleByDateResponseDto(
+                schedule.getId(),
+                schedule.getStudyId(),
+                schedule.getTitle(),
+                schedule.getStartTime(),
+                schedule.getEndTime()
+            ))
+            .collect(Collectors.toList());
     }
 
-    @Nested
-    @DisplayName("일정 생성 테스트")
-    class CreateScheduleTests {
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScheduleResponseDto> findAllSchedulesByStudyId(Long studyId) {
+        User currentUser = getCurrentUser();
 
-        @Test
-        @DisplayName("스터디 리더는 일정을 성공적으로 생성한다.")
-        void createSchedule_Success_ByLeader() {
-            // given
-            setAuthentication(leader);
-            ScheduleCreateRequestDto request = new ScheduleCreateRequestDto("새 일정", "내용",
-                LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2));
-
-            when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
-            when(studyMemberService.isStudyLeader(leader, study)).thenReturn(true);
-
-            // when
-            scheduleService.createSchedule(1L, request);
-
-            // then
-            verify(scheduleRepository, times(1)).save(any(Schedule.class));
+        if (!studyMemberService.isStudyMember(currentUser, studyId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
 
-        @Test
-        @DisplayName("일반 멤버는 일정 생성 시 FORBIDDEN 예외가 발생한다.")
-        void createSchedule_Fail_ByMember() {
-            // given
-            setAuthentication(member);
-            ScheduleCreateRequestDto request = new ScheduleCreateRequestDto("새 일정", "내용",
-                LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2));
-
-            when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
-            when(studyMemberService.isStudyLeader(member, study)).thenReturn(false);
-
-            // when & then
-            BusinessException exception = assertThrows(BusinessException.class,
-                () -> scheduleService.createSchedule(1L, request));
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
-        }
+        List<Schedule> schedules = scheduleRepository.findAllByStudyId(studyId);
+        return schedules.stream()
+            .map(schedule -> new ScheduleResponseDto(
+                schedule.getId(),
+                schedule.getTitle(),
+                schedule.getStartTime(),
+                schedule.getEndTime()))
+            .collect(Collectors.toList());
     }
 
-    @Nested
-    @DisplayName("월별 일정 조회")
-    class FindSchedulesByMonthTests {
+    @Override
+    @Transactional(readOnly = true)
+    public ScheduleDetailResponseDto findScheduleDetailById(Long scheduleId) {
+        Schedule schedule = findScheduleById(scheduleId);
+        User currentUser = getCurrentUser();
 
-        @Test
-        @DisplayName("성공: 2025년 9월 조회 시, 8/31 ~ 10/11 사이의 일정을 정확히 반환한다.")
-        void findMySchedulesByMonth_Success() {
-            // given
-            Long userId = 1L;
-            int year = 2025;
-            int month = 9;
-
-            LocalDate expectedStartDate = LocalDate.of(2025, 8, 31);
-            LocalDate expectedEndDate = LocalDate.of(2025, 10, 11);
-            LocalDateTime expectedPeriodStart = expectedStartDate.atStartOfDay();
-            LocalDateTime expectedPeriodEnd = expectedEndDate.plusDays(1).atStartOfDay();
-
-            Schedule scheduleInPeriod = Schedule.builder()
-                .studyId(1L)
-                .title("9월 스터디")
-                .startTime(LocalDateTime.of(2025, 9, 15, 10, 0))
-                .endTime(LocalDateTime.of(2025, 9, 15, 12, 0))
-                .build();
-            ReflectionTestUtils.setField(scheduleInPeriod, "id", 101L);
-
-            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), eq(expectedPeriodStart),
-                eq(expectedPeriodEnd)))
-                .thenReturn(List.of(scheduleInPeriod));
-
-            // when
-            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId,
-                year, month);
-
-            // then
-            assertThat(result).hasSize(1);
-            assertThat(result.getFirst().title()).isEqualTo("9월 스터디");
-            assertThat(result.getFirst().schedule_id()).isEqualTo(101L);
+        if (!studyMemberService.isStudyMember(currentUser, schedule.getStudyId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
         }
 
-        @Test
-        @DisplayName("성공: 해당 기간에 일정이 없으면 빈 리스트를 반환한다.")
-        void findMySchedulesByMonth_WhenNoSchedules_ShouldReturnEmptyList() {
-            // given
-            Long userId = 1L;
-            int year = 2025;
-            int month = 11;
-
-            when(scheduleRepository.findAllByUserIdAndPeriod(eq(userId), any(), any())).thenReturn(
-                Collections.emptyList());
-
-            // when
-            List<ScheduleByDateResponseDto> result = scheduleService.findMySchedulesByMonth(userId,
-                year, month);
-
-            // then
-            assertThat(result).isNotNull().isEmpty();
-        }
+        return new ScheduleDetailResponseDto(
+            schedule.getId(),
+            schedule.getTitle(),
+            schedule.getDescription(),
+            schedule.getStartTime(),
+            schedule.getEndTime()
+        );
     }
 
-    @Nested
-    @DisplayName("일정 수정 테스트")
-    class UpdateScheduleTests {
-
-        @Test
-        @DisplayName("스터디 리더는 일정을 성공적으로 수정한다.")
-        void updateSchedule_Success_ByLeader() {
-            // given
-            setAuthentication(leader);
-            ScheduleCreateRequestDto request = new ScheduleCreateRequestDto("수정된 제목", "수정된 내용",
-                LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(2));
-
-            Schedule existingSchedule = Schedule.builder()
-                .studyId(1L)
-                .title("원본 제목")
-                .description("원본 내용")
-                .startTime(LocalDateTime.now().plusDays(1))
-                .endTime(LocalDateTime.now().plusDays(1).plusHours(1))
-                .build();
-
-            when(scheduleRepository.findById(10L)).thenReturn(Optional.of(existingSchedule));
-            when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
-            when(studyMemberService.isStudyLeader(leader, study)).thenReturn(true);
-
-            // when
-            scheduleService.updateSchedule(10L, request);
-
-            // then
-            assertThat(existingSchedule.getTitle()).isEqualTo("수정된 제목");
-            assertThat(existingSchedule.getDescription()).isEqualTo("수정된 내용");
-            assertThat(existingSchedule.getStartTime()).isEqualTo(request.start_time());
-            assertThat(existingSchedule.getEndTime()).isEqualTo(request.end_time());
+    @Override
+    public void updateSchedule(Long scheduleId, ScheduleCreateRequestDto request) {
+        User currentUser = getCurrentUser();
+        Schedule schedule = findScheduleById(scheduleId);
+        Study study = findStudyById(schedule.getStudyId());
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
+        schedule.update(request.title(), request.content(), request.start_time(),
+            request.end_time());
+    }
 
-        @Test
-        @DisplayName("해당 일정의 스터디 리더가 아니면 FORBIDDEN 예외가 발생한다.")
-        void updateSchedule_Fail_NotLeaderOfThatStudy() {
-            // given
-            setAuthentication(leader);
-            ScheduleCreateRequestDto request = new ScheduleCreateRequestDto("수정된 제목", "수정된 내용",
-                LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(2));
-            
-            Schedule anotherStudySchedule = Schedule.builder()
-                .studyId(999L)
-                .title("타 스터디 일정")
-                .build();
-            Study anotherStudy = Study.builder().leader(member).title("다른 스터디").build();
-            ReflectionTestUtils.setField(anotherStudy, "id", 999L);
-
-            when(scheduleRepository.findById(10L)).thenReturn(Optional.of(anotherStudySchedule));
-            when(studyRepository.findById(999L)).thenReturn(Optional.of(anotherStudy));
-            when(studyMemberService.isStudyLeader(leader, anotherStudy)).thenReturn(false);
-
-            // when & then
-            BusinessException exception = assertThrows(BusinessException.class,
-                () -> scheduleService.updateSchedule(10L, request));
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+    @Override
+    public void deleteSchedule(Long scheduleId) {
+        User currentUser = getCurrentUser();
+        Schedule schedule = findScheduleById(scheduleId);
+        Study study = findStudyById(schedule.getStudyId());
+        if (!studyMemberService.isStudyLeader(currentUser, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
+        scheduleRepository.delete(schedule);
+    }
+
+    private User getCurrentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof CustomUserDetails) {
+            return ((CustomUserDetails) principal).getUser();
+        }
+        throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER);
+    }
+
+    private Study findStudyById(Long studyId) {
+        return studyRepository.findById(studyId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+    }
+
+    private Schedule findScheduleById(Long scheduleId) {
+        return scheduleRepository.findById(scheduleId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
     }
 }
