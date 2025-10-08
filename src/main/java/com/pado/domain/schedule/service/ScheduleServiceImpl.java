@@ -74,7 +74,6 @@ public class ScheduleServiceImpl implements ScheduleService {
                         savedSchedule.getTitle()
                 )
         );
-        scheduleRepository.save(schedule);
     }
 
     @Override
