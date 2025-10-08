@@ -170,7 +170,7 @@ public class ChatServiceImpl implements ChatService {
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
         
-        if (chatReactionRepository.existsByStudyIdAndUserId(studyId, user.getId())) {
+        if (chatReactionRepository.existsByStudyMemberIdAndChatMessageId(member.getId(), message.getId())) {
             throw new BusinessException(ErrorCode.ALREADY_REACTED);
         }
 
