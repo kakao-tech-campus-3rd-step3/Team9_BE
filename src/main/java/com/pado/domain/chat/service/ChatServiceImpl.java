@@ -95,7 +95,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public ChatMessageListResponseDto getChatMessages(Long studyId, Long cursor, int size, User currentUser) {
-        validateStudyMemberPermission(studyId, currentUser);
+        findAndValidateStudyMember(studyId, currentUser);
 
         List<ChatMessage> chatMessages = chatMessageRepository.findChatMessagesWithCursor(studyId, cursor, size);
 
@@ -163,10 +163,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public void createChatReaction(Long studyId, Long chatMessageId, ReactionRequestDto request, User user) {
-        validateStudyMemberPermission(studyId, user);
-
-        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        StudyMember member = findAndValidateStudyMember(studyId, user);
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
         
@@ -199,10 +196,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public void updateChatReaction(Long studyId, Long chatMessageId, ReactionRequestDto request, User user) {
-        validateStudyMemberPermission(studyId, user);
-
-        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        StudyMember member = findAndValidateStudyMember(studyId, user);
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
         ChatReaction chatReaction = chatReactionRepository.findByChatMessageAndStudyMember(message, member)
@@ -227,10 +221,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public void deleteChatReaction(Long studyId, Long chatMessageId, User user) {
-        validateStudyMemberPermission(studyId, user);
-
-        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, user.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        StudyMember member = findAndValidateStudyMember(studyId, user);
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
         ChatReaction chatReaction = chatReactionRepository.findByChatMessageAndStudyMember(message, member)
@@ -253,8 +244,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public void deleteChatMessage(Long studyId, Long chatMessageId, User user) {
-        validateStudyMemberPermission(studyId, user);
-
+        StudyMember member = findAndValidateStudyMember(studyId, user);
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
 
@@ -280,7 +270,6 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public void openChatModal(Long studyId, User currentUser) {
-        validateStudyMemberPermission(studyId, currentUser);
 
         modalManager.openModal(studyId, currentUser.getId());
 
@@ -310,14 +299,12 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public void closeChatModal(Long studyId, User currentUser) {
-        validateStudyMemberPermission(studyId, currentUser);
 
         modalManager.closeModal(studyId, currentUser.getId());
     }
 
     @Override
     public void refreshModalState(Long studyId, User currentUser) {
-        validateStudyMemberPermission(studyId, currentUser);
 
         modalManager.refreshModal(studyId, currentUser.getId());
     }
@@ -382,13 +369,12 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
-    private void validateStudyMemberPermission(Long studyId, User currentUser) {
+    private StudyMember findAndValidateStudyMember(Long studyId, User currentUser) {
         if (!studyRepository.existsById(studyId)) {
             throw new BusinessException(ErrorCode.STUDY_NOT_FOUND);
         }
 
-        if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, currentUser.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
-        }
+        return studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
     }
 }
