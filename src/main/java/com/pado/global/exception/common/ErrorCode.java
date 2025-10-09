@@ -93,6 +93,8 @@ public enum ErrorCode {
 
     // QUIZ
     QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "QUIZ_NOT_FOUND", "퀴즈를 찾을 수 없습니다."),
+    QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "QUESTION_NOT_FOUND", "문제를 찾을 수 없습니다."),
+    INVALID_ANSWER_SUBMISSION(HttpStatus.BAD_REQUEST, "INVALID_ANSWER_SUBMISSION", "잘못된 답안 제출입니다."),
     FILE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_PROCESSING_FAILED",
         "파일 처리 중 오류가 발생했습니다."),
     API_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "API_RESPONSE_INVALID",
@@ -103,7 +105,11 @@ public enum ErrorCode {
     QUIZ_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_COMPLETED", "이미 완료된 퀴즈입니다."),
     SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", "제출 정보를 찾을 수 없습니다."),
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "FORBIDDEN_ACCESS", "권한이 없는 사용자입니다."),
+    QUIZ_NOT_YET_COMPLETED(HttpStatus.BAD_REQUEST, "QUIZ_NOT_YET_COMPLETED", "아직 완료되지 않은 퀴즈입니다."),
     QUIZ_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_PROCESSED", "퀴즈가 이미 처리되었습니다."),
+
+    // 동시성
+    CONCURRENT_REQUEST_CONFLICT(HttpStatus.CONFLICT, "CONCURRENT_REQUEST_CONFLICT","다른 요청과 충돌이 발생했습니다. 잠시 후 다시 시도해주세요."),
 
     //Progress Domain
     CHAPTER_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAPTER_NOT_FOUND", "로드맵 차시를 찾을 수 없습니다."),
