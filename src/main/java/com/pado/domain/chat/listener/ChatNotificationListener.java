@@ -8,7 +8,6 @@ import com.pado.domain.material.event.NoticeCreatedEvent;
 import com.pado.domain.schedule.event.ScheduleCreatedEvent;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyRepository;
-import com.pado.global.config.AppConfig;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +18,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
@@ -33,11 +33,10 @@ public class ChatNotificationListener {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
     private final StudyRepository studyRepository;
-    private final AppConfig appConfig;
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @TransactionalEventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleNoticeCreatedEvent(NoticeCreatedEvent event) {
 
         String systemMessageContent = "새로운 공지사항이 등록되었습니다: " + event.title();
@@ -48,7 +47,7 @@ public class ChatNotificationListener {
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @TransactionalEventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleScheduleCreatedEvent(ScheduleCreatedEvent event) {
 
         String systemMessageContent = "새로운 일정이 등록되었습니다: " + event.title();
