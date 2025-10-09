@@ -40,31 +40,10 @@ public class ChatNotificationListener {
     @TransactionalEventListener
     public void handleNoticeCreatedEvent(NoticeCreatedEvent event) {
 
-        Study study = studyRepository.findById(event.studyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
-
         String systemMessageContent = "새로운 공지사항이 등록되었습니다: " + event.title();
         String link = baseUrl + "/study/document/" + event.noticeId();
 
-        ChatMessage systemMessage = ChatMessage.builder()
-                .study(study)
-                .sender(null)
-                .content(systemMessageContent)
-                .type(MessageType.NOTICE)
-                .link(link)
-                .build();
-
-        ChatMessage savedMessage = chatMessageRepository.save(systemMessage);
-
-        ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(
-                savedMessage, 
-                0L,
-                0L,
-                0L
-        );
-        
-        messagingTemplate.convertAndSend("/topic/studies/" + event.studyId() + "/chats", responseDto);
-        log.info("공지사항 알림 메시지 전송 완료: studyId={}, link={}", event.studyId(), link);
+        sendSystemMessage(event.studyId(), systemMessageContent, link, MessageType.NOTICE);
     }
 
     @Async
@@ -72,17 +51,22 @@ public class ChatNotificationListener {
     @TransactionalEventListener
     public void handleScheduleCreatedEvent(ScheduleCreatedEvent event) {
 
-        Study study = studyRepository.findById(event.studyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
-
         String systemMessageContent = "새로운 일정이 등록되었습니다: " + event.title();
         String link = baseUrl + "/study/schedule/tune";
+
+        sendSystemMessage(event.studyId(), systemMessageContent, link, MessageType.SCHEDULE);
+
+    }
+
+    private void sendSystemMessage(Long studyId, String content, String link, MessageType type) {
+        Study study = studyRepository.findById(studyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
 
         ChatMessage systemMessage = ChatMessage.builder()
                 .study(study)
                 .sender(null)
-                .content(systemMessageContent)
-                .type(MessageType.SCHEDULE)
+                .content(content)
+                .type(type)
                 .link(link)
                 .build();
 
@@ -95,7 +79,7 @@ public class ChatNotificationListener {
                 0L
         );
 
-        messagingTemplate.convertAndSend("/topic/studies/" + event.studyId() + "/chats", responseDto);
-        log.info("일정 알림 메시지 전송 완료: studyId={}, link={}", event.studyId(), link);
+        messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/chats", responseDto);
+        log.info("{} 알림 메시지 전송 완료: studyId={}, link={}", type.name(), studyId, link);
     }
 }
