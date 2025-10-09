@@ -122,6 +122,12 @@ public enum ErrorCode {
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_NOT_FOUND", "채팅 메시지를 찾을 수 없습니다."),
     CHAT_MESSAGE_TOO_LONG(HttpStatus.BAD_REQUEST, "CHAT_MESSAGE_TOO_LONG", "메시지가 너무 깁니다."),
     NOT_FOUND_LAST_READ_CHAT(HttpStatus.NOT_FOUND, "NOT_FOUND_LAST_READ_CHAT", "해당 유저가 가장 마지막으로 읽는 메세지를 찾을 수 없습니다."),
+    INVALID_REACTION(HttpStatus.BAD_REQUEST, "INVALID_REACTION", "잘못된 리액션 형식입니다."),
+    ALREADY_REACTED(HttpStatus.CONFLICT, "ALREADY_REACTED", "이미 리액션을 남겼습니다."),
+    INVALID_REACTION_TARGET(HttpStatus.BAD_REQUEST, "INVALID_REACTION_TARGET", "채팅 타입의 메세지만 리액션할 수 있습니다."),
+    REACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "REACTION_NOT_FOUND", "리액션을 찾을 수 없습니다."),
+    INVALID_MESSAGE_TYPE_FOR_DELETION(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE_TYPE_FOR_DELETION", "알림 메세지는 삭제할 수 없습니다."),
+    FORBIDDEN_DELETE_MESSAGE(HttpStatus.FORBIDDEN, "FORBIDDEN_DELETE_MESSAGE", "메시지 작성자만 삭제할 수 있습니다."),
     WEBSOCKET_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "WEBSOCKET_CONNECTION_FAILED", "웹소켓 연결에 실패했습니다.");
 
     public final HttpStatus status;

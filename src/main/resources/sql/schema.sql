@@ -205,10 +205,12 @@ CREATE TABLE study_condition (
 CREATE TABLE chat_message (
                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
                               study_id BIGINT NOT NULL,
-                              sender_id BIGINT NOT NULL,
+                              sender_id BIGINT,
                               content TEXT NOT NULL,
-                              created_at TIMESTAMP NOT NULL,
-                              updated_at TIMESTAMP NOT NULL
+                              type VARCHAR(50) NOT NULL,
+                              link VARCHAR(500),
+                              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE chapter (
@@ -365,7 +367,29 @@ CREATE TABLE chat_message_last_read (
                                         UNIQUE KEY uk_last_read_study_member (study_member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- chat_reaction 테이블 추가
+CREATE TABLE chat_reaction (
+                                        id BIGINT NOT NULL AUTO_INCREMENT,
+                                        chat_message_id BIGINT NOT NULL,
+                                        study_member_id BIGINT NOT NULL,
+                                        reaction_type VARCHAR(20) NOT NULL,
+                                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        PRIMARY KEY (id),
+                                        UNIQUE KEY uk_chat_reaction (chat_message_id, study_member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE INDEX idx_chat_reaction_message ON chat_reaction (chat_message_id);
+CREATE INDEX idx_chat_reaction_member ON chat_reaction (study_member_id);
+
 -- 외래 키 추가
 ALTER TABLE chat_message_last_read
     ADD CONSTRAINT fk_last_read_study_member
         FOREIGN KEY (study_member_id) REFERENCES study_member(id) ON DELETE CASCADE;
+ 
+ALTER TABLE chat_reaction
+    ADD CONSTRAINT fk_chat_reaction_message 
+        FOREIGN KEY (chat_message_id) REFERENCES chat_message (id) ON DELETE CASCADE;
+ALTER TABLE chat_reaction
+    ADD CONSTRAINT fk_chat_reaction_member
+        FOREIGN KEY (study_member_id) REFERENCES study_member (id) ON DELETE CASCADE;

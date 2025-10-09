@@ -1,9 +1,11 @@
-package com.pado.domain.quiz.event;
+package com.pado.domain.chat.listener;
 
 import com.pado.domain.chat.dto.response.ChatMessageResponseDto;
 import com.pado.domain.chat.entity.ChatMessage;
 import com.pado.domain.chat.entity.MessageType;
 import com.pado.domain.chat.repository.ChatMessageRepository;
+import com.pado.domain.material.event.NoticeCreatedEvent;
+import com.pado.domain.schedule.event.ScheduleCreatedEvent;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyRepository;
 import com.pado.global.exception.common.BusinessException;
@@ -22,7 +24,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class QuizNotificationListener {
+public class ChatNotificationListener {
 
     @Value("${app.frontend.url}")
     private String baseUrl;
@@ -35,12 +37,24 @@ public class QuizNotificationListener {
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleQuizCompletedEvent(QuizCompletedEvent event) {
-        log.info("Handling quiz completed event for studyId: {}", event.studyId());
-        String message = "🎉 새로운 퀴즈 '%s'이(가) 생성되었습니다!".formatted(event.quizTitle());
-        String link = baseUrl + "/study/quiz";
-        // 채팅 서비스 호출
-        sendSystemMessage(event.studyId(), message, link, MessageType.QUIZ);
+    public void handleNoticeCreatedEvent(NoticeCreatedEvent event) {
+
+        String systemMessageContent = "새로운 공지사항이 등록되었습니다: " + event.title();
+        String link = baseUrl + "/study/document/" + event.noticeId();
+
+        sendSystemMessage(event.studyId(), systemMessageContent, link, MessageType.NOTICE);
+    }
+
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleScheduleCreatedEvent(ScheduleCreatedEvent event) {
+
+        String systemMessageContent = "새로운 일정이 등록되었습니다: " + event.title();
+        String link = baseUrl + "/study/schedule/tune";
+
+        sendSystemMessage(event.studyId(), systemMessageContent, link, MessageType.SCHEDULE);
+
     }
 
     private void sendSystemMessage(Long studyId, String content, String link, MessageType type) {
