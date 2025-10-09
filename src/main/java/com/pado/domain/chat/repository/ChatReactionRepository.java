@@ -17,4 +17,6 @@ public interface ChatReactionRepository extends JpaRepository<ChatReaction, Long
     long countByChatMessageAndReactionType(ChatMessage chatMessage, ReactionType reactionType);
 
     boolean existsByStudyMemberIdAndChatMessageId(Long studyMemberId, Long ChatMessageId);
+
+    void deleteAllByChatMessageId(Long chatMessageId);
 }

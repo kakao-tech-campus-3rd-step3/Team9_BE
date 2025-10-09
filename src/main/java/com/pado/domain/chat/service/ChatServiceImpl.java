@@ -26,10 +26,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -81,12 +78,10 @@ public class ChatServiceImpl implements ChatService {
 
         // 스터디 전체 멤버 - 채팅방 접속 중인 멤버 방식으로 계산
         Long unreadMemberCount = lastReadRepository.countUnreadMembers(studyId, savedMessage.getId());
-
-        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(savedMessage, ReactionType.LIKE);
-        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(savedMessage, ReactionType.DISLIKE);
+        ChatReactionCountDto reactionCount = CountMessageReaction(savedMessage);
 
         // 채팅 전송
-        ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(savedMessage, likeCount, dislikeCount, unreadMemberCount);
+        ChatMessageResponseDto responseDto = ChatMessageResponseDto.from(savedMessage, reactionCount.likeCount(), reactionCount.dislikeCount(), unreadMemberCount);
         messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/chats", responseDto);
 
         // 현재 채팅방에 접속하고 있지 않은 사용자들에게 안읽은 메시지 수 알림을 비동기 처리
@@ -166,7 +161,11 @@ public class ChatServiceImpl implements ChatService {
         StudyMember member = findAndValidateStudyMember(studyId, user);
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
-        
+
+        if (message.getType() != MessageType.CHAT) {
+            throw new BusinessException(ErrorCode.INVALID_REACTION_TARGET);
+        }
+
         if (chatReactionRepository.existsByStudyMemberIdAndChatMessageId(member.getId(), message.getId())) {
             throw new BusinessException(ErrorCode.ALREADY_REACTED);
         }
@@ -181,14 +180,13 @@ public class ChatServiceImpl implements ChatService {
 
         chatReactionRepository.save(chatReaction);
 
-        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.LIKE);
-        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.DISLIKE);
+        ChatReactionCountDto reactionCount = CountMessageReaction(message);
 
         UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
                 UpdateType.IMOJI,
                 chatMessageId,
-                likeCount,
-                dislikeCount
+                reactionCount.likeCount(),
+                reactionCount.dislikeCount()
         );
         messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
     }
@@ -206,14 +204,13 @@ public class ChatServiceImpl implements ChatService {
 
         chatReaction.changeReaction(newReactionType);
 
-        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.LIKE);
-        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.DISLIKE);
+        ChatReactionCountDto reactionCount = CountMessageReaction(message);
 
         UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
                 UpdateType.IMOJI,
                 chatMessageId,
-                likeCount,
-                dislikeCount
+                reactionCount.likeCount(),
+                reactionCount.dislikeCount()
         );
         messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
     }
@@ -229,14 +226,13 @@ public class ChatServiceImpl implements ChatService {
 
         chatReactionRepository.delete(chatReaction);
 
-        long likeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.LIKE);
-        long dislikeCount = chatReactionRepository.countByChatMessageAndReactionType(message, ReactionType.DISLIKE);
+        ChatReactionCountDto reactionCount = CountMessageReaction(message);
 
         UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
                 UpdateType.IMOJI,
                 chatMessageId,
-                likeCount,
-                dislikeCount
+                reactionCount.likeCount(),
+                reactionCount.dislikeCount()
         );
         messagingTemplate.convertAndSend("/topic/studies/" + studyId + "/updates", responseDto);
     }
@@ -244,7 +240,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public void deleteChatMessage(Long studyId, Long chatMessageId, User user) {
-        StudyMember member = findAndValidateStudyMember(studyId, user);
+        findAndValidateStudyMember(studyId, user);
         ChatMessage message = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
 
@@ -256,6 +252,7 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException(ErrorCode.FORBIDDEN_DELETE_MESSAGE);
         }
 
+        chatReactionRepository.deleteAllByChatMessageId(message.getId());
         chatMessageRepository.delete(message);
 
         UpdatedChatRoomResponseDto responseDto = new UpdatedChatRoomResponseDto(
@@ -374,7 +371,20 @@ public class ChatServiceImpl implements ChatService {
             throw new BusinessException(ErrorCode.STUDY_NOT_FOUND);
         }
 
-        return studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
+        StudyMember member = studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        return member;
+    }
+
+    private ChatReactionCountDto CountMessageReaction(ChatMessage message) {
+
+        if (message.getId() == null) {
+            return new ChatReactionCountDto(null, 0L, 0L);
+        }
+
+        List<ChatReactionCountDto> results = chatReactionRepository.findReactionCountsByMessageIdIn(List.of(message.getId()));
+
+        return results.isEmpty() ? new ChatReactionCountDto(message.getId(), 0L, 0L) : results.getFirst();
     }
 }
