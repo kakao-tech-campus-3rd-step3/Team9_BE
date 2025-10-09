@@ -125,7 +125,7 @@ CREATE TABLE material_file (
                                material_id BIGINT NOT NULL,
                                size BIGINT NOT NULL,
                                processing_status VARCHAR(50),
-                               extracted_text TEXT,
+                               extracted_text MEDIUMTEXT,
                                file_key VARCHAR(255) NOT NULL,
                                file_type VARCHAR(255) NOT NULL,
                                name VARCHAR(255) NOT NULL,
@@ -256,6 +256,7 @@ CREATE TABLE quiz_question (
                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                quiz_id BIGINT NOT NULL,
                                question_text TEXT NOT NULL,
+                               explanation TEXT,
                                question_type VARCHAR(31) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -282,7 +283,9 @@ CREATE TABLE quiz_submission (
                                  score INT NOT NULL,
                                  total_questions INT NOT NULL,
                                  status VARCHAR(255) NOT NULL,
-                                 submitted_at TIMESTAMP
+                                 started_at TIMESTAMP NOT NULL,
+                                 submitted_at TIMESTAMP,
+                                 version BIGINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE answer_submission (
@@ -299,6 +302,7 @@ CREATE TABLE quiz_point_log (
                                 quiz_submission_id BIGINT NOT NULL UNIQUE,
                                 points_awarded INT NOT NULL,
                                 created_at TIMESTAMP NOT NULL,
+                                updated_at TIMESTAMP NOT NULL,
                                 revoked BOOLEAN NOT NULL DEFAULT FALSE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

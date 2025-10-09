@@ -3,7 +3,6 @@ package com.pado.domain.study.controller;
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
 import com.pado.domain.study.dto.request.StudyLeaderDelegateRequestDto;
-import com.pado.domain.study.dto.request.StudyMemberRoleChangeRequestDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.service.StudyMemberService;
 import com.pado.domain.user.entity.User;
@@ -93,30 +92,6 @@ public class StudyMemberController {
     ) {
         studyMemberService.kickMember(user, studyId, memberId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
-
-    @Api403ForbiddenStudyLeaderOnlyError
-    @Api404StudyOrMemberNotFoundError
-    @Operation(
-        summary = "스터디원 역할 변경",
-        description = "특정 스터디원의 역할을 변경합니다. (스터디 리더만 가능, 현재 미사용)"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "역할 변경 성공"),
-        @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경")
-    })
-    @Parameters({
-        @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
-        @Parameter(name = "member_id", description = "역할을 변경할 스터디원의 ID", required = true, example = "2")
-    })
-    @PatchMapping("/members/{member_id}")
-    public ResponseEntity<Void> updateMemberRole(
-        @PathVariable("study_id") Long studyId,
-        @PathVariable("member_id") Long memberId,
-        @Valid @RequestBody StudyMemberRoleChangeRequestDto request
-    ) {
-        // TODO: 스터디원 상태 변경
-        return ResponseEntity.ok().build();
     }
 
     @Api403ForbiddenStudyLeaderOnlyError

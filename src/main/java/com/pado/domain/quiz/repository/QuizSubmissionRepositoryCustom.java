@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
 
 public interface QuizSubmissionRepositoryCustom {
     List<SubmissionStatusDto> findSubmissionStatuses(List<Long> quizIds, Long userId);
-    Optional<QuizSubmission> findWithDetailsById(Long submissionId);
+    Optional<QuizSubmission> findForInProgressById(Long submissionId);
+    Optional<QuizSubmission> findForGradingById(Long submissionId);
     List<UserQuizCountDto> countByStudyGroupByUser(Long studyId);
     default Map<Long, Long> countMapByStudy(Long studyId) {
         return countByStudyGroupByUser(studyId).stream()

@@ -32,7 +32,8 @@ public class File {
     @Column(name = "processing_status")
     private ProcessingStatus processingStatus;
 
-    @Column(name = "extracted_text")
+    @Lob
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
     private String extractedText;
 
     // Material 생성 이후 setter를 통해 연관관계를 지어줘야 함
