@@ -4,6 +4,7 @@ import com.pado.domain.chat.dto.request.ChatMessageRequestDto;
 import com.pado.domain.chat.dto.request.ReactionRequestDto;
 import com.pado.domain.chat.dto.response.ChatMessageListResponseDto;
 import com.pado.domain.chat.dto.response.ChatMessageResponseDto;
+import com.pado.domain.chat.dto.response.ChatReactionCountDto;
 import com.pado.domain.chat.dto.response.UpdatedChatRoomResponseDto;
 import com.pado.domain.chat.entity.*;
 import com.pado.domain.chat.repository.ChatMessageRepository;
@@ -115,7 +116,8 @@ class ChatServiceTest {
             when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(chatMessage);
             when(modalManager.getOpenModalUserIds(TEST_STUDY_ID)).thenReturn(new HashSet<>());
             when(lastReadRepository.countUnreadMembers(anyLong(), anyLong())).thenReturn(0L);
-            when(chatReactionRepository.countByChatMessageAndReactionType(any(), any())).thenReturn(0L);
+            when(chatReactionRepository.findReactionCountsByMessageIdIn(List.of(TEST_MESSAGE_ID)))
+                    .thenReturn(List.of(new ChatReactionCountDto(TEST_MESSAGE_ID, 0L, 0L)));
 
             // when
             chatService.sendMessage(TEST_STUDY_ID, requestDto, user);
@@ -193,7 +195,8 @@ class ChatServiceTest {
             when(lastReadRepository.findByStudyMemberIn(anyList()))
                     .thenReturn(Arrays.asList(lastRead1, lastRead2));
             when(lastReadRepository.countUnreadMembers(TEST_STUDY_ID, TEST_MESSAGE_ID)).thenReturn(0L);
-            when(chatReactionRepository.countByChatMessageAndReactionType(any(), any())).thenReturn(0L);
+            when(chatReactionRepository.findReactionCountsByMessageIdIn(List.of(TEST_MESSAGE_ID)))
+                    .thenReturn(List.of(new ChatReactionCountDto(TEST_MESSAGE_ID, 0L, 0L)));
 
             // when
             chatService.sendMessage(TEST_STUDY_ID, requestDto, user);
@@ -211,7 +214,6 @@ class ChatServiceTest {
         @BeforeEach
         void setUp() {
             when(studyRepository.existsById(TEST_STUDY_ID)).thenReturn(true);
-            when(studyMemberRepository.existsByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID)).thenReturn(true);
         }
 
         @Test
@@ -223,6 +225,8 @@ class ChatServiceTest {
                     .thenReturn(Map.of(TEST_MESSAGE_ID, 0L));
             when(chatReactionRepository.findReactionCountsByMessageIdIn(anyList()))
                     .thenReturn(Collections.emptyList());
+            when(studyMemberRepository.findByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID)).thenReturn(Optional.of(studyMember));
+
 
             // when
             ChatMessageListResponseDto result = chatService.getChatMessages(TEST_STUDY_ID, null, 20, user);
@@ -236,12 +240,44 @@ class ChatServiceTest {
         @Test
         void 스터디멤버가_아닌경우의_메세지목록_조회() {
             // given
-            when(studyMemberRepository.existsByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID)).thenReturn(false);
+            User otherUser = User.builder()
+                    .email("other@test.com")
+                    .nickname("다른사람")
+                    .build();
+            ReflectionTestUtils.setField(otherUser, "id", 2L);
+
+            StudyMember otherMember = StudyMember.builder()
+                    .user(otherUser)
+                    .build();
+
+            when(studyMemberRepository.findByStudyIdAndUserId(TEST_STUDY_ID, 2L))
+                    .thenReturn(Optional.of(otherMember));
+
+            User originalUser = User.builder()
+                    .email("owner@test.com")
+                    .nickname("본인")
+                    .build();
+            ReflectionTestUtils.setField(originalUser, "id", 1L);
+
+            StudyMember senderMember = StudyMember.builder()
+                    .user(originalUser)
+                    .build();
+
+            ChatMessage message = ChatMessage.builder()
+                    .sender(senderMember)
+                    .type(MessageType.CHAT)
+                    .content("안녕")
+                    .build();
+            ReflectionTestUtils.setField(message, "id", TEST_MESSAGE_ID);
+
+            when(chatMessageRepository.findById(TEST_MESSAGE_ID))
+                    .thenReturn(Optional.of(message));
 
             // when & then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> chatService.getChatMessages(TEST_STUDY_ID, null, 20, user));
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY);
+                    () -> chatService.deleteChatMessage(TEST_STUDY_ID, TEST_MESSAGE_ID, otherUser));
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_DELETE_MESSAGE);
         }
     }
 
@@ -254,7 +290,6 @@ class ChatServiceTest {
         @BeforeEach
         void setUp() {
             when(studyRepository.existsById(TEST_STUDY_ID)).thenReturn(true);
-            when(studyMemberRepository.existsByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID)).thenReturn(true);
             when(studyMemberRepository.findByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID))
                     .thenReturn(Optional.of(studyMember));
             when(chatMessageRepository.findById(TEST_MESSAGE_ID)).thenReturn(Optional.of(chatMessage));
@@ -272,10 +307,8 @@ class ChatServiceTest {
         void 정상적인_리액선_생성() {
             // given
             request = new ReactionRequestDto("LIKE");
-            when(chatReactionRepository.countByChatMessageAndReactionType(chatMessage, ReactionType.LIKE))
-                    .thenReturn(1L);
-            when(chatReactionRepository.countByChatMessageAndReactionType(chatMessage, ReactionType.DISLIKE))
-                    .thenReturn(0L);
+            when(chatReactionRepository.findReactionCountsByMessageIdIn(List.of(TEST_MESSAGE_ID)))
+                    .thenReturn(List.of(new ChatReactionCountDto(TEST_MESSAGE_ID, 1L, 0L)));
 
             // when
             chatService.createChatReaction(TEST_STUDY_ID, TEST_MESSAGE_ID, request, user);
@@ -293,10 +326,8 @@ class ChatServiceTest {
             request = new ReactionRequestDto("DISLIKE");
             when(chatReactionRepository.findByChatMessageAndStudyMember(chatMessage, studyMember))
                     .thenReturn(Optional.of(existingReaction));
-            when(chatReactionRepository.countByChatMessageAndReactionType(chatMessage, ReactionType.LIKE))
-                    .thenReturn(0L);
-            when(chatReactionRepository.countByChatMessageAndReactionType(chatMessage, ReactionType.DISLIKE))
-                    .thenReturn(1L);
+            when(chatReactionRepository.findReactionCountsByMessageIdIn(List.of(TEST_MESSAGE_ID)))
+                    .thenReturn(List.of(new ChatReactionCountDto(TEST_MESSAGE_ID, 0L, 1L)));
 
             // when
             chatService.updateChatReaction(TEST_STUDY_ID, TEST_MESSAGE_ID, request, user);
@@ -311,10 +342,8 @@ class ChatServiceTest {
             // given
             when(chatReactionRepository.findByChatMessageAndStudyMember(chatMessage, studyMember))
                     .thenReturn(Optional.of(existingReaction));
-            when(chatReactionRepository.countByChatMessageAndReactionType(chatMessage, ReactionType.LIKE))
-                    .thenReturn(0L);
-            when(chatReactionRepository.countByChatMessageAndReactionType(chatMessage, ReactionType.DISLIKE))
-                    .thenReturn(0L);
+            when(chatReactionRepository.findReactionCountsByMessageIdIn(List.of(TEST_MESSAGE_ID)))
+                    .thenReturn(List.of(new ChatReactionCountDto(TEST_MESSAGE_ID, 0L, 0L)));
 
             // when
             chatService.deleteChatReaction(TEST_STUDY_ID, TEST_MESSAGE_ID, user);
@@ -337,7 +366,7 @@ class ChatServiceTest {
         @Test
         void 정상적인_메세지_삭제() {
             // given
-            when(studyMemberRepository.existsByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID)).thenReturn(true);
+            when(studyMemberRepository.findByStudyIdAndUserId(TEST_STUDY_ID, TEST_USER_ID)).thenReturn(Optional.of(studyMember));
 
             // when
             chatService.deleteChatMessage(TEST_STUDY_ID, TEST_MESSAGE_ID, user);
@@ -351,9 +380,14 @@ class ChatServiceTest {
         void 다른사람의_메세지를_삭제() {
             // given
             User otherUser = User.builder().email("other@test.com").nickname("다른사람").build();
+
             ReflectionTestUtils.setField(otherUser, "id", 2L);
 
-            when(studyMemberRepository.existsByStudyIdAndUserId(TEST_STUDY_ID, 2L)).thenReturn(true);
+            StudyMember otherMember = StudyMember.builder()
+                    .user(otherUser)
+                    .build();
+
+            when(studyMemberRepository.findByStudyIdAndUserId(TEST_STUDY_ID, 2L)).thenReturn(Optional.of(otherMember));
 
             // when & then
             BusinessException exception = assertThrows(BusinessException.class,
