@@ -1,6 +1,7 @@
 package com.pado.global.exception.common;
 
 import com.pado.global.exception.dto.ErrorResponseDto;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,7 +44,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, errors, path(req));
         return ResponseEntity.status(code.status).body(body);
     }
-    
+
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ErrorResponseDto> handleHandlerMethodValidation(
         HandlerMethodValidationException ex, WebRequest req) {
@@ -152,6 +153,24 @@ public class GlobalExceptionHandler {
         log.error("Internal error at {}: {}", path, ex.getMessage(), ex);
 
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(),
+            path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleEntityNotFound(EntityNotFoundException ex,
+        WebRequest req) {
+        ErrorCode code = ErrorCode.ENTITY_NOT_FOUND;
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(),
+            path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccessDenied(
+        org.springframework.security.access.AccessDeniedException ex, WebRequest req) {
+        ErrorCode code = ErrorCode.FORBIDDEN_REFLECTION_OWNER_ONLY;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(),
             path(req));
         return ResponseEntity.status(code.status).body(body);

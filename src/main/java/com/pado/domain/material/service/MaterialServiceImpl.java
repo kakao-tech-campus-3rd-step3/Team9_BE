@@ -202,7 +202,7 @@ public class MaterialServiceImpl implements MaterialService {
 
     // 파일 엔티티 생성 메서드
     private File createFileEntity(FileRequestDto fileDto, Material material) {
-        File file = new File(fileDto.name(), fileDto.key(), fileDto.size());
+        File file = new File(fileDto.name(), fileDto.key(), fileDto.size(), fileDto.fileType());
         file.setMaterial(material);
         return file;
     }
@@ -266,7 +266,7 @@ public class MaterialServiceImpl implements MaterialService {
     private MaterialDetailResponseDto convertToDetailResponseDto(Material material) {
         List<File> files = fileRepository.findByMaterialId(material.getId());
         List<FileResponseDto> fileResponseDtos = files.stream()
-                .map(file -> new FileResponseDto(file.getId(), file.getName(), file.getFileKey(), file.getSize()))
+                .map(file -> new FileResponseDto(file.getId(), file.getName(), file.getFileKey(), file.getSize(), file.getFileType()))
                 .collect(Collectors.toList());
 
         return new MaterialDetailResponseDto(

@@ -13,21 +13,19 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@ApiResponse(responseCode = "400", description = "입력값 유효성 검증 실패",
+@ApiResponse(responseCode = "403", description = "접근 권한 없음 (스터디 리더가 아닌 경우)",
         content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponseDto.class),
                 examples = @ExampleObject(
-                        name = "최대 인원 검증 실패 예시",
+                        name = "권한 없음 예시",
                         value = """
                                 {
-                                  "code": "INVALID_MAX_MEMBERS",
-                                  "message": "최대 멤버 수가 올바르지 않습니다.",
-                                  "errors": [
-                                    "max_members: 최대 인원은 2명 이상이어야 합니다."
-                                  ],
-                                  "timestamp": "2025-09-07T08:15:30.123Z",
-                                  "path": "/api/study/create"
+                                  "code": "FORBIDDEN_STUDY_LEADER_ONLY",
+                                  "message": "스터디 리더만 접근할 수 있습니다.",
+                                  "errors": [],
+                                  "timestamp": "2025-09-07T09:28:57.5088742",
+                                  "path": "/api/your-endpoint"
                                 }
                                 """
                 )

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users  (
     password_hash VARCHAR(200) NOT NULL,
     nickname VARCHAR(100) NOT NULL UNIQUE,
     region VARCHAR(100),
-    profile_image_url VARCHAR(500),
+    image_key VARCHAR(500),
     gender VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -122,13 +122,18 @@ CREATE TABLE material (
 CREATE INDEX idx_material_main_search
     ON material(study_id, material_category, created_at DESC);
 
-CREATE TABLE material_file (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    file_key VARCHAR(255) NOT NULL UNIQUE,
-    size BIGINT NOT NULL,
-    material_id BIGINT NOT NULL,
+CREATE TABLE material_file
+(
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(255) NOT NULL,
+    file_key    VARCHAR(255) NOT NULL UNIQUE,
+    size        BIGINT       NOT NULL,
+    file_type   VARCHAR(50)  NOT NULL,
+    processing_status VARCHAR(50),
+    extracted_text    TEXT,
+    material_id BIGINT       NOT NULL,
     CONSTRAINT fk_material_file_material FOREIGN KEY (material_id) REFERENCES material (id) ON DELETE CASCADE
+);
 
 CREATE TABLE attendance (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -203,3 +208,25 @@ CREATE TABLE IF NOT EXISTS schedule_tune_slot (
     );
 
 CREATE INDEX IF NOT EXISTS idx_schedule_tune_slot__tune_index ON schedule_tune_slot (schedule_tune_id, slot_index);
+
+CREATE TABLE chat_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    sender_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_chat_message_study FOREIGN KEY (study_id) REFERENCES study (id) ON DELETE CASCADE,
+    CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES study_member (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_chat_message_study_id ON chat_message (study_id, id);
+CREATE INDEX idx_chat_message_study_created_at ON chat_message (study_id, created_at);
+
+CREATE TABLE IF NOT EXISTS chapter (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    study_id BIGINT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_chapter_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE
+);
