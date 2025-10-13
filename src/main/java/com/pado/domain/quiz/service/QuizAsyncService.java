@@ -65,12 +65,16 @@ public class QuizAsyncService {
                 throw new BusinessException(ErrorCode.API_RESPONSE_INVALID, "AI failed to generate sufficient questions.");
             }
 
+            // 퀴즈 제한 시간 생성 & AiQuizResponseDto로 변환
+            int totalRecommendedTime = calculateTotalTimeWithGuards(successfulQuestions);
+            AiQuizResponseDto finalQuizDto = new AiQuizResponseDto(totalRecommendedTime, successfulQuestions);
 
-            validateAiResponse(aiQuizDto, quizId);
+            // AI 퀴즈 검증
+            validateAiResponse(finalQuizDto, quizId);
 
             // 생성된 퀴즈 저장
             try {
-                quizTransactionService.saveSuccessfulQuiz(quizId, aiQuizDto);
+                quizTransactionService.saveSuccessfulQuiz(quizId, finalQuizDto);
             } catch (BusinessException e) {
                 if (e.getErrorCode() == ErrorCode.QUIZ_NOT_FOUND) {
                     log.info("[Async Task] Quiz '{}' was deleted during generation. Task gracefully terminated.", quizId);
@@ -121,6 +125,19 @@ public class QuizAsyncService {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList()))
                 .join();
+    }
+
+    private int calculateTotalTimeWithGuards(List<AiQuestionDto> questions) {
+        int totalTime = 0;
+        for (AiQuestionDto question : questions) {
+            int baseTime = "MULTIPLE_CHOICE".equals(question.questionType()) ? 40 : 20;
+            totalTime += baseTime;
+        }
+
+        totalTime = Math.max(totalTime, 120);
+        totalTime = Math.min(totalTime, 600);
+
+        return totalTime;
     }
 
     private void validateAiResponse(AiQuizResponseDto aiQuizDto, Long quizId) {
