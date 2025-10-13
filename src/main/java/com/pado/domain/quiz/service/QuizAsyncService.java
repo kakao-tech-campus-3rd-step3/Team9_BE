@@ -13,10 +13,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,8 @@ public class QuizAsyncService {
     private final QuizTransactionService quizTransactionService;
     private final FileProcessingService fileProcessingService;
     private final Executor quizThreadPool;
+
+    private static final int SHORT_TEXT_THRESHOLD = 500;
 
     public CompletableFuture<Void> processAndCallAiInBackground(Long quizId) {
         return CompletableFuture.runAsync(() -> {
@@ -81,6 +86,16 @@ public class QuizAsyncService {
     private int calculateQuestionCount(int textLength) {
         int count = textLength / 300;
         return Math.max(5, Math.min(10, count));
+    }
+
+    private List<String> buildHints(int textLength, int questionCount) {
+        if (textLength < SHORT_TEXT_THRESHOLD) {
+            return Collections.nCopies(questionCount, null);
+        }
+
+        return IntStream.range(0, questionCount)
+                .mapToObj(i -> String.format("이 문서의 %d/%d 부분에 집중해서 문제를 만들어 줘.", i + 1, questionCount))
+                .toList();
     }
 
     private void validateAiResponse(AiQuizResponseDto aiQuizDto, Long quizId) {
