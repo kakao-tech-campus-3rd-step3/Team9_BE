@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -33,6 +34,7 @@ public class QuizAsyncService {
     private final Executor quizThreadPool;
 
     private static final int SHORT_TEXT_THRESHOLD = 500;
+    private static final int MINIMUM_SUCCESSFUL_QUESTIONS = 4;
 
     public CompletableFuture<Void> processAndCallAiInBackground(Long quizId) {
         return CompletableFuture.runAsync(() -> {
@@ -52,10 +54,18 @@ public class QuizAsyncService {
                 throw new BusinessException(ErrorCode.FILE_PROCESSING_FAILED, "Extracted text is blank.");
             }
 
+            // 문제 수 결정 & 힌트 생성
             int questionCount = calculateQuestionCount(combinedText.length());
+            List<String> hints = buildHints(combinedText.length(), questionCount);
+            log.info("QuizId: {}. Preparing to generate {} questions.", quizId, questionCount);
 
-            // AI 퀴즈 생성 요청 & 검증
-            AiQuizResponseDto aiQuizDto = geminiClient.generateQuiz(combinedText);
+            // AI 퀴즈 생성
+            List<AiQuestionDto> successfulQuestions = generateQuestionsInParallel(combinedText, hints);
+            if (successfulQuestions.size() < MINIMUM_SUCCESSFUL_QUESTIONS) {
+                throw new BusinessException(ErrorCode.API_RESPONSE_INVALID, "AI failed to generate sufficient questions.");
+            }
+
+
             validateAiResponse(aiQuizDto, quizId);
 
             // 생성된 퀴즈 저장
@@ -96,6 +106,21 @@ public class QuizAsyncService {
         return IntStream.range(0, questionCount)
                 .mapToObj(i -> String.format("이 문서의 %d/%d 부분에 집중해서 문제를 만들어 줘.", i + 1, questionCount))
                 .toList();
+    }
+
+    private List<AiQuestionDto> generateQuestionsInParallel(String text, List<String> hints) {
+        // hint 리스트를 순회하면서 AI 문제 생성 요청
+        List<CompletableFuture<AiQuestionDto>> futures = hints.stream()
+                .map(hint -> geminiClient.generateSingleQuestion(text, hint, quizThreadPool))
+                .toList();
+
+        // 모든 작업이 끝날 때까지 기다림 -> 성공한 결과만 모아서 반환
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> futures.stream()
+                        .map(CompletableFuture::join)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList()))
+                .join();
     }
 
     private void validateAiResponse(AiQuizResponseDto aiQuizDto, Long quizId) {
