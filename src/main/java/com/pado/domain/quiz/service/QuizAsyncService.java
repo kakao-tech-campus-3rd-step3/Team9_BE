@@ -83,7 +83,11 @@ public class QuizAsyncService {
                 }
             }
 
-        }, quizThreadPool);
+        }, quizThreadPool).exceptionally(ex -> {
+            log.error("Async task for quizId {} failed.", quizId, ex);
+            quizTransactionService.updateQuizStatusToFailed(quizId);
+            return null;
+        });
     }
 
     private String getAndProcessTextForFiles(Set<File> files) {
