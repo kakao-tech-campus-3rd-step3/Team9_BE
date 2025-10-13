@@ -47,6 +47,8 @@ public class QuizAsyncService {
                 throw new BusinessException(ErrorCode.FILE_PROCESSING_FAILED, "Extracted text is blank.");
             }
 
+            int questionCount = calculateQuestionCount(combinedText.length());
+
             // AI 퀴즈 생성 요청 & 검증
             AiQuizResponseDto aiQuizDto = geminiClient.generateQuiz(combinedText);
             validateAiResponse(aiQuizDto, quizId);
@@ -74,6 +76,11 @@ public class QuizAsyncService {
                     return fileProcessingService.processFileAndUpdateState(file.getId());
                 })
                 .collect(Collectors.joining("\n\n---\n\n"));
+    }
+
+    private int calculateQuestionCount(int textLength) {
+        int count = textLength / 300;
+        return Math.max(5, Math.min(10, count));
     }
 
     private void validateAiResponse(AiQuizResponseDto aiQuizDto, Long quizId) {
