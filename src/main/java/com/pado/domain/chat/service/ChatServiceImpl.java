@@ -306,6 +306,17 @@ public class ChatServiceImpl implements ChatService {
         modalManager.refreshSocket(studyId, currentUser.getId());
     }
 
+    @Override
+    public UnreadCountResponseDto getUnreadMessages(Long studyId, User user) {
+        StudyMember member = findAndValidateStudyMember(studyId, user);
+
+        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(member)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
+
+        long unreadCount = chatMessageRepository.countByIdGreaterThanAndStudyId(lastReadMessage.getLastReadMessageId(), studyId);
+        return new UnreadCountResponseDto(unreadCount);
+    }
+
     // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송을 비동기 처리
     @Async
     public void sendUnreadCountToClosedModalUsersAsync(Long studyId){
