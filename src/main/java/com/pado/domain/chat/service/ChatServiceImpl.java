@@ -64,7 +64,7 @@ public class ChatServiceImpl implements ChatService {
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
 
         // 현재 채팅방에 접속하고 있는 멤버 대상으로만 마지막으로 읽은 메세지 id 업데이트
-        Set<Long> onlineUserIds = modalManager.getOpenModalUserIds(studyId);
+        Set<Long> onlineUserIds = modalManager.getOpenSocketUserIds(studyId);
         if (!onlineUserIds.isEmpty()) {
             // 1. 채팅방에 접속한 유저의 StudyMember 목록을 한 번에 조회
             List<StudyMember> onlineMembers = studyMemberRepository.findByStudyIdAndUserIdIn(studyId, onlineUserIds);
@@ -268,7 +268,7 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     public void openChatModal(Long studyId, User currentUser) {
 
-        modalManager.openModal(studyId, currentUser.getId());
+        modalManager.openSocket(studyId, currentUser.getId());
 
         StudyMember studyMember = studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
@@ -297,13 +297,13 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     public void closeChatModal(Long studyId, User currentUser) {
 
-        modalManager.closeModal(studyId, currentUser.getId());
+        modalManager.closeSocket(studyId, currentUser.getId());
     }
 
     @Override
     public void refreshModalState(Long studyId, User currentUser) {
 
-        modalManager.refreshModal(studyId, currentUser.getId());
+        modalManager.refreshSocket(studyId, currentUser.getId());
     }
 
     // 모달을 열지 않은 사용자들에게 안읽은 메시지 수 전송을 비동기 처리
@@ -318,7 +318,7 @@ public class ChatServiceImpl implements ChatService {
         List<StudyMember> allMembers = studyMemberRepository.findByStudyId(studyId);
 
         // 채팅방에 접속한 유저 목록을 한 번에 조회
-        Set<Long> onlineUserIds = modalManager.getOpenModalUserIds(studyId); // 메서드 내부에서 null을 반환하지 않도록 처리해야 함
+        Set<Long> onlineUserIds = modalManager.getOpenSocketUserIds(studyId); // 메서드 내부에서 null을 반환하지 않도록 처리해야 함
 
         // 채팅방에 미접속 상태인 멤버들을 필터링
         List<StudyMember> offlineMembers = allMembers.stream()
