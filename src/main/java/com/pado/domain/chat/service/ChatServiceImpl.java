@@ -2,12 +2,7 @@ package com.pado.domain.chat.service;
 
 import com.pado.domain.chat.dto.request.ChatMessageRequestDto;
 import com.pado.domain.chat.dto.request.ReactionRequestDto;
-import com.pado.domain.chat.dto.response.ChatMessageListResponseDto;
-import com.pado.domain.chat.dto.response.ChatMessageResponseDto;
-import com.pado.domain.chat.dto.response.ChatReactionCountDto;
-import com.pado.domain.chat.dto.response.LastReadMessageResponseDto;
-import com.pado.domain.chat.dto.response.UnreadCountResponseDto;
-import com.pado.domain.chat.dto.response.UpdatedChatRoomResponseDto;
+import com.pado.domain.chat.dto.response.*;
 import com.pado.domain.chat.entity.*;
 import com.pado.domain.chat.repository.ChatReactionRepository;
 import com.pado.domain.chat.repository.LastReadMessageRepository;
@@ -273,24 +268,45 @@ public class ChatServiceImpl implements ChatService {
         StudyMember studyMember = studyMemberRepository.findByStudyIdAndUserId(studyId, currentUser.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
 
+        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 추출
+        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(studyMember)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
+        long lastReadMessageId = lastReadMessage.getLastReadMessageId();
+
         // 현재 채팅방에서 가장 최신 메시지 아이디 추출
-        Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
         long latestChatMessageId = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId)
                 .map(ChatMessage::getId)
                 .orElse(0L);
 
-        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 추출
-        LastReadMessage lastReadMessage = lastReadRepository.findByStudyMember(studyMember)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_LAST_READ_CHAT));
-        long lastReadMessageId = lastReadMessage.getLastReadMessageId();
+        // 마지막으로 읽은 메세지가 가장 최신의 메세지인 경우 웹소켓 전송 X
+        if (latestChatMessageId <= lastReadMessageId) {
+            return;
+        }
+
+        // 웹소켓으로 갱신되는 메시지와 안읽은 멤버 수 전송
+        List<ChatMessage> unreadMessages = chatMessageRepository.findAllByIdGreaterThanAndStudyIdOrderByIdAsc(lastReadMessageId, studyId);
 
         lastReadMessage.updateLastReadMessageId(latestChatMessageId);
 
-        // 모달을 킨 유저가 가장 마지막으로 읽었던 메세지 아이디 전송
-        // 프론트에서 이보다 큰 메세지들의 읽지 않은 멤버 수에 -1 수행
-        messagingTemplate.convertAndSend(
-                "/topic/studies/" + studyId + "/unread", new LastReadMessageResponseDto(lastReadMessageId)
-        );
+        if (!unreadMessages.isEmpty()) {
+            List<Long> unreadMessageIds = unreadMessages.stream()
+                    .map(ChatMessage::getId)
+                    .toList();
+
+            Map<Long, Long> newUnreadCountsMap = lastReadRepository.getUnreadCountsForMessages(studyId, unreadMessageIds);
+
+            List<UpdatedMessageUnreadCountDto> updatedMessages = unreadMessages.stream()
+                    .map(message -> new UpdatedMessageUnreadCountDto(
+                            message.getId(),
+                            newUnreadCountsMap.getOrDefault(message.getId(), 0L)
+                    ))
+                    .collect(Collectors.toList());
+
+            messagingTemplate.convertAndSend(
+                    "/topic/studies/" + studyId + "/unread",
+                    new UnreadMessageUpdateResponseDto(updatedMessages)
+            );
+        }
     }
 
     @Override
