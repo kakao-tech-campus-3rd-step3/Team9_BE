@@ -7,6 +7,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -53,11 +55,11 @@ public class RedisChatModalManager {
     // 특정 스터디에서 모달이 열린 모든 사용자 ID 조회
     public Set<Long> getOpenSocketUserIds(Long studyId) {
         String pattern = MODAL_KEY_PREFIX + studyId + ":*";
-        Set<String> keys = redisTemplate.keys(pattern);
+        Set<String> keys = new HashSet<>();
 
         redisTemplate.execute((RedisConnection connection) -> {
             try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(pattern).count(1000).build())) {
-                cursor.forEachRemaining(key -> keys.add(new String(key)));
+                cursor.forEachRemaining(key -> keys.add(new String(key, StandardCharsets.UTF_8)));
             }
             return null;
         });
