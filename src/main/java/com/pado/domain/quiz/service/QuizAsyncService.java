@@ -119,7 +119,11 @@ public class QuizAsyncService {
     private List<AiQuestionDto> generateQuestionsInParallel(String text, List<String> hints) {
         // hint 리스트를 순회하면서 AI 문제 생성 요청
         List<CompletableFuture<AiQuestionDto>> futures = hints.stream()
-                .map(hint -> geminiClient.generateSingleQuestion(text, hint, quizThreadPool))
+                .map(hint -> geminiClient.generateSingleQuestion(text, hint, quizThreadPool)
+                    .exceptionally(ex -> {
+                                log.warn("Single-question generation failed; skipping this item.", ex);
+                                return null;
+                    }))
                 .toList();
 
         // 모든 작업이 끝날 때까지 기다림 -> 성공한 결과만 모아서 반환
