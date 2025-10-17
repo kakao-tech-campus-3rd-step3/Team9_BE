@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -116,6 +117,21 @@ public class GlobalExceptionHandler {
         ErrorCode code = ErrorCode.JSON_PARSE_ERROR;
         ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(),
             path(req));
+        return ResponseEntity.status(code.status).body(body);
+    }
+
+    // 낙관적 락 실패 처리
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponseDto> handleOptimisticLockingFailure(
+            ObjectOptimisticLockingFailureException ex,
+            WebRequest req) {
+
+        log.warn("Optimistic locking conflict: {}", ex.getMessage(), ex);
+
+        ErrorCode code = ErrorCode.CONCURRENT_REQUEST_CONFLICT;
+        String requestPath = path(req);
+        ErrorResponseDto body = ErrorResponseDto.of(code, code.message, Collections.emptyList(), requestPath);
+
         return ResponseEntity.status(code.status).body(body);
     }
 

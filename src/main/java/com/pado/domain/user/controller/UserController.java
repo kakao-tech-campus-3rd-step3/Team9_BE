@@ -1,5 +1,7 @@
 package com.pado.domain.user.controller;
 
+import com.pado.domain.study.dto.response.MyApplicationResponseDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.user.dto.UserDetailResponseDto;
 import com.pado.domain.user.dto.UserSimpleResponseDto;
 import com.pado.domain.user.dto.UserStudyResponseDto;
@@ -20,45 +22,69 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @Tag(name = "02. User", description = "인증된 사용자 정보 관련 API")
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
+
     private final UserService userService;
 
     @Api404UserNotFoundError
-    @Operation(summary = "유저 정보 조회", description = "인증 토큰을 통해 현재 로그인된 사용자의 주요 정보(닉네임, 이미지 URL)를 조회합니다.")
+    @Operation(summary = "내 정보 조회 (간략)", description = "인증 토큰을 통해 현재 로그인된 사용자의 주요 정보(닉네임, 이미지 URL)를 조회합니다.")
     @ApiResponse(
-            responseCode = "200", description = "유저 정보 조회 성공",
-            content = @Content(schema = @Schema(implementation = UserSimpleResponseDto.class))
+        responseCode = "200", description = "유저 정보 조회 성공",
+        content = @Content(schema = @Schema(implementation = UserSimpleResponseDto.class))
     )
-    @GetMapping
-    public ResponseEntity<UserSimpleResponseDto> getSimpleUserInfo(@Parameter(hidden = true) @CurrentUser User user) {
+    @GetMapping("/me")
+    public ResponseEntity<UserSimpleResponseDto> getSimpleUserInfo(
+        @Parameter(hidden = true) @CurrentUser User user) {
         return ResponseEntity.ok(userService.getUserSimple(user));
     }
 
     @Api404UserNotFoundError
-    @Operation(summary = "유저 세부 정보 조회", description = "인증 토큰을 통해 현재 로그인된 사용자의 세부 정보(관심분야, 지역 포함)를 조회합니다.")
+    @Operation(summary = "내 정보 조회 (상세)", description = "인증 토큰을 통해 현재 로그인된 사용자의 세부 정보(관심분야, 지역 포함)를 조회합니다.")
     @ApiResponse(
-            responseCode = "200", description = "세부 정보 조회 성공",
-            content = @Content(schema = @Schema(implementation = UserDetailResponseDto.class))
+        responseCode = "200", description = "세부 정보 조회 성공",
+        content = @Content(schema = @Schema(implementation = UserDetailResponseDto.class))
     )
-    @GetMapping("/detail")
-    public ResponseEntity<UserDetailResponseDto> getDetailUserInfo(@Parameter(hidden = true) @CurrentUser User user) {
+    @GetMapping("/me/detail")
+    public ResponseEntity<UserDetailResponseDto> getDetailUserInfo(
+        @Parameter(hidden = true) @CurrentUser User user) {
         return ResponseEntity.ok(userService.getUserDetail(user.getId()));
     }
 
     @Api404UserNotFoundError
-    @Operation(summary = "유저 스터디 정보 조회", description = "인증 토큰과 study_id를 통해 현재 로그인된 사용자의 스터디 정보(역할, 스터디 이름 포함)를 조회합니다.")
+    @Operation(summary = "내 스터디 정보 조회", description = "인증 토큰과 study_id를 통해 현재 로그인된 사용자의 스터디 정보(역할, 스터디 이름 포함)를 조회합니다.")
     @ApiResponse(
-            responseCode = "200", description = "스터디 정보 조회 성공",
-            content = @Content(schema = @Schema(implementation = UserStudyResponseDto.class))
+        responseCode = "200", description = "스터디 정보 조회 성공",
+        content = @Content(schema = @Schema(implementation = UserStudyResponseDto.class))
     )
-    @GetMapping("/{study_id}")
+    @GetMapping("/me/studies/{study_id}")
     public ResponseEntity<UserStudyResponseDto> getStudyUserInfo(
-            @PathVariable("study_id") Long studyId, @Parameter(hidden = true) @CurrentUser User user
+        @PathVariable("study_id") Long studyId, @Parameter(hidden = true) @CurrentUser User user
     ) {
         return ResponseEntity.ok(userService.getUserStudy(studyId, user));
+    }
+
+    @Operation(summary = "내가 신청한 스터디 목록 조회", description = "사용자가 자신이 신청한 스터디 목록을 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping("/me/studies/applications")
+    public ResponseEntity<List<MyApplicationResponseDto>> getMyApplications(
+        @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        return ResponseEntity.ok(userService.getMyApplications(user));
+    }
+
+    @Operation(summary = "내가 참여중인 스터디 목록 조회", description = "현재 로그인한 사용자가 참여하고 있는 스터디 목록을 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping("/me/studies")
+    public ResponseEntity<List<MyStudyResponseDto>> getMyStudies(
+        @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        List<MyStudyResponseDto> myStudies = userService.findMyStudies(user.getId());
+        return ResponseEntity.ok(myStudies);
     }
 }

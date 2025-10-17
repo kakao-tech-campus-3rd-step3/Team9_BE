@@ -14,7 +14,7 @@ public class QuizPointLogRepositoryImpl implements QuizPointLogRepositoryCustom 
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<QuizPointLog> findActiveLogsForQuiz(Long quizId) {
+    public List<QuizPointLog> findActiveLogsByQuizIdWithMember(Long quizId) {
         return queryFactory
                 .selectFrom(quizPointLog)
                 .join(quizPointLog.studyMember, studyMember).fetchJoin()
