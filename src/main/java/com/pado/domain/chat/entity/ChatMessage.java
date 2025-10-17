@@ -27,24 +27,16 @@ public class ChatMessage extends AuditingEntity {
     private Study study;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id")
+    @JoinColumn(name = "sender_id", nullable = false)
     private StudyMember sender;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false)
-    private MessageType type;
-
-    @Column(length = 500)
-    private String link;
-
     @Builder
-    public ChatMessage(Study study, StudyMember sender, String content, MessageType type, String link) {
+    public ChatMessage(Study study, StudyMember sender, String content) {
         this.study = study;
         this.sender = sender;
         this.content = content;
-        this.type = type;
-        this.link = link;
     }
 }

@@ -1,18 +1,18 @@
 package com.pado.domain.quiz.entity;
 
-import com.pado.domain.basetime.AuditingEntity;
 import com.pado.domain.study.entity.StudyMember;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "quiz_point_log")
-public class QuizPointLog extends AuditingEntity {
+public class QuizPointLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,6 +29,9 @@ public class QuizPointLog extends AuditingEntity {
     @Column(name = "points_awarded", nullable = false)
     private Integer pointsAwarded;
 
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
     @Column(nullable = false)
     private boolean revoked = false;
 
@@ -37,6 +40,7 @@ public class QuizPointLog extends AuditingEntity {
         this.studyMember = studyMember;
         this.quizSubmission = quizSubmission;
         this.pointsAwarded = pointsAwarded;
+        this.createdAt = LocalDateTime.now();
         this.revoked = false;
     }
 

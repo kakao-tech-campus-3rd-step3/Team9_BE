@@ -14,9 +14,6 @@ public record AiQuestionDto(
         @JsonProperty("options")
         List<String> options,
 
-        @JsonProperty("explanation")
-        String explanation,
-
         @JsonProperty("correctAnswerIndex")
         Integer correctAnswerIndex,
 

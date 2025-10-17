@@ -4,5 +4,5 @@ import com.pado.domain.quiz.entity.QuizPointLog;
 import java.util.List;
 
 public interface QuizPointLogRepositoryCustom {
-    List<QuizPointLog> findActiveLogsByQuizIdWithMember(Long quizId);
+    List<QuizPointLog> findActiveLogsForQuiz(Long quizId);
 }

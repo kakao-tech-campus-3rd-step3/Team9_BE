@@ -4,5 +4,5 @@ import com.pado.domain.quiz.entity.AnswerSubmission;
 import java.util.List;
 
 public interface AnswerSubmissionRepositoryCustom {
-    List<AnswerSubmission> findWithQuestionBySubmissionId(Long submissionId);
+    List<AnswerSubmission> findBySubmissionId(Long submissionId);
 }

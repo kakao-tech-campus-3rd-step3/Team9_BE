@@ -27,21 +27,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // 클라이언트에서 메시지를 구독할 때 사용할 prefix
-        registry.enableSimpleBroker("/topic", "/queue");
+        registry.enableSimpleBroker("/topic");
         
         // 클라이언트에서 메시지를 전송할 때 사용할 prefix
         registry.setApplicationDestinationPrefixes("/app");
-
-        // 개인 메세지용 prefix
-        registry.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // WebSocket 연결 엔드포인트
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // CORS 설정
-                .withSockJS();
+                .setAllowedOriginPatterns("*"); // CORS 설정
     }
 
     @Override

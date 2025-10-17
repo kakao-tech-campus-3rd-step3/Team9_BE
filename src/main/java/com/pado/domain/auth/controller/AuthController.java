@@ -114,19 +114,6 @@ public class AuthController {
             .body(new TokenResponseDto(tokens.accessToken()));
     }
 
-    @Operation(summary = "로그아웃", description = "Refresh 쿠키를 통해 Refreshtoken을 삭제시킵니다")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "성공", content = @Content),
-    })
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
-        if (refreshToken == null) {
-            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "RefreshToken 쿠키가 없습니다.");
-        }
-        authService.logout(refreshToken);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
-
     @Operation(summary = "액세스 토큰 재발급", description = "Refresh 쿠키로 Access 토큰을 재발급합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "성공",

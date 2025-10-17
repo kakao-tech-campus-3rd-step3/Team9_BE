@@ -1,10 +1,9 @@
 package com.pado.domain.study.service;
 
-import com.pado.domain.chat.repository.ChatMessageRepository;
-import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.response.MyStudyResponseDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
@@ -49,13 +48,6 @@ class StudyServiceImplTest {
     @Mock
     private StudyMemberRepository studyMemberRepository;
 
-    @Mock
-    private ChatMessageRepository chatMessageRepository;
-
-    // LastReadMessageRepository도 사용되므로 함께 추가해주는 것이 좋습니다.
-    @Mock
-    private LastReadMessageRepository lastReadMessageRepository;
-
     private static final int MAX_PAGE_SIZE = 50;
 
     @Test
@@ -63,30 +55,16 @@ class StudyServiceImplTest {
         // given
         User user = User.builder().build();
         StudyCreateRequestDto dto = new StudyCreateRequestDto(
-            "새로운 스터디",
-            "한 줄 설명",
-            "상세 설명",
-            List.of(Category.PROGRAMMING, Category.LANGUAGE),
-            Region.ONLINE,
-            "월요일 오후 2시-4시",
-            10,
-            List.of("열심히 하실 분만"),
-            "image_url"
+                "새로운 스터디",
+                "한 줄 설명",
+                "상세 설명",
+                List.of(Category.PROGRAMMING, Category.LANGUAGE),
+                Region.ONLINE,
+                "월요일 오후 2시-4시",
+                10,
+                List.of("열심히 하실 분만"),
+                "image_url"
         );
-
-        Study dummySavedStudy = Study.builder()
-                .id(1L) // ID 설정
-                .leader(user)
-                .title(dto.title())
-                .description(dto.description())
-                .detailDescription(dto.detail_description())
-                .studyTime(dto.study_time())
-                .region(dto.region())
-                .maxMembers(dto.max_members())
-                .fileKey(dto.file_key())
-                .build();
-
-        when(studyRepository.save(any(Study.class))).thenReturn(dummySavedStudy);
 
         // when
         studyService.createStudy(user, dto);
@@ -101,34 +79,49 @@ class StudyServiceImplTest {
         StudyMember savedMember = memberCaptor.getValue();
 
         assertAll(
-            () -> assertThat(savedMember.getStudy()).isEqualTo(savedStudy),
-            () -> assertThat(savedMember.getUser()).isEqualTo(user),
-            () -> assertThat(savedMember.getRole()).isEqualTo(StudyMemberRole.LEADER)
+                () -> assertThat(savedMember.getStudy()).isEqualTo(savedStudy),
+                () -> assertThat(savedMember.getUser()).isEqualTo(user),
+                () -> assertThat(savedMember.getRole()).isEqualTo(StudyMemberRole.LEADER)
         );
 
         assertAll(
-            () -> assertThat(savedStudy.getTitle()).isEqualTo(dto.title()),
-            () -> assertThat(savedStudy.getDescription()).isEqualTo(dto.description()),
-            () -> assertThat(savedStudy.getDetailDescription()).isEqualTo(dto.detail_description()),
-            () -> assertThat(savedStudy.getRegion()).isEqualTo(dto.region()),
-            () -> assertThat(savedStudy.getStudyTime()).isEqualTo(dto.study_time()),
-            () -> assertThat(savedStudy.getMaxMembers()).isEqualTo(dto.max_members()),
-            () -> assertThat(savedStudy.getFileKey()).isEqualTo(dto.file_key()),
-            () -> assertThat(savedStudy.getLeader()).isEqualTo(user),
+                () -> assertThat(savedStudy.getTitle()).isEqualTo(dto.title()),
+                () -> assertThat(savedStudy.getDescription()).isEqualTo(dto.description()),
+                () -> assertThat(savedStudy.getDetailDescription()).isEqualTo(dto.detail_description()),
+                () -> assertThat(savedStudy.getRegion()).isEqualTo(dto.region()),
+                () -> assertThat(savedStudy.getStudyTime()).isEqualTo(dto.study_time()),
+                () -> assertThat(savedStudy.getMaxMembers()).isEqualTo(dto.max_members()),
+                () -> assertThat(savedStudy.getFileKey()).isEqualTo(dto.file_key()),
+                () -> assertThat(savedStudy.getLeader()).isEqualTo(user),
 
-            () -> assertThat(savedStudy.getInterests()).hasSize(2),
-            () -> assertThat(savedStudy.getInterests().get(0).getCategory()).isEqualTo(
-                Category.PROGRAMMING),
-            () -> assertThat(savedStudy.getInterests().get(1).getCategory()).isEqualTo(
-                Category.LANGUAGE),
+                () -> assertThat(savedStudy.getInterests()).hasSize(2),
+                () -> assertThat(savedStudy.getInterests().get(0).getCategory()).isEqualTo(Category.PROGRAMMING),
+                () -> assertThat(savedStudy.getInterests().get(1).getCategory()).isEqualTo(Category.LANGUAGE),
 
-            () -> assertThat(savedStudy.getConditions())
-                .extracting(StudyCondition::getContent)
-                .containsExactly("열심히 하실 분만")
+                () -> assertThat(savedStudy.getConditions())
+                        .extracting(StudyCondition::getContent)
+                        .containsExactly("열심히 하실 분만")
         );
     }
 
-    // `findMyStudies` 메소드가 UserService로 이전되었으므로 이 테스트는 삭제합니다.
+    @Test
+    void 내_스터디목록_조회_성공() {
+        // given
+        Long userId = 1L;
+        Study study1 = Study.builder().id(1L).title("스터디1").build();
+        Study study2 = Study.builder().id(2L).title("스터디2").build();
+
+        when(studyRepository.findByUserId(userId))
+                .thenReturn(List.of(study1, study2));
+
+        // when
+        List<MyStudyResponseDto> result = studyService.findMyStudies(userId);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).title()).isEqualTo("스터디1");
+        assertThat(result.get(1).title()).isEqualTo("스터디2");
+    }
 
     @Test
     void 스터디_목록_조회_성공() {
@@ -142,20 +135,19 @@ class StudyServiceImplTest {
         Slice<Study> mockSlice = new SliceImpl<>(List.of(study1, study2), pageable, false);
 
         when(studyRepository.findStudiesByFilter(any(), any(), any(), any(), any(Pageable.class)))
-            .thenReturn(mockSlice);
+                .thenReturn(mockSlice);
 
         // when
-        StudyListResponseDto response = studyService.findStudies(user, "키워드", null, null, page,
-            size);
+        StudyListResponseDto response = studyService.findStudies(user, "키워드", null, null, page, size);
 
         // then
         assertThat(response.studies()).hasSize(2);
         assertThat(response.studies().get(0))
-            .extracting(StudySimpleResponseDto::title, StudySimpleResponseDto::description)
-            .containsExactly("스터디1", "설명1");
+                .extracting(StudySimpleResponseDto::title, StudySimpleResponseDto::description)
+                .containsExactly("스터디1", "설명1");
         assertThat(response.studies().get(1))
-            .extracting(StudySimpleResponseDto::title, StudySimpleResponseDto::description)
-            .containsExactly("스터디2", "설명2");
+                .extracting(StudySimpleResponseDto::title, StudySimpleResponseDto::description)
+                .containsExactly("스터디2", "설명2");
         assertThat(response.page()).isEqualTo(0);
         assertThat(response.size()).isEqualTo(10);
         assertThat(response.has_next()).isFalse();
@@ -167,13 +159,12 @@ class StudyServiceImplTest {
         int requestedSize = MAX_PAGE_SIZE + 20;
 
         when(studyRepository.findStudiesByFilter(any(), any(), any(), any(), any(Pageable.class)))
-            .thenReturn(new SliceImpl<>(List.of(), PageRequest.of(0, MAX_PAGE_SIZE), false));
+                .thenReturn(new SliceImpl<>(List.of(), PageRequest.of(0, MAX_PAGE_SIZE), false));
 
         studyService.findStudies(null, null, null, null, requestedPage, requestedSize);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(studyRepository).findStudiesByFilter(any(), any(), any(), any(),
-            pageableCaptor.capture());
+        verify(studyRepository).findStudiesByFilter(any(), any(), any(), any(), pageableCaptor.capture());
         Pageable capturedPageable = pageableCaptor.getValue();
 
         assertThat(capturedPageable.getPageSize()).isEqualTo(MAX_PAGE_SIZE);
@@ -184,48 +175,45 @@ class StudyServiceImplTest {
     void 상세정보_조회_성공() {
         // given
         User testUser = User.builder()
-            .email("test@test.com")
-            .passwordHash("1234")
-            .nickname("tester")
-            .gender(Gender.MALE)
-            .region(Region.SEOUL)
-            .build();
+                .email("test@test.com")
+                .passwordHash("1234")
+                .nickname("tester")
+                .gender(Gender.MALE)
+                .region(Region.SEOUL)
+                .build();
 
         Study mockStudy = Study.builder()
-            .id(100L)
-            .fileKey("https://test.com/image.jpg")
-            .title("테스트 스터디")
-            .description("테스트 설명")
-            .detailDescription("상세 설명")
-            .leader(testUser)
-            .region(Region.SEOUL)
-            .studyTime("주말")
-            .maxMembers(5)
-            .build();
+                .id(100L)
+                .fileKey("https://test.com/image.jpg")
+                .title("테스트 스터디")
+                .description("테스트 설명")
+                .detailDescription("상세 설명")
+                .leader(testUser)
+                .region(Region.SEOUL)
+                .studyTime("주말")
+                .maxMembers(5)
+                .build();
 
         mockStudy.addInterests(List.of(Category.PROGRAMMING, Category.EMPLOYMENT));
         mockStudy.addConditions(List.of("코어타임 참여 필수", "성실한 분"));
 
-        when(studyRepository.findByIdWithLeader(mockStudy.getId())).thenReturn(
-            Optional.of(mockStudy));
+        when(studyRepository.findByIdWithLeader(mockStudy.getId())).thenReturn(Optional.of(mockStudy));
 
         // when
         StudyDetailResponseDto result = studyService.getStudyDetail(mockStudy.getId());
 
         // then
         assertAll(
-            () -> assertThat(result.file_key()).isEqualTo(mockStudy.getFileKey()),
-            () -> assertThat(result.title()).isEqualTo(mockStudy.getTitle()),
-            () -> assertThat(result.description()).isEqualTo(mockStudy.getDescription()),
-            () -> assertThat(result.detail_description()).isEqualTo(
-                mockStudy.getDetailDescription()),
-            () -> assertThat(result.region()).isEqualTo(mockStudy.getRegion()),
-            () -> assertThat(result.study_time()).isEqualTo(mockStudy.getStudyTime()),
-            () -> assertThat(result.max_members()).isEqualTo(mockStudy.getMaxMembers()),
+                () -> assertThat(result.file_key()).isEqualTo(mockStudy.getFileKey()),
+                () -> assertThat(result.title()).isEqualTo(mockStudy.getTitle()),
+                () -> assertThat(result.description()).isEqualTo(mockStudy.getDescription()),
+                () -> assertThat(result.detail_description()).isEqualTo(mockStudy.getDetailDescription()),
+                () -> assertThat(result.region()).isEqualTo(mockStudy.getRegion()),
+                () -> assertThat(result.study_time()).isEqualTo(mockStudy.getStudyTime()),
+                () -> assertThat(result.max_members()).isEqualTo(mockStudy.getMaxMembers()),
 
-            () -> assertThat(result.interests()).containsExactlyInAnyOrder(Category.PROGRAMMING,
-                Category.EMPLOYMENT),
-            () -> assertThat(result.conditions()).containsExactlyInAnyOrder("코어타임 참여 필수", "성실한 분")
+                () -> assertThat(result.interests()).containsExactlyInAnyOrder(Category.PROGRAMMING, Category.EMPLOYMENT),
+                () -> assertThat(result.conditions()).containsExactlyInAnyOrder("코어타임 참여 필수", "성실한 분")
         );
 
         verify(studyRepository, times(1)).findByIdWithLeader(mockStudy.getId());
@@ -237,8 +225,8 @@ class StudyServiceImplTest {
         when(studyRepository.findByIdWithLeader(invalidId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> studyService.getStudyDetail(invalidId))
-            .isInstanceOf(BusinessException.class)
-            .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
     }
 
 }
