@@ -2,6 +2,7 @@ package com.pado.domain.chat.controller;
 
 import com.pado.domain.chat.dto.request.ReactionRequestDto;
 import com.pado.domain.chat.dto.response.ChatMessageListResponseDto;
+import com.pado.domain.chat.dto.response.UnreadCountResponseDto;
 import com.pado.domain.chat.service.ChatService;
 import com.pado.domain.user.entity.User;
 import com.pado.global.auth.annotation.CurrentUser;
@@ -77,6 +78,16 @@ public class ChatController {
 
         chatService.deleteChatMessage(studyId, chatId, user);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "안읽은 채팅 메세지 수 조회", description = "안읽은 메세지 수를 조회합니다.")
+    @GetMapping("/{studyId}/chats/unread")
+    public ResponseEntity<UnreadCountResponseDto> getChatMessages(
+            @Parameter(description = "스터디 ID") @PathVariable Long studyId,
+            @Parameter(hidden = true) @CurrentUser User user) {
+
+        UnreadCountResponseDto response = chatService.getUnreadMessages(studyId, user);
+        return ResponseEntity.ok(response);
     }
 
 }

@@ -114,7 +114,7 @@ class ChatServiceTest {
             // given
             requestDto = new ChatMessageRequestDto("안녕하세요!");
             when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(chatMessage);
-            when(modalManager.getOpenModalUserIds(TEST_STUDY_ID)).thenReturn(new HashSet<>());
+            when(modalManager.getOpenSocketUserIds(TEST_STUDY_ID)).thenReturn(new HashSet<>());
             when(lastReadRepository.countUnreadMembers(anyLong(), anyLong())).thenReturn(0L);
             when(chatReactionRepository.findReactionCountsByMessageIdIn(List.of(TEST_MESSAGE_ID)))
                     .thenReturn(List.of(new ChatReactionCountDto(TEST_MESSAGE_ID, 0L, 0L)));
@@ -189,7 +189,7 @@ class ChatServiceTest {
             LastReadMessage lastRead2 = LastReadMessage.builder().studyMember(member2).lastReadMessageId(0L).build();
 
             when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(chatMessage);
-            when(modalManager.getOpenModalUserIds(TEST_STUDY_ID)).thenReturn(onlineUserIds);
+            when(modalManager.getOpenSocketUserIds(TEST_STUDY_ID)).thenReturn(onlineUserIds);
             when(studyMemberRepository.findByStudyIdAndUserIdIn(TEST_STUDY_ID, onlineUserIds))
                     .thenReturn(Arrays.asList(studyMember, member2));
             when(lastReadRepository.findByStudyMemberIn(anyList()))

@@ -26,4 +26,6 @@ public interface ChatService {
     void closeChatModal(Long studyId, User currentUser);
 
     void refreshModalState(Long studyId, User currentUser);
+
+    UnreadCountResponseDto getUnreadMessages(Long studyId, User user);
 }

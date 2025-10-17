@@ -13,10 +13,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,9 @@ public class QuizAsyncService {
     private final QuizTransactionService quizTransactionService;
     private final FileProcessingService fileProcessingService;
     private final Executor quizThreadPool;
+
+    private static final int SHORT_TEXT_THRESHOLD = 500;
+    private static final int MINIMUM_SUCCESSFUL_QUESTIONS = 4;
 
     public CompletableFuture<Void> processAndCallAiInBackground(Long quizId) {
         return CompletableFuture.runAsync(() -> {
@@ -47,13 +54,27 @@ public class QuizAsyncService {
                 throw new BusinessException(ErrorCode.FILE_PROCESSING_FAILED, "Extracted text is blank.");
             }
 
-            // AI 퀴즈 생성 요청 & 검증
-            AiQuizResponseDto aiQuizDto = geminiClient.generateQuiz(combinedText);
-            validateAiResponse(aiQuizDto, quizId);
+            // 문제 수 결정 & 힌트 생성
+            int questionCount = calculateQuestionCount(combinedText.length());
+            List<String> hints = buildHints(combinedText.length(), questionCount);
+            log.info("QuizId: {}. Preparing to generate {} questions.", quizId, questionCount);
+
+            // AI 퀴즈 생성
+            List<AiQuestionDto> successfulQuestions = generateQuestionsInParallel(combinedText, hints);
+            if (successfulQuestions.size() < MINIMUM_SUCCESSFUL_QUESTIONS) {
+                throw new BusinessException(ErrorCode.API_RESPONSE_INVALID, "AI failed to generate sufficient questions.");
+            }
+
+            // 퀴즈 제한 시간 생성 & AiQuizResponseDto로 변환
+            int totalRecommendedTime = calculateTotalTimeWithGuards(successfulQuestions);
+            AiQuizResponseDto finalQuizDto = new AiQuizResponseDto(totalRecommendedTime, successfulQuestions);
+
+            // AI 퀴즈 검증
+            validateAiResponse(finalQuizDto, quizId);
 
             // 생성된 퀴즈 저장
             try {
-                quizTransactionService.saveSuccessfulQuiz(quizId, aiQuizDto);
+                quizTransactionService.saveSuccessfulQuiz(quizId, finalQuizDto);
             } catch (BusinessException e) {
                 if (e.getErrorCode() == ErrorCode.QUIZ_NOT_FOUND) {
                     log.info("[Async Task] Quiz '{}' was deleted during generation. Task gracefully terminated.", quizId);
@@ -62,7 +83,11 @@ public class QuizAsyncService {
                 }
             }
 
-        }, quizThreadPool);
+        }, quizThreadPool).exceptionally(ex -> {
+            log.error("Async task for quizId {} failed.", quizId, ex);
+            quizTransactionService.updateQuizStatusToFailed(quizId);
+            return null;
+        });
     }
 
     private String getAndProcessTextForFiles(Set<File> files) {
@@ -74,6 +99,53 @@ public class QuizAsyncService {
                     return fileProcessingService.processFileAndUpdateState(file.getId());
                 })
                 .collect(Collectors.joining("\n\n---\n\n"));
+    }
+
+    private int calculateQuestionCount(int textLength) {
+        int count = textLength / 300;
+        return Math.max(5, Math.min(10, count));
+    }
+
+    private List<String> buildHints(int textLength, int questionCount) {
+        if (textLength < SHORT_TEXT_THRESHOLD) {
+            return Collections.nCopies(questionCount, null);
+        }
+
+        return IntStream.range(0, questionCount)
+                .mapToObj(i -> String.format("이 문서의 %d/%d 부분에 집중해서 문제를 만들어 줘.", i + 1, questionCount))
+                .toList();
+    }
+
+    private List<AiQuestionDto> generateQuestionsInParallel(String text, List<String> hints) {
+        // hint 리스트를 순회하면서 AI 문제 생성 요청
+        List<CompletableFuture<AiQuestionDto>> futures = hints.stream()
+                .map(hint -> geminiClient.generateSingleQuestion(text, hint, quizThreadPool)
+                    .exceptionally(ex -> {
+                                log.warn("Single-question generation failed; skipping this item.", ex);
+                                return null;
+                    }))
+                .toList();
+
+        // 모든 작업이 끝날 때까지 기다림 -> 성공한 결과만 모아서 반환
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> futures.stream()
+                        .map(CompletableFuture::join)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList()))
+                .join();
+    }
+
+    private int calculateTotalTimeWithGuards(List<AiQuestionDto> questions) {
+        int totalTime = 0;
+        for (AiQuestionDto question : questions) {
+            int baseTime = "MULTIPLE_CHOICE".equals(question.questionType()) ? 40 : 20;
+            totalTime += baseTime;
+        }
+
+        totalTime = Math.max(totalTime, 120);
+        totalTime = Math.min(totalTime, 600);
+
+        return totalTime;
     }
 
     private void validateAiResponse(AiQuizResponseDto aiQuizDto, Long quizId) {
