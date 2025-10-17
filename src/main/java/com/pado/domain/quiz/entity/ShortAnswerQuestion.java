@@ -1,14 +1,8 @@
 package com.pado.domain.quiz.entity;
 
-import com.pado.domain.quiz.dto.response.AnswerResultDto;
-import jakarta.persistence.Column;
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
-import org.springframework.util.StringUtils;
-
-import java.util.Collections;
 
 @Entity
 @Getter
@@ -22,44 +16,8 @@ public class ShortAnswerQuestion extends QuizQuestion {
     }
 
     @Builder
-    public ShortAnswerQuestion(Quiz quiz, String questionText, String explanation, String answer) {
-        super(quiz, questionText, explanation);
+    public ShortAnswerQuestion(Quiz quiz, String questionText, String answer) {
+        super(quiz, questionText);
         this.answer = answer;
-    }
-
-    @Override
-    public int calculateScore(String userAnswer) {
-        if (!StringUtils.hasText(userAnswer)) {
-            return 0;
-        }
-        boolean correct = normalize(getAnswer()).equals(normalize(userAnswer));
-        return correct ? 1 : 0;
-    }
-
-    @Override
-    public AnswerResultDto toAnswerResultDto(AnswerSubmission userAnswer) {
-        String userAnswerText = userAnswer != null
-                ? userAnswer.getSubmittedAnswer()
-                : "";
-
-        boolean isCorrect = userAnswer != null
-                && userAnswer.isCorrect();
-
-        return new AnswerResultDto(
-                this.getId(),
-                QuestionType.SHORT_ANSWER,
-                this.getQuestionText(),
-                isCorrect,
-                userAnswerText,
-                this.getAnswer(),
-                this.getExplanation(),
-                Collections.emptyList()
-        );
-    }
-
-    private String normalize(String input) {
-        return input == null ? "" : input.trim()
-                .replaceAll("\\s+", " ")
-                .toLowerCase();
     }
 }

@@ -1,7 +1,6 @@
 package com.pado.domain.schedule.controller;
 
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
-import com.pado.domain.schedule.dto.response.PastScheduleResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleDetailResponseDto;
 import com.pado.domain.schedule.dto.response.ScheduleResponseDto;
@@ -26,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @Tag(name = "08. Schedule", description = "스터디 일정 관련 API")
@@ -51,7 +51,7 @@ public class ScheduleController {
     }
 
     @Api403ForbiddenStudyMemberOnlyError
-    @Api404StudyNotFoundError
+    @Api404ScheduleNotFoundError
     @Operation(summary = "개별 일정 세부 조회", description = "지정된 ID를 가진 일정의 상세 정보를 조회합니다. (스터디 멤버만 가능)")
     @ApiResponse(responseCode = "200", description = "일정 상세 정보 조회 성공", content = @Content(schema = @Schema(implementation = ScheduleDetailResponseDto.class)))
     @Parameters({
@@ -120,17 +120,5 @@ public class ScheduleController {
     ) {
         scheduleService.deleteSchedule(scheduleId);
         return ResponseEntity.noContent().build();
-    }
-
-    @Api403ForbiddenStudyMemberOnlyError
-    @Api404StudyNotFoundError
-    @Operation(summary = "회고 작성 가능한 스터디 일정 조회", description = "회고 작성/수정 시 선택 가능한, 이미 지난 스터디 일정 목록을 조회합니다. (스터디 멤버만 가능)")
-    @ApiResponse(responseCode = "200", description = "조회 성공")
-    @GetMapping("/studies/{study_id}/schedules/past")
-    public ResponseEntity<List<PastScheduleResponseDto>> getPastSchedulesForReflection(
-        @PathVariable("study_id") Long studyId,
-        @Parameter(hidden = true) @CurrentUser User user
-    ) {
-        return ResponseEntity.ok(scheduleService.findPastSchedulesForReflection(studyId, user));
     }
 }

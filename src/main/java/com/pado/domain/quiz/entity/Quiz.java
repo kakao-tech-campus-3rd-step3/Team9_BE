@@ -7,16 +7,16 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.BatchSize;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.*;
 
-@Getter
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "quiz")
 public class Quiz extends AuditingEntity {
 
@@ -48,46 +48,33 @@ public class Quiz extends AuditingEntity {
             joinColumns = @JoinColumn(name = "quiz_id"),
             inverseJoinColumns = @JoinColumn(name = "file_id")
     )
-    @Builder.Default
     private Set<File> sourceFiles = new HashSet<>();
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @BatchSize(size = 100)
     private List<QuizQuestion> questions = new ArrayList<>();
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<QuizSubmission> submissions = new ArrayList<>();
+
+    @Builder
+    public Quiz(Study study, User createdBy, String title, Integer timeLimitSeconds, QuizStatus status) {
+        this.study = study;
+        this.createdBy = createdBy;
+        this.title = title;
+        this.timeLimitSeconds = timeLimitSeconds;
+        this.status = status;
+    }
 
     public void updateStatus(QuizStatus status) {
         this.status = status;
     }
 
+    public void setSourceFiles(Set<File> sourceFiles) {
+        this.sourceFiles = sourceFiles;
+    }
+
     public void setTimeLimitSeconds(Integer timeLimitSeconds) {
         this.timeLimitSeconds = timeLimitSeconds;
-    }
-
-    public QuizSubmission start(User user) {
-        return this.submissions.stream()
-                .filter(submission -> submission.getUser().getId().equals(user.getId()))
-                .findFirst()
-                .map(submission -> {
-                    submission.validateIsNotCompleted();
-                    return submission;
-                })
-                .orElseGet(() -> {
-                    QuizSubmission newSubmission = QuizSubmission.builder()
-                            .user(user)
-                            .build();
-                    this.addSubmission(newSubmission);
-                    return newSubmission;
-                });
-    }
-
-    private void addSubmission(QuizSubmission submission) {
-        this.submissions.add(submission);
-        submission.setQuiz(this);
     }
 
     public void addQuestions(Collection<QuizQuestion> questions) {

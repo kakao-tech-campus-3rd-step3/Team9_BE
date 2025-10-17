@@ -101,7 +101,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private Long extractStudyIdFromDestination(String destination) {
-        Pattern pattern = Pattern.compile("/topic/studies/(\\d+)/.*");
+        Pattern pattern = Pattern.compile("/topic/studies/(\\d+)/chats");
         Matcher matcher = pattern.matcher(destination);
         if (matcher.find()) {
             return Long.parseLong(matcher.group(1));

@@ -1,5 +1,7 @@
 package com.pado.domain.study.service;
 
+import com.pado.domain.quiz.entity.QuizPointLog;
+import com.pado.domain.quiz.entity.QuizSubmission;
 import com.pado.domain.quiz.repository.QuizPointLogRepository;
 import com.pado.domain.study.dto.response.MyRankResponseDto;
 import com.pado.domain.study.dto.response.RankerResponseDto;
@@ -74,6 +76,38 @@ public class StudyRankingServiceImpl implements StudyRankingService{
             lastScore = currentScore;
         }
         return ranking;
+    }
+
+    @Transactional
+    public void addPointsFromQuiz(StudyMember member, QuizSubmission submission) {
+        int score = submission.getScore();
+        if (score <= 0) {
+            return;
+        }
+
+        member.addRankPoints(score);
+
+        QuizPointLog log = QuizPointLog.builder()
+                .studyMember(member)
+                .quizSubmission(submission)
+                .pointsAwarded(score)
+                .build();
+
+        quizPointLogRepository.save(log);
+    }
+
+    @Transactional
+    public void revokePointsForQuiz(Long quizId) {
+        List<QuizPointLog> logsToRevoke = quizPointLogRepository.findActiveLogsForQuiz(quizId);
+
+        for (QuizPointLog log : logsToRevoke) {
+            StudyMember member = log.getStudyMember();
+            int pointsAwarded = log.getPointsAwarded();
+
+            member.subtractRankPoints(pointsAwarded);
+
+            log.revoke();
+        }
     }
 
     private void validateStudyExists(Long studyId) {

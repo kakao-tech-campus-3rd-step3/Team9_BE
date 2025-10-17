@@ -1,9 +1,6 @@
 package com.pado.domain.reflection.service;
 
-import com.pado.domain.reflection.dto.request.ReflectionCreateRequestDto;
-import com.pado.domain.reflection.dto.response.ReflectionListResponseDto;
-import com.pado.domain.reflection.dto.response.ReflectionResponseDto;
-import com.pado.domain.reflection.dto.response.ReflectionSimpleResponseDto;
+import com.pado.domain.reflection.dto.*;
 import com.pado.domain.reflection.entity.Reflection;
 import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.study.entity.Study;
@@ -16,11 +13,8 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,10 +34,11 @@ public class ReflectionServiceImpl implements ReflectionService {
         StudyMember member = checkStudyMember(studyId, user);
         Study study = studyRepository.findById(studyId)
             .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_NOT_FOUND));
+
         Schedule schedule = request.scheduleId() != null ?
             scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
+
         Reflection reflection = Reflection.builder()
-            .title(request.title())
             .study(study)
             .studyMember(member)
             .schedule(schedule)
@@ -60,56 +55,34 @@ public class ReflectionServiceImpl implements ReflectionService {
 
     @Override
     @Transactional(readOnly = true)
-    public ReflectionListResponseDto getReflections(Long studyId, User user, String author,
-        Pageable pageable) {
+    public List<ReflectionResponseDto> getReflections(Long studyId, User user) {
         checkStudyMember(studyId, user);
-
-        Long filterByUserId = null;
-        if ("me".equalsIgnoreCase(author)) {
-            filterByUserId = user.getId();
-        }
-
-        Page<Reflection> reflectionPage = reflectionRepository.findReflectionsByStudy(studyId,
-            filterByUserId, pageable);
-
-        List<ReflectionSimpleResponseDto> dtoList = reflectionPage.getContent().stream()
-            .map(this::toSimpleDto)
+        return reflectionRepository.findByStudyId(studyId).stream()
+            .map(this::toDto)
             .collect(Collectors.toList());
-
-        return new ReflectionListResponseDto(dtoList, reflectionPage.getNumber(),
-            reflectionPage.getSize(), reflectionPage.hasNext());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ReflectionResponseDto getReflection(Long studyId, Long reflectionId, User user) {
-        checkStudyMember(studyId, user);
+    public ReflectionResponseDto getReflection(Long reflectionId, User user) {
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
-
-        if (!reflection.getStudy().getId().equals(studyId)) {
-            throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
-        }
+        checkStudyMember(reflection.getStudy().getId(), user);
         return toDto(reflection);
     }
 
     @Override
     @Transactional
-    public ReflectionResponseDto updateReflection(Long studyId, Long reflectionId, User user,
+    public ReflectionResponseDto updateReflection(Long reflectionId, User user,
         ReflectionCreateRequestDto request) {
-        checkStudyMember(studyId, user);
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
-
-        if (!reflection.getStudy().getId().equals(studyId)) {
-            throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
-        }
         checkReflectionOwner(reflection, user);
 
         Schedule schedule = request.scheduleId() != null ?
             scheduleRepository.findById(request.scheduleId()).orElse(null) : null;
+
         reflection.update(
-            request.title(),
             schedule,
             request.satisfactionScore(),
             request.understandingScore(),
@@ -122,14 +95,9 @@ public class ReflectionServiceImpl implements ReflectionService {
 
     @Override
     @Transactional
-    public void deleteReflection(Long studyId, Long reflectionId, User user) {
-        checkStudyMember(studyId, user);
+    public void deleteReflection(Long reflectionId, User user) {
         Reflection reflection = reflectionRepository.findById(reflectionId)
             .orElseThrow(() -> new BusinessException(ErrorCode.REFLECTION_NOT_FOUND));
-
-        if (!reflection.getStudy().getId().equals(studyId)) {
-            throw new BusinessException(ErrorCode.REFLECTION_NOT_FOUND);
-        }
         checkReflectionOwner(reflection, user);
         reflectionRepository.deleteById(reflectionId);
     }
@@ -148,7 +116,6 @@ public class ReflectionServiceImpl implements ReflectionService {
     private ReflectionResponseDto toDto(Reflection r) {
         return new ReflectionResponseDto(
             r.getId(),
-            r.getTitle(),
             r.getStudy().getId(),
             r.getStudyMember().getId(),
             r.getSchedule() != null ? r.getSchedule().getId() : null,
@@ -160,15 +127,5 @@ public class ReflectionServiceImpl implements ReflectionService {
             r.getCreatedAt(),
             r.getUpdatedAt()
         );
-    }
-
-    private ReflectionSimpleResponseDto toSimpleDto(Reflection r) {
-        return ReflectionSimpleResponseDto.builder()
-            .reflectionId(r.getId())
-            .title(r.getTitle())
-            .authorName(r.getStudyMember().getUser().getNickname())
-            .scheduleTitle(r.getSchedule() != null ? r.getSchedule().getTitle() : null)
-            .updatedAt(r.getUpdatedAt())
-            .build();
     }
 }

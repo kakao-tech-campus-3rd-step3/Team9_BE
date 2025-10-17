@@ -4,37 +4,25 @@ import com.pado.domain.quiz.dto.projection.QQuestionCountDto;
 import com.pado.domain.quiz.dto.projection.QQuizInfoProjection;
 import com.pado.domain.quiz.dto.projection.QuestionCountDto;
 import com.pado.domain.quiz.dto.projection.QuizInfoProjection;
-import com.pado.domain.quiz.entity.*;
+import com.pado.domain.quiz.entity.MultipleChoiceQuestion;
+import com.pado.domain.quiz.entity.Quiz;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.pado.domain.quiz.entity.QMultipleChoiceQuestion.multipleChoiceQuestion;
 import static com.pado.domain.quiz.entity.QQuiz.quiz;
 import static com.pado.domain.quiz.entity.QQuizQuestion.quizQuestion;
-import static com.pado.domain.quiz.entity.QQuizSubmission.quizSubmission;
 import static com.pado.domain.user.entity.QUser.user;
 
 @RequiredArgsConstructor
 public class QuizRepositoryImpl implements QuizRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
-
-    @Override
-    public Optional<Quiz> findWithSourceFilesById(Long id) {
-        Quiz result = queryFactory
-                .selectFrom(quiz)
-                .join(quiz.sourceFiles).fetchJoin()
-                .where(quiz.id.eq(id))
-                .fetchOne();
-
-        return Optional.ofNullable(result);
-    }
 
     @Override
     public List<QuizInfoProjection> findByStudyIdWithCursor(Long studyId, Long cursor, int pageSize) {
@@ -80,21 +68,35 @@ public class QuizRepositoryImpl implements QuizRepositoryCustom {
     }
 
     @Override
-    public Optional<Quiz> findForStartQuizById(Long quizId) {
-        return Optional.ofNullable(
-                queryFactory
-                        .selectFrom(quiz)
-                        .leftJoin(quiz.submissions, quizSubmission).fetchJoin()
-                        .leftJoin(quizSubmission.user, user).fetchJoin()
-                        .where(quiz.id.eq(quizId))
-                        .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                        .fetchOne()
-        );
+    public Optional<Quiz> findDetailById(Long quizId) {
+        Quiz result = queryFactory
+                .selectFrom(quiz)
+                .leftJoin(quiz.questions, quizQuestion).fetchJoin()
+                .where(quiz.id.eq(quizId))
+                .fetchOne();
+
+        if (result == null) {
+            return Optional.empty();
+        }
+
+        List<MultipleChoiceQuestion> mcqs = result.getQuestions().stream()
+                .filter(MultipleChoiceQuestion.class::isInstance)
+                .map(MultipleChoiceQuestion.class::cast)
+                .toList();
+
+        if (!mcqs.isEmpty()) {
+            queryFactory.selectFrom(multipleChoiceQuestion)
+                    .join(multipleChoiceQuestion.choices).fetchJoin()
+                    .where(multipleChoiceQuestion.in(mcqs))
+                    .fetch();
+        }
+
+        return Optional.of(result);
     }
 
     private BooleanExpression cursorIdLessThan(Long cursorId) {
         return cursorId != null
-                ? quiz.id.lt(cursorId)
-                : null;
+                        ? quiz.id.lt(cursorId)
+                        : null;
     }
 }

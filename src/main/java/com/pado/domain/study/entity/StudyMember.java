@@ -17,15 +17,19 @@ public class StudyMember extends AuditingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "study_id", nullable = false)
     private Study study;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private StudyMemberRole role;
+
     @Column(length = 500)
     private String message;
 
@@ -33,8 +37,7 @@ public class StudyMember extends AuditingEntity {
     private Integer rankPoint;
 
     @Builder
-    public StudyMember(Study study, User user, StudyMemberRole role, String message,
-        Integer rankPoint) {
+    public StudyMember(Study study, User user, StudyMemberRole role, String message, Integer rankPoint) {
         this.study = study;
         this.user = user;
         this.role = role;
@@ -52,9 +55,5 @@ public class StudyMember extends AuditingEntity {
         if (pointsToSubtract > 0) {
             this.rankPoint = Math.max(0, this.rankPoint - pointsToSubtract);
         }
-    }
-
-    public void updateRole(StudyMemberRole role) {
-        this.role = role;
     }
 }

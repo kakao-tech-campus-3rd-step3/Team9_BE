@@ -2,13 +2,10 @@ package com.pado.domain.progress.service;
 
 import com.pado.domain.attendance.repository.AttendanceRepository;
 import com.pado.domain.progress.dto.ProgressChapterRequestDto;
-import com.pado.domain.progress.dto.ProgressMemberStatusDto;
 import com.pado.domain.progress.dto.ProgressRoadMapResponseDto;
 import com.pado.domain.progress.dto.ProgressStatusResponseDto;
 import com.pado.domain.progress.entity.Chapter;
 import com.pado.domain.progress.repository.ChapterRepository;
-import com.pado.domain.quiz.repository.QuizSubmissionRepository;
-import com.pado.domain.reflection.repository.ReflectionRepository;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.entity.Study;
@@ -31,7 +28,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -45,8 +41,6 @@ class ProgressServiceImplTest {
     @Mock StudyMemberRepository studyMemberRepository;
     @Mock AttendanceRepository attendanceRepository;
     @Mock ScheduleRepository scheduleRepository;
-    @Mock QuizSubmissionRepository quizSubmissionRepository;
-    @Mock ReflectionRepository reflectionRepository;
 
     @InjectMocks ProgressServiceImpl service;
 
@@ -313,7 +307,7 @@ class ProgressServiceImplTest {
     // ---------- getStudyStatus ----------
 
     @Test
-    void getStudyStatus_멤버권한일때_개인진척도리스트반환_모든지표검증() {
+    void getStudyStatus_멤버권한일때_개인진척도리스트반환() {
         // given
         User u1 = mock(User.class); when(u1.getId()).thenReturn(1L); when(u1.getNickname()).thenReturn("철수");
         User u2 = mock(User.class); when(u2.getId()).thenReturn(2L); when(u2.getNickname()).thenReturn("영희");
@@ -330,14 +324,8 @@ class ProgressServiceImplTest {
         given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(eq(studyId), eq(userMember.getId()), anyCollection()))
                 .willReturn(true);
         given(studyMemberRepository.findByStudyIdFetchUser(studyId)).willReturn(List.of(sm1, sm2));
-
-        // 핵심: 모든 맵 스텁
-        given(attendanceRepository.countMapByStudy(studyId)).willReturn(Map.of(1L, 3L));  // 철수=3, 영희=0
-        given(quizSubmissionRepository.countMapByStudy(studyId)).willReturn(Map.of(1L, 2L, 2L, 1L)); // 철수=2, 영희=1
-        given(reflectionRepository.countMapByStudy(studyId)).willReturn(Collections.emptyMap()); // 둘 다 0
-
-        // findByStudyId(Reflection) 호출된다면(현재 미사용) 안전하게 빈 컬렉션 리턴
-        given(reflectionRepository.findByStudyId(studyId)).willReturn(Collections.emptyList());
+        given(attendanceRepository.countMapByStudy(studyId)).willReturn(Map.of(1L, 3L)); // u1만 3회
+        given(scheduleRepository.countAllByStudyId(studyId)).willReturn(5);
 
         // when
         ProgressStatusResponseDto dto = service.getStudyStatus(studyId, userMember);
@@ -345,24 +333,10 @@ class ProgressServiceImplTest {
         // then
         assertNotNull(dto);
         assertEquals(2, dto.progressMemberStatusDto().size());
-
-        // 순서 의존 제거: 닉네임으로 매핑
-        Map<String, ProgressMemberStatusDto> byName = dto.progressMemberStatusDto().stream()
-                .collect(Collectors.toMap(ProgressMemberStatusDto::nickname, d -> d));
-
-        assertEquals(StudyMemberRole.MEMBER, byName.get("철수").role());
-        assertEquals(StudyMemberRole.LEADER, byName.get("영희").role());
-
-        assertEquals(3, byName.get("철수").attendance_count());
-        assertEquals(0, byName.get("영희").attendance_count());
-
-        assertEquals(2, byName.get("철수").quiz_count());
-        assertEquals(1, byName.get("영희").quiz_count());
-
-        assertEquals(0, byName.get("철수").reflection_count());
-        assertEquals(0, byName.get("영희").reflection_count());
+        // 철수 = 3, 영희 = 기본 0
+        assertEquals(3, dto.progressMemberStatusDto().get(0).attendance_count());
+        assertEquals(0, dto.progressMemberStatusDto().get(1).attendance_count());
     }
-
 
     @Test
     void getStudyStatus_권한없음_예외_FORBIDDEN_STUDY_MEMBER_ONLY() {

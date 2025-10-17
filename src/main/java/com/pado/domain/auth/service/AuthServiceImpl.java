@@ -17,8 +17,8 @@ import com.pado.global.auth.jwt.JwtProvider;
 import com.pado.global.config.AuthProps;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
-import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -65,9 +65,9 @@ public class AuthServiceImpl implements AuthService{
     public TokenWithRefreshResponseDto login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.email())
             .orElseThrow(
-                () -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER));
+                () -> new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "Invalid credentials"));
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER);
+            throw new BusinessException(ErrorCode.UNAUTHENTICATED_USER, "Invalid credentials");
         }
 
         String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail());
@@ -97,31 +97,6 @@ public class AuthServiceImpl implements AuthService{
         }
 
         return new TokenWithRefreshResponseDto(accessToken, refreshToken);
-    }
-
-    @Override
-    public void logout(String refreshToken) {
-        Long userId;
-        try {
-            userId = jwtProvider.getUserId(refreshToken);
-        } catch (JwtException e) {
-            log.warn("Invalid refresh token on logout. reason={}", e.getMessage());
-            return;
-        }
-
-        try{
-            redisRefreshTokenStore.deleteToken(userId);
-        } catch (DataAccessException e){
-            log.error(
-                    "Failed to delete refresh token to Redis (userId={}, host/port check needed). reason={}, causeClass={}",
-                    userId,
-                    e.getMessage(),
-                    (e.getCause() != null ? e.getCause().getClass().getName() : "null"),
-                    e
-            );
-            throw new BusinessException(ErrorCode.REDIS_UNAVAILABLE,
-                    "Redis unavailable while deleting refresh token");
-        }
     }
 
     @Override
@@ -170,7 +145,7 @@ public class AuthServiceImpl implements AuthService{
     }
 
     @Override
-    public EmailVerificationResponseDto emailVerify(EmailVerifyRequestDto request) {
+    public EmailVerificationResponseDto emailVerify(@Valid EmailVerifyRequestDto request) {
         String code = redisEmailVerificationStore.getCode(request.email())
             .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
         if (!code.equals(request.verification_code())) {

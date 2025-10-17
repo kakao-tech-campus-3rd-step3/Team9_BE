@@ -164,23 +164,12 @@ jobs:
             NAME="pado-pr-${{ github.run_id }}"
             
             echo "Pull $IMAGE and run on localhost:${PORT} ..."
-
-            # FIX 1: 포트 충돌 방지를 위해 기존 컨테이너를 먼저 삭제
-            OLD_CONTAINER_ID=$(sudo docker ps -q --filter "publish=${PORT}")
-            if [ -n "$OLD_CONTAINER_ID" ]; then
-              echo "Found and stopping stale container using port ${PORT}: ${OLD_CONTAINER_ID}"
-              sudo docker rm -f "$OLD_CONTAINER_ID"
-            fi
-            
             sudo docker pull "$IMAGE"
             sudo docker rm -f "$NAME" 2>/dev/null || true
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
+            sudo docker network connect pado-net redis || true
             
-            # FIX 2: redis 컨테이너를 직접 조회하는 안정적인 방식으로 네트워크 연결을 확인
-            if ! sudo docker inspect redis -f '{{json .NetworkSettings.Networks}}' | grep -q "pado-net"; then
-              sudo docker network connect pado-net redis
-            fi
-            
+            # Create PR env file on remote (prevent expansion with quoted heredoc)
             cat > /tmp/pado-pr.env <<'EOF'
             SPRING_PROFILES_ACTIVE=prod
             DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -219,20 +208,17 @@ jobs:
               sleep 5
             done
             
-            # FIX 3: 실패 시 상세한 디버깅 로그를 출력하도록 개선
             if [ "${OK:-false}" != true ]; then
-              echo "--- Health check failed. Displaying debug information. ---"
-              echo "--- Health endpoint response: ---"
-              curl -v "$HEALTH" || echo "curl command failed"
+              echo "--- Health response ---"
+              curl -s "$HEALTH" || true
               echo
-              echo "--- Application container logs: ---"
-              sudo docker logs "$NAME"
+              echo "--- Logs ---"
+              sudo docker logs "$NAME" || true
               sudo docker rm -f "$NAME" || true
               sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
               exit 1
             fi
             
-            # 성공 시 정리
             sudo docker rm -f "$NAME" || true
             sudo shred -u /tmp/pado-pr.env || sudo rm -f /tmp/pado-pr.env || true
             echo "PR EC2 smoke passed."
@@ -309,10 +295,7 @@ jobs:
               sudo docker rm -f "$NEW_NAME"
             fi
             sudo docker network inspect pado-net >/dev/null 2>&1 || sudo docker network create pado-net
-            
-            if ! sudo docker inspect redis -f '{{json .NetworkSettings.Networks}}' | grep -q "pado-net"; then
-              sudo docker network connect pado-net redis
-            fi
+            sudo docker network connect pado-net redis || true
 
             cat > /tmp/pado.env <<'EOF'
             SPRING_PROFILES_ACTIVE=prod
@@ -368,12 +351,11 @@ jobs:
               sudo docker image prune -f
               echo "Deployment complete."
             else
-              echo "--- Health check failed. Displaying debug information. ---"
-              echo "--- Health endpoint response: ---"
-              curl -v "$HEALTH_CHECK_URL" || echo "curl command failed"
+              echo "--- Health endpoint response ---"
+              curl -s "$HEALTH_CHECK_URL" || true
               echo
-              echo "--- Container logs ($NEW_NAME): ---"
-              sudo docker logs "$NEW_NAME"
+              echo "--- Container logs ($NEW_NAME) ---"
+              sudo docker logs "$NEW_NAME" || true
               sudo docker rm -f "$NEW_NAME" || true
               sudo shred -u /tmp/pado.env || sudo rm -f /tmp/pado.env || true
               exit 1

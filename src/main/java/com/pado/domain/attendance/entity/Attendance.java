@@ -37,17 +37,13 @@ public class Attendance {
     @Column(name = "check_in_time")
     private LocalDateTime checkInTime;
 
-    public static Attendance createCheckIn(Schedule schedule, boolean status, User user) {
+    public static Attendance createCheckIn(Schedule schedule, User user) {
         return Attendance.builder()
                 .schedule(schedule)
                 .user(user)
-                .status(status)
+                .status(true)
                 .checkInTime(LocalDateTime.now())
                 .build();
-    }
-
-    public void changestatus(boolean status){
-        this.status = status;
     }
 }
 
