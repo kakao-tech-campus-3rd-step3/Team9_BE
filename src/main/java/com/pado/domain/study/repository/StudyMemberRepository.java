@@ -11,10 +11,19 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> {
 
     Optional<StudyMember> findByStudyAndUser(Study study, User user);
+
+    @Query("""
+            select sm 
+            from StudyMember sm 
+            join fetch sm.user 
+            where sm.study.id = :studyId and sm.user.id IN :userIds
+        """)
+    List<StudyMember> findByStudyIdAndUserIdIn(@Param("studyId") Long studyId, @Param("userIds") Set<Long> userIds);
 
     int countByStudyId(long studyId);
 

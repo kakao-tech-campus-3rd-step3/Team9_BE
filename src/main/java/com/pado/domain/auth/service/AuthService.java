@@ -28,4 +28,6 @@ public interface AuthService {
 
     //accesstoken 재발급
     TokenResponseDto renewAccessToken(String refreshToken);
+
+    void logout(String refreshToken);
 }

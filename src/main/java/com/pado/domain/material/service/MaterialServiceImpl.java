@@ -7,6 +7,7 @@ import com.pado.domain.material.entity.File;
 import com.pado.domain.material.entity.Material;
 import com.pado.domain.material.entity.MaterialCategory;
 import com.pado.domain.material.event.MaterialDeletedEvent;
+import com.pado.domain.material.event.NoticeCreatedEvent;
 import com.pado.domain.material.repository.FileRepository;
 import com.pado.domain.material.repository.MaterialRepository;
 import com.pado.domain.study.entity.Study;
@@ -19,9 +20,7 @@ import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +37,6 @@ public class MaterialServiceImpl implements MaterialService {
     private final StudyMemberRepository studyMemberRepository;
     private final StudyRepository studyRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserRepository userRepository;
 
     private static final int RECENT_MATERIAL_COUNT = 2;
 
@@ -66,6 +64,16 @@ public class MaterialServiceImpl implements MaterialService {
             fileRepository.saveAll(fileEntities);
         }
 
+        // 공지 생성 시 채팅으로 알림을 보내기 위해 이벤트 발생
+        if (material.getMaterialCategory() == MaterialCategory.NOTICE) {
+            eventPublisher.publishEvent(
+                    new NoticeCreatedEvent(
+                            studyId,
+                            savedMaterial.getId(),
+                            savedMaterial.getTitle()
+                    )
+            );
+        }
         return convertToDetailResponseDto(savedMaterial);
     }
 

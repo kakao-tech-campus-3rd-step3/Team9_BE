@@ -57,12 +57,19 @@ public enum ErrorCode {
     PENDING_SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "PENDING_SCHEDULE_NOT_FOUND",
         "승인 대기 중인 일정을 찾을 수 없습니다."),
     INVALID_STATE_CHANGE(HttpStatus.CONFLICT, "INVALID_STATE_CHANGE", "상태 변경이 유효하지 않습니다."),
-    ALREADY_CHECKED_IN(HttpStatus.CONFLICT, "ALREADY_CHECKED_IN", "이미 출석 체크되었습니다."),
     ALREADY_MEMBER(HttpStatus.CONFLICT, "ALREADY_MEMBER", "이미 스터디의 멤버입니다."),
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 스터디에 참여 신청했습니다."),
     STUDY_NOT_RECRUITING(HttpStatus.BAD_REQUEST, "STUDY_NOT_RECRUITING", "모집 중인 스터디가 아닙니다."),
     STUDY_FULL(HttpStatus.BAD_REQUEST, "STUDY_FULL", "스터디 정원이 가득 찼습니다."),
-    STUDY_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_APPLICATION_NOT_FOUND", "승인 요청중인 유저를 찾을 수 없습니다."),
+    STUDY_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDY_APPLICATION_NOT_FOUND",
+        "승인 요청중인 유저를 찾을 수 없습니다."),
+    CANNOT_KICK_LEADER(HttpStatus.BAD_REQUEST, "CANNOT_KICK_LEADER",
+        "스터디 리더는 탈퇴시킬 수 없습니다. 먼저 리더를 위임해야 합니다."),
+    CANNOT_LEAVE_AS_LEADER(HttpStatus.BAD_REQUEST, "CANNOT_LEAVE_AS_LEADER",
+        "스터디 리더는 탈퇴할 수 없습니다. 먼저 다른 멤버에게 리더를 위임해야 합니다."),
+    INVALID_LEADER_DELEGATION_TARGET(HttpStatus.BAD_REQUEST, "INVALID_LEADER_DELEGATION_TARGET",
+        "유효하지 않은 리더 위임 대상입니다."),
+
 
     // Material Domain
     MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "MATERIAL_NOT_FOUND", "자료를 찾을 수 없습니다."),
@@ -86,14 +93,23 @@ public enum ErrorCode {
 
     // QUIZ
     QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "QUIZ_NOT_FOUND", "퀴즈를 찾을 수 없습니다."),
-    FILE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_PROCESSING_FAILED", "파일 처리 중 오류가 발생했습니다."),
-    API_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "API_RESPONSE_INVALID", "Gemini AI API가 유효하지 않은 결과를 반환하였습니다."),
-    UNSUPPORTED_QUESTION_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_QUESTION_TYPE", "지원하지 않는 문제 형식입니다."),
+    QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "QUESTION_NOT_FOUND", "문제를 찾을 수 없습니다."),
+    INVALID_ANSWER_SUBMISSION(HttpStatus.BAD_REQUEST, "INVALID_ANSWER_SUBMISSION", "잘못된 답안 제출입니다."),
+    FILE_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_PROCESSING_FAILED",
+        "파일 처리 중 오류가 발생했습니다."),
+    API_RESPONSE_INVALID(HttpStatus.INTERNAL_SERVER_ERROR, "API_RESPONSE_INVALID",
+        "Gemini AI API가 유효하지 않은 결과를 반환하였습니다."),
+    UNSUPPORTED_QUESTION_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_QUESTION_TYPE",
+        "지원하지 않는 문제 형식입니다."),
     QUIZ_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "QUIZ_NOT_ACTIVE", "퀴즈 상태가 Active가 아닙니다."),
     QUIZ_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_COMPLETED", "이미 완료된 퀴즈입니다."),
     SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", "제출 정보를 찾을 수 없습니다."),
     FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "FORBIDDEN_ACCESS", "권한이 없는 사용자입니다."),
+    QUIZ_NOT_YET_COMPLETED(HttpStatus.BAD_REQUEST, "QUIZ_NOT_YET_COMPLETED", "아직 완료되지 않은 퀴즈입니다."),
     QUIZ_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "QUIZ_ALREADY_PROCESSED", "퀴즈가 이미 처리되었습니다."),
+
+    // 동시성
+    CONCURRENT_REQUEST_CONFLICT(HttpStatus.CONFLICT, "CONCURRENT_REQUEST_CONFLICT","다른 요청과 충돌이 발생했습니다. 잠시 후 다시 시도해주세요."),
 
     //Progress Domain
     CHAPTER_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAPTER_NOT_FOUND", "로드맵 차시를 찾을 수 없습니다."),
@@ -105,6 +121,13 @@ public enum ErrorCode {
     INVALID_SUBSCRIBE_PATH(HttpStatus.BAD_REQUEST, "INVALID_SUBSCRIBE_PATH", "구독 경로가 잘못되었습니다."),
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_NOT_FOUND", "채팅 메시지를 찾을 수 없습니다."),
     CHAT_MESSAGE_TOO_LONG(HttpStatus.BAD_REQUEST, "CHAT_MESSAGE_TOO_LONG", "메시지가 너무 깁니다."),
+    NOT_FOUND_LAST_READ_CHAT(HttpStatus.NOT_FOUND, "NOT_FOUND_LAST_READ_CHAT", "해당 유저가 가장 마지막으로 읽는 메세지를 찾을 수 없습니다."),
+    INVALID_REACTION(HttpStatus.BAD_REQUEST, "INVALID_REACTION", "잘못된 리액션 형식입니다."),
+    ALREADY_REACTED(HttpStatus.CONFLICT, "ALREADY_REACTED", "이미 리액션을 남겼습니다."),
+    INVALID_REACTION_TARGET(HttpStatus.BAD_REQUEST, "INVALID_REACTION_TARGET", "채팅 타입의 메세지만 리액션할 수 있습니다."),
+    REACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "REACTION_NOT_FOUND", "리액션을 찾을 수 없습니다."),
+    INVALID_MESSAGE_TYPE_FOR_DELETION(HttpStatus.BAD_REQUEST, "INVALID_MESSAGE_TYPE_FOR_DELETION", "알림 메세지는 삭제할 수 없습니다."),
+    FORBIDDEN_DELETE_MESSAGE(HttpStatus.FORBIDDEN, "FORBIDDEN_DELETE_MESSAGE", "메시지 작성자만 삭제할 수 있습니다."),
     WEBSOCKET_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "WEBSOCKET_CONNECTION_FAILED", "웹소켓 연결에 실패했습니다.");
 
     public final HttpStatus status;

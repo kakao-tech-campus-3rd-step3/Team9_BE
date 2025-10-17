@@ -3,6 +3,7 @@ package com.pado.domain.schedule.service;
 import com.pado.domain.schedule.dto.request.ScheduleCreateRequestDto;
 import com.pado.domain.schedule.dto.response.ScheduleByDateResponseDto;
 import com.pado.domain.schedule.entity.Schedule;
+import com.pado.domain.schedule.event.ScheduleCreatedEvent;
 import com.pado.domain.schedule.repository.ScheduleRepository;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.study.repository.StudyRepository;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,9 +52,13 @@ class ScheduleServiceTest {
     @Mock
     private StudyMemberService studyMemberService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private User leader;
     private User member;
     private Study study;
+    private Schedule schedule;
 
     private void setAuthentication(User user) {
         CustomUserDetails userDetails = new CustomUserDetails(user);
@@ -67,10 +73,18 @@ class ScheduleServiceTest {
         leader = User.builder().email("leader@test.com").nickname("리더").build();
         member = User.builder().email("member@test.com").nickname("멤버").build();
         study = Study.builder().leader(leader).title("테스트 스터디").build();
+        schedule = Schedule.builder()
+                .studyId(1L)
+                .title("스터디 일정")
+                .description("테스트용 일정")
+                .startTime(LocalDateTime.now())
+                .endTime(LocalDateTime.now().plusHours(2))
+                .build();
 
         ReflectionTestUtils.setField(leader, "id", 1L);
         ReflectionTestUtils.setField(member, "id", 2L);
         ReflectionTestUtils.setField(study, "id", 1L);
+        ReflectionTestUtils.setField(schedule, "id", 1L);
     }
 
     @Nested
@@ -87,12 +101,14 @@ class ScheduleServiceTest {
 
             when(studyRepository.findById(1L)).thenReturn(Optional.of(study));
             when(studyMemberService.isStudyLeader(leader, study)).thenReturn(true);
+            when(scheduleRepository.save(any(Schedule.class))).thenReturn(schedule);
 
             // when
             scheduleService.createSchedule(1L, request);
 
             // then
             verify(scheduleRepository, times(1)).save(any(Schedule.class));
+            verify(eventPublisher).publishEvent(any(ScheduleCreatedEvent.class));
         }
 
         @Test

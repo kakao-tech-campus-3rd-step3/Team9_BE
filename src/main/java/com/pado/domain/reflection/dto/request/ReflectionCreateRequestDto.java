@@ -1,10 +1,15 @@
-package com.pado.domain.reflection.dto;
+package com.pado.domain.reflection.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
 @Schema(description = "회고 생성 및 수정 요청 DTO")
 public record ReflectionCreateRequestDto(
+    @Schema(description = "회고 제목", example = "1주차 스터디를 마치고")
+    @NotBlank(message = "제목은 필수 입력 항목입니다.")
+    @Size(max = 255, message = "제목은 255자를 초과할 수 없습니다.")
+    String title,
+
     @Schema(description = "연관된 스터디 일정 ID (선택)", example = "10")
     Long scheduleId,
 
