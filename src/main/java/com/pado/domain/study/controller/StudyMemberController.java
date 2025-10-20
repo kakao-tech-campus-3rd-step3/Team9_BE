@@ -55,7 +55,7 @@ public class StudyMemberController {
     @Api404StudyNotFoundError
     @Operation(
         summary = "스터디원 목록 조회 (현재 구성원, 신청자 제외)",
-        description = "확정된 스터디원 목록을 조회합니다. (스터디 리더만 접근 가능)"
+        description = "신청자를 제외한 현재 확정된 스터디원 목록을 조회합니다. (스터디 리더만 접근 가능)"
     )
     @ApiResponse(
         responseCode = "200", description = "스터디원 목록 조회 성공",
