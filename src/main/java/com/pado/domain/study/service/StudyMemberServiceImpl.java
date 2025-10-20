@@ -21,8 +21,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
@@ -90,22 +88,22 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
-        StudyApplicationStatus newRole = StudyApplicationStatus.fromString(request.status());
-        if (newRole.equals(StudyApplicationStatus.APPROVED)) {
+        StudyApplicationStatus newStatus = StudyApplicationStatus.fromString(request.status());
+        if (newStatus.equals(StudyApplicationStatus.APPROVED)) {
+
             StudyMember member = new StudyMember(study, application.getUser(),
                 StudyMemberRole.MEMBER, application.getMessage(), 0);
             studyMemberRepository.save(member);
             studyApplicationRepository.delete(application);
-            
-            // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
-            // 채팅방에 아무런 채팅이 없으면 0, 아니라면 가장 최신의 메세지 아이디를 가짐
-            Optional<ChatMessage> lastestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
-            long lastestMessageId = lastestMessage.isPresent() ? lastestMessage.get().getId() : 0L;
 
-            LastReadMessage lastReadMessage = new LastReadMessage(member, lastestMessageId);
+            Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(
+                studyId);
+            long latestMessageId = latestMessage.map(ChatMessage::getId).orElse(0L);
+
+            LastReadMessage lastReadMessage = new LastReadMessage(member, latestMessageId);
             lastReadMessageRepository.save(lastReadMessage);
-        }
-        else if (newRole.equals(StudyApplicationStatus.REJECTED)) {
+
+        } else if (newStatus.equals(StudyApplicationStatus.REJECTED)) {
             studyApplicationRepository.delete(application);
         } else {
             throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE);
@@ -120,33 +118,32 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
-        // 멤버 목록 조회
         List<StudyMember> members = studyMemberRepository.findByStudyWithUser(study);
         List<StudyMemberDetailDto> memberDtos = members.stream()
             .map(member -> new StudyMemberDetailDto(
                 member.getUser().getNickname(),
                 member.getRole().name(),
-                null, // 확정된 멤버는 신청 메시지가 없음
+                null,
                 mapToUserDetailDto(member.getUser())
             ))
             .collect(Collectors.toList());
 
-        // 신청자 목록 조회
-        List<StudyApplication> applications = studyApplicationRepository.findByStudyWithUser(study);
-        List<StudyMemberDetailDto> applicantDtos = applications.stream()
-            .map(app -> new StudyMemberDetailDto(
-                app.getUser().getNickname(),
-                "Pending", // 신청자는 역할 대신 Pending 상태 표시
-                app.getMessage(),
-                mapToUserDetailDto(app.getUser())
-            ))
-            .collect(Collectors.toList());
+        // [수정] 신청자 목록 조회 및 병합 로직 제거
+        // List<StudyApplication> applications = studyApplicationRepository.findByStudyWithUser(study);
+        // List<StudyMemberDetailDto> applicantDtos = applications.stream()
+        //     .map(app -> new StudyMemberDetailDto(
+        //         app.getUser().getNickname(),
+        //         "Pending", // 신청자는 역할 대신 Pending 상태 표시
+        //         app.getMessage(),
+        //         mapToUserDetailDto(app.getUser())
+        //     ))
+        //     .collect(Collectors.toList());
+        //
+        // List<StudyMemberDetailDto> combinedList = new ArrayList<>();
+        // combinedList.addAll(memberDtos);
+        // combinedList.addAll(applicantDtos);
 
-        List<StudyMemberDetailDto> combinedList = new ArrayList<>();
-        combinedList.addAll(memberDtos);
-        combinedList.addAll(applicantDtos);
-
-        return new StudyMemberListResponseDto(combinedList);
+        return new StudyMemberListResponseDto(memberDtos);
     }
 
     @Override
@@ -163,6 +160,11 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         // 스터디장이 자신을 강퇴시키는지 확인
         if (memberToKick.getRole() == StudyMemberRole.LEADER) {
             throw new BusinessException(ErrorCode.CANNOT_KICK_LEADER);
+        }
+
+        // [수정] 스터디 멤버가 맞는지 추가 확인 (memberId가 다른 스터디의 멤버일 수 있음)
+        if (!memberToKick.getStudy().getId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "해당 스터디의 멤버가 아닙니다.");
         }
 
         studyMemberRepository.delete(memberToKick);
@@ -195,6 +197,9 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         currentLeaderMember.updateRole(StudyMemberRole.MEMBER);
         // 3. 새로운 리더의 역할을 리더로 변경
         newLeaderMember.updateRole(StudyMemberRole.LEADER);
+
+        // studyRepository.save(study); // Study 엔티티 변경 감지로 자동 업데이트되므로 명시적 save 불필요
+        // studyMemberRepository.saveAll(List.of(currentLeaderMember, newLeaderMember)); // StudyMember 엔티티 변경 감지로 자동 업데이트
     }
 
     @Override
