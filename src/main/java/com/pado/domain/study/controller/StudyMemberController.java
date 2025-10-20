@@ -3,6 +3,7 @@ package com.pado.domain.study.controller;
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
 import com.pado.domain.study.dto.request.StudyLeaderDelegateRequestDto;
+import com.pado.domain.study.dto.response.StudyApplicantListResponseDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.service.StudyMemberService;
 import com.pado.domain.user.entity.User;
@@ -53,8 +54,8 @@ public class StudyMemberController {
     @Api403ForbiddenStudyLeaderOnlyError
     @Api404StudyNotFoundError
     @Operation(
-        summary = "스터디원 목록 조회",
-        description = "스터디원 목록을 조회합니다. (스터디 리더만 접근 가능)"
+        summary = "스터디원 목록 조회 (현재 구성원, 신청자 제외)",
+        description = "확정된 스터디원 목록을 조회합니다. (스터디 리더만 접근 가능)"
     )
     @ApiResponse(
         responseCode = "200", description = "스터디원 목록 조회 성공",
@@ -69,6 +70,28 @@ public class StudyMemberController {
         @PathVariable("study_id") Long studyId
     ) {
         return ResponseEntity.ok(studyMemberService.getStudyMembers(user, studyId));
+    }
+
+    @Api403ForbiddenStudyLeaderOnlyError
+    @Api404StudyNotFoundError
+    @Operation(
+        summary = "스터디 신청자 목록 조회",
+        description = "스터디에 참여 신청하고 승인 대기 중인 사용자 목록을 조회합니다. (스터디 리더만 접근 가능)"
+    )
+    @ApiResponse(
+        responseCode = "200", description = "신청자 목록 조회 성공",
+        content = @Content(schema = @Schema(implementation = StudyApplicantListResponseDto.class))
+    )
+    @Parameters({
+        @Parameter(name = "study_id", description = "조회할 스터디의 ID", required = true, example = "1")
+    })
+    @GetMapping("/applicants")
+    public ResponseEntity<StudyApplicantListResponseDto> getStudyApplicants(
+        @Parameter(hidden = true) @CurrentUser User user,
+        @PathVariable("study_id") Long studyId
+    ) {
+        return ResponseEntity.ok(
+            studyMemberService.getStudyApplicants(user, studyId));
     }
 
     @Api403ForbiddenStudyLeaderOnlyError
@@ -101,12 +124,13 @@ public class StudyMemberController {
         description = "스터디 신청 대기 중인 사용자를 수락하거나 거절합니다. (스터디 리더만 가능)"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "상태 변경/수락 성공"),
+        @ApiResponse(responseCode = "200", description = "상태 변경 성공"),
+        @ApiResponse(responseCode = "404", description = "신청서를 찾을 수 없음"),
         @ApiResponse(responseCode = "409", description = "유효하지 않은 상태 변경")
     })
     @Parameters({
         @Parameter(name = "study_id", description = "스터디 ID", required = true, example = "1"),
-        @Parameter(name = "app_id", description = "처리할 신청서의 ID", required = true, example = "1")
+        @Parameter(name = "app_id", description = "처리할 신청서의 ID (StudyApplication ID)", required = true, example = "1")
     })
     @PatchMapping("/applications/{app_id}")
     public ResponseEntity<Void> updateMemberApplicationStatus(

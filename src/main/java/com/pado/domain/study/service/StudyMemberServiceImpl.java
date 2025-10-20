@@ -6,6 +6,8 @@ import com.pado.domain.chat.repository.ChatMessageRepository;
 import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
+import com.pado.domain.study.dto.response.StudyApplicantDetailDto; // 신규 import
+import com.pado.domain.study.dto.response.StudyApplicantListResponseDto; // 신규 import
 import com.pado.domain.study.dto.response.StudyMemberDetailDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.dto.response.UserDetailDto;
@@ -20,6 +22,7 @@ import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -90,12 +93,13 @@ public class StudyMemberServiceImpl implements StudyMemberService {
 
         StudyApplicationStatus newStatus = StudyApplicationStatus.fromString(request.status());
         if (newStatus.equals(StudyApplicationStatus.APPROVED)) {
-
+            // 스터디 멤버 생성
             StudyMember member = new StudyMember(study, application.getUser(),
                 StudyMemberRole.MEMBER, application.getMessage(), 0);
             studyMemberRepository.save(member);
-            studyApplicationRepository.delete(application);
+            studyApplicationRepository.delete(application); // 신청서 삭제
 
+            // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티 생성
             Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(
                 studyId);
             long latestMessageId = latestMessage.map(ChatMessage::getId).orElse(0L);
@@ -128,22 +132,30 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             ))
             .collect(Collectors.toList());
 
-        // [수정] 신청자 목록 조회 및 병합 로직 제거
-        // List<StudyApplication> applications = studyApplicationRepository.findByStudyWithUser(study);
-        // List<StudyMemberDetailDto> applicantDtos = applications.stream()
-        //     .map(app -> new StudyMemberDetailDto(
-        //         app.getUser().getNickname(),
-        //         "Pending", // 신청자는 역할 대신 Pending 상태 표시
-        //         app.getMessage(),
-        //         mapToUserDetailDto(app.getUser())
-        //     ))
-        //     .collect(Collectors.toList());
-        //
-        // List<StudyMemberDetailDto> combinedList = new ArrayList<>();
-        // combinedList.addAll(memberDtos);
-        // combinedList.addAll(applicantDtos);
-
         return new StudyMemberListResponseDto(memberDtos);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StudyApplicantListResponseDto getStudyApplicants(User user, Long studyId) {
+        Study study = studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
+        if (!isStudyLeader(user, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
+        List<StudyApplication> applications = studyApplicationRepository.findByStudyWithUser(study);
+        List<StudyApplicantDetailDto> applicantDtos = applications.stream()
+            .filter(app -> app.getStatus() == StudyApplicationStatus.PENDING)
+            .map(app -> new StudyApplicantDetailDto(
+                app.getId(),
+                app.getUser().getNickname(),
+                app.getMessage(),
+                mapToUserDetailDto(app.getUser()),
+                app.getCreatedAt()
+            ))
+            .collect(Collectors.toList());
+
+        return new StudyApplicantListResponseDto(applicantDtos);
     }
 
     @Override
@@ -157,12 +169,10 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         StudyMember memberToKick = studyMemberRepository.findById(memberId)
             .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 스터디장이 자신을 강퇴시키는지 확인
         if (memberToKick.getRole() == StudyMemberRole.LEADER) {
             throw new BusinessException(ErrorCode.CANNOT_KICK_LEADER);
         }
 
-        // [수정] 스터디 멤버가 맞는지 추가 확인 (memberId가 다른 스터디의 멤버일 수 있음)
         if (!memberToKick.getStudy().getId().equals(studyId)) {
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "해당 스터디의 멤버가 아닙니다.");
         }
@@ -191,15 +201,9 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             throw new BusinessException(ErrorCode.INVALID_LEADER_DELEGATION_TARGET);
         }
 
-        // 1. Study 엔티티의 리더 변경
         study.setLeader(newLeaderMember.getUser());
-        // 2. 기존 리더의 역할을 멤버로 변경
         currentLeaderMember.updateRole(StudyMemberRole.MEMBER);
-        // 3. 새로운 리더의 역할을 리더로 변경
         newLeaderMember.updateRole(StudyMemberRole.LEADER);
-
-        // studyRepository.save(study); // Study 엔티티 변경 감지로 자동 업데이트되므로 명시적 save 불필요
-        // studyMemberRepository.saveAll(List.of(currentLeaderMember, newLeaderMember)); // StudyMember 엔티티 변경 감지로 자동 업데이트
     }
 
     @Override
@@ -217,38 +221,34 @@ public class StudyMemberServiceImpl implements StudyMemberService {
     }
 
     private UserDetailDto mapToUserDetailDto(User user) {
+        List<String> interestNames = user.getInterests() == null ? List.of() :
+            user.getInterests().stream()
+                .map(ui -> ui.getCategory().getKrName())
+                .collect(Collectors.toList());
+
         return new UserDetailDto(
             user.getImage_key(),
             user.getGender().name(),
-            user.getInterests().stream().map(ui -> ui.getCategory().getKrName())
-                .collect(Collectors.toList()),
+            interestNames,
             user.getRegion().getKrName()
         );
     }
 
+
     private void validateApplication(Study study, User user) {
-        // 1. 스터디장 본인 신청 여부 확인
         if (study.getLeader().equals(user)) {
             throw new AlreadyMemberException("스터디장은 자신의 스터디에 참여 신청할 수 없습니다.");
         }
-
-        // 2. 스터디 모집 상태 확인
         if (study.getStatus() != StudyStatus.RECRUITING) {
             throw new StudyNotRecruitingException();
         }
-
-        // 3. 이미 확정된 멤버인지 확인
         if (studyMemberRepository.existsByStudyAndUser(study, user)) {
             throw new AlreadyMemberException();
         }
-
-        // 4. 이미 신청 후 대기중인 상태인지 확인
         if (studyApplicationRepository.existsByStudyAndUserAndStatus(study, user,
             StudyApplicationStatus.PENDING)) {
             throw new AlreadyAppliedException();
         }
-
-        // 5. 스터디 인원 확인 (현재 멤버 수 >= 최대 멤버 수)
         long currentMembers = studyMemberRepository.countByStudy(study);
         if (currentMembers >= study.getMaxMembers()) {
             throw new StudyFullException();
