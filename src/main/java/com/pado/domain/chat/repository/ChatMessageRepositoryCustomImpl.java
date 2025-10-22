@@ -2,7 +2,6 @@ package com.pado.domain.chat.repository;
 
 import com.pado.domain.chat.entity.ChatMessage;
 import com.pado.domain.chat.entity.QChatMessage;
-import com.pado.domain.study.entity.QStudy;
 import com.pado.domain.study.entity.QStudyMember;
 import com.pado.domain.user.entity.QUser;
 import com.querydsl.core.types.dsl.BooleanExpression;
