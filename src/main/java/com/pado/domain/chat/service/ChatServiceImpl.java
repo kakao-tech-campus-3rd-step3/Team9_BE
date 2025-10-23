@@ -147,7 +147,7 @@ public class ChatServiceImpl implements ChatService {
             nextCursor = null;
         }
 
-        return ChatMessageListResponseDto.of(messageDtos, hasNext, nextCursor);
+        return ChatMessageListResponseDto.of(currentUser.getId(), messageDtos, hasNext, nextCursor);
     }
 
     @Transactional
