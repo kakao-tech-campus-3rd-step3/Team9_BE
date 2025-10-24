@@ -6,6 +6,8 @@ import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "chat_reaction")
@@ -23,6 +25,7 @@ public class ChatReaction extends CreatedAtEntity {
 
     @ManyToOne
     @JoinColumn(name = "study_member_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     StudyMember studyMember;
 
     @Enumerated(EnumType.STRING)

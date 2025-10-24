@@ -337,7 +337,7 @@ ALTER TABLE schedule_tune_participant ADD CONSTRAINT fk_participant_tune FOREIGN
 ALTER TABLE schedule_tune_participant ADD CONSTRAINT fk_schedule_tune_participant_study_member FOREIGN KEY (study_member_id) REFERENCES study_member(id) ON DELETE CASCADE;
 ALTER TABLE schedule_tune_slot ADD CONSTRAINT fk_slot_tune FOREIGN KEY (schedule_tune_id) REFERENCES schedule_tune(id) ON DELETE CASCADE;
 ALTER TABLE chat_message ADD CONSTRAINT fk_chat_message_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE;
-ALTER TABLE chat_message ADD CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES study_member(id) ON DELETE CASCADE;
+ALTER TABLE chat_message ADD CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES study_member(id) ON DELETE SET NULL;
 ALTER TABLE chapter ADD CONSTRAINT fk_chapter_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE;
 ALTER TABLE reflection ADD CONSTRAINT fk_reflection_study FOREIGN KEY (study_id) REFERENCES study(id) ON DELETE CASCADE;
 ALTER TABLE reflection ADD CONSTRAINT fk_reflection_study_member FOREIGN KEY (study_member_id) REFERENCES study_member(id) ON DELETE CASCADE;
