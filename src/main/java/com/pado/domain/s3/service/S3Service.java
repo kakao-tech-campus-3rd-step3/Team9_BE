@@ -117,12 +117,10 @@ public class S3Service {
     // 파일 다운로드용 Presigned URL 생성
     public String generatePresignedDownloadUrl(String fileName, String fileKey) {
         try {
-            String contentDisposition = "attachment; filename=\"" + fileName + "\"";
-
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(fileKey)
-                    .responseContentDisposition(contentDisposition)
+                    .responseContentDisposition("inline; filename=\"" + fileName + "\"")
                     .build();
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
