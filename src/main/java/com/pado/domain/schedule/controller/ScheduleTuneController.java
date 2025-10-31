@@ -152,7 +152,7 @@ public class ScheduleTuneController {
     @Api404TuningScheduleNotFoundError
     @Operation(
         summary = "조율 참여/갱신",
-        description = "멤버가 가능한 슬롯을 제출합니다(배열 길이는 슬롯 수와 일치해야 하며, 각 값은 0/1로 해석됩니다).",
+        description = "멤버가 가능한 슬롯을 제출합니다. 배열의 길이는 해당 조율의 전체 슬롯 수와 일치해야 하며, 각 요소는 0(불가능) 또는 1(가능)이어야 합니다.",
         security = @SecurityRequirement(name = "bearerAuth"),
         requestBody = @RequestBody(
             required = true,
@@ -162,7 +162,7 @@ public class ScheduleTuneController {
                 examples = @ExampleObject(
                     name = "participate",
                     value = """
-                        { "candidate_dates": }[1]
+                        { "candidate_dates": [1, 1, 0, 0, 1, 0] }
                         """
                 )
             )
