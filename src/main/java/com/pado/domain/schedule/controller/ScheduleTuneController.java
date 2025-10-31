@@ -141,9 +141,9 @@ public class ScheduleTuneController {
     @Parameters({
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
-    @GetMapping("schedule-tunes/{tuneid}")
+    @GetMapping("schedule-tunes/{tune_id}")
     public ResponseEntity<ScheduleTuneDetailResponseDto> getScheduleTuneDetail(
-        @PathVariable("tuneid") Long tuneId
+        @PathVariable("tune_id") Long tuneId
     ) {
         return ResponseEntity.ok(scheduleTuneService.findScheduleTuneDetail(tuneId));
     }
@@ -189,9 +189,9 @@ public class ScheduleTuneController {
     @Parameters({
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
-    @PostMapping("schedule-tunes/{tuneid}/participants")
+    @PostMapping("schedule-tunes/{tune_id}/participants")
     public ResponseEntity<ScheduleTuneParticipantResponseDto> participateInScheduleTune(
-        @PathVariable("tuneid") Long tuneId,
+        @PathVariable("tune_id") Long tuneId,
         @Valid @org.springframework.web.bind.annotation.RequestBody ScheduleTuneParticipantRequestDto request
     ) {
         return ResponseEntity.ok(scheduleTuneService.participate(tuneId, request));
