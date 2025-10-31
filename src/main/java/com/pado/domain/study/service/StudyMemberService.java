@@ -2,6 +2,7 @@ package com.pado.domain.study.service;
 
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
+import com.pado.domain.study.dto.response.StudyApplicantListResponseDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.entity.Study;
 import com.pado.domain.user.entity.User;
@@ -18,6 +19,8 @@ public interface StudyMemberService {
         StudyApplicationStatusChangeRequestDto request);
 
     StudyMemberListResponseDto getStudyMembers(User user, Long studyId);
+
+    StudyApplicantListResponseDto getStudyApplicants(User user, Long studyId);
 
     void kickMember(User user, Long studyId, Long memberId);
 

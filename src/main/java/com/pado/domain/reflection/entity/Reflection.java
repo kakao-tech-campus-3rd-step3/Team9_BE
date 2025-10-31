@@ -6,6 +6,8 @@ import com.pado.domain.schedule.entity.Schedule;
 import com.pado.domain.basetime.AuditingEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Getter
 @Entity
@@ -28,6 +30,7 @@ public class Reflection extends AuditingEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "study_member_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private StudyMember studyMember;
 
     @ManyToOne(fetch = FetchType.LAZY)

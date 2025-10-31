@@ -29,8 +29,16 @@ public record ChatMessageResponseDto(
             Long unreadMemberCount) {
 
         Long senderId = chatMessage.getSender() != null ? chatMessage.getSender().getUser().getId() : null;
-        String nickname = chatMessage.getSender() != null ? chatMessage.getSender().getUser().getNickname() : "서버";
-
+        String nickname;
+        if (chatMessage.getSender() != null) {
+            nickname = chatMessage.getSender().getUser().getNickname();
+        }
+        else if(chatMessage.getType() == MessageType.CHAT) {
+            nickname = "알 수 없음";
+        }
+        else {
+            nickname = "서버";
+        }
         return new ChatMessageResponseDto(
                 chatMessage.getId(),
                 chatMessage.getType(),

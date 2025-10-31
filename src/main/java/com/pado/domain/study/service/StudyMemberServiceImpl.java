@@ -6,6 +6,8 @@ import com.pado.domain.chat.repository.ChatMessageRepository;
 import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
+import com.pado.domain.study.dto.response.StudyApplicantDetailDto; // 신규 import
+import com.pado.domain.study.dto.response.StudyApplicantListResponseDto; // 신규 import
 import com.pado.domain.study.dto.response.StudyMemberDetailDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.dto.response.UserDetailDto;
@@ -22,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
@@ -90,22 +91,23 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
-        StudyApplicationStatus newRole = StudyApplicationStatus.fromString(request.status());
-        if (newRole.equals(StudyApplicationStatus.APPROVED)) {
+        StudyApplicationStatus newStatus = StudyApplicationStatus.fromString(request.status());
+        if (newStatus.equals(StudyApplicationStatus.APPROVED)) {
+            // 스터디 멤버 생성
             StudyMember member = new StudyMember(study, application.getUser(),
                 StudyMemberRole.MEMBER, application.getMessage(), 0);
             studyMemberRepository.save(member);
-            studyApplicationRepository.delete(application);
-            
-            // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
-            // 채팅방에 아무런 채팅이 없으면 0, 아니라면 가장 최신의 메세지 아이디를 가짐
-            Optional<ChatMessage> lastestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(studyId);
-            long lastestMessageId = lastestMessage.isPresent() ? lastestMessage.get().getId() : 0L;
+            studyApplicationRepository.delete(application); // 신청서 삭제
 
-            LastReadMessage lastReadMessage = new LastReadMessage(member, lastestMessageId);
+            // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티 생성
+            Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(
+                studyId);
+            long latestMessageId = latestMessage.map(ChatMessage::getId).orElse(0L);
+
+            LastReadMessage lastReadMessage = new LastReadMessage(member, latestMessageId);
             lastReadMessageRepository.save(lastReadMessage);
-        }
-        else if (newRole.equals(StudyApplicationStatus.REJECTED)) {
+
+        } else if (newStatus.equals(StudyApplicationStatus.REJECTED)) {
             studyApplicationRepository.delete(application);
         } else {
             throw new BusinessException(ErrorCode.INVALID_STATE_CHANGE);
@@ -120,33 +122,40 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
-        // 멤버 목록 조회
         List<StudyMember> members = studyMemberRepository.findByStudyWithUser(study);
         List<StudyMemberDetailDto> memberDtos = members.stream()
             .map(member -> new StudyMemberDetailDto(
                 member.getUser().getNickname(),
                 member.getRole().name(),
-                null, // 확정된 멤버는 신청 메시지가 없음
+                null,
                 mapToUserDetailDto(member.getUser())
             ))
             .collect(Collectors.toList());
 
-        // 신청자 목록 조회
+        return new StudyMemberListResponseDto(memberDtos);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StudyApplicantListResponseDto getStudyApplicants(User user, Long studyId) {
+        Study study = studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
+        if (!isStudyLeader(user, study)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
+        }
+
         List<StudyApplication> applications = studyApplicationRepository.findByStudyWithUser(study);
-        List<StudyMemberDetailDto> applicantDtos = applications.stream()
-            .map(app -> new StudyMemberDetailDto(
+        List<StudyApplicantDetailDto> applicantDtos = applications.stream()
+            .filter(app -> app.getStatus() == StudyApplicationStatus.PENDING)
+            .map(app -> new StudyApplicantDetailDto(
+                app.getId(),
                 app.getUser().getNickname(),
-                "Pending", // 신청자는 역할 대신 Pending 상태 표시
                 app.getMessage(),
-                mapToUserDetailDto(app.getUser())
+                mapToUserDetailDto(app.getUser()),
+                app.getCreatedAt()
             ))
             .collect(Collectors.toList());
 
-        List<StudyMemberDetailDto> combinedList = new ArrayList<>();
-        combinedList.addAll(memberDtos);
-        combinedList.addAll(applicantDtos);
-
-        return new StudyMemberListResponseDto(combinedList);
+        return new StudyApplicantListResponseDto(applicantDtos);
     }
 
     @Override
@@ -160,9 +169,12 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         StudyMember memberToKick = studyMemberRepository.findById(memberId)
             .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 스터디장이 자신을 강퇴시키는지 확인
         if (memberToKick.getRole() == StudyMemberRole.LEADER) {
             throw new BusinessException(ErrorCode.CANNOT_KICK_LEADER);
+        }
+
+        if (!memberToKick.getStudy().getId().equals(studyId)) {
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "해당 스터디의 멤버가 아닙니다.");
         }
 
         studyMemberRepository.delete(memberToKick);
@@ -189,11 +201,8 @@ public class StudyMemberServiceImpl implements StudyMemberService {
             throw new BusinessException(ErrorCode.INVALID_LEADER_DELEGATION_TARGET);
         }
 
-        // 1. Study 엔티티의 리더 변경
         study.setLeader(newLeaderMember.getUser());
-        // 2. 기존 리더의 역할을 멤버로 변경
         currentLeaderMember.updateRole(StudyMemberRole.MEMBER);
-        // 3. 새로운 리더의 역할을 리더로 변경
         newLeaderMember.updateRole(StudyMemberRole.LEADER);
     }
 
@@ -212,38 +221,34 @@ public class StudyMemberServiceImpl implements StudyMemberService {
     }
 
     private UserDetailDto mapToUserDetailDto(User user) {
+        List<String> interestNames = user.getInterests() == null ? List.of() :
+            user.getInterests().stream()
+                .map(ui -> ui.getCategory().getKrName())
+                .collect(Collectors.toList());
+
         return new UserDetailDto(
             user.getImage_key(),
             user.getGender().name(),
-            user.getInterests().stream().map(ui -> ui.getCategory().getKrName())
-                .collect(Collectors.toList()),
+            interestNames,
             user.getRegion().getKrName()
         );
     }
 
+
     private void validateApplication(Study study, User user) {
-        // 1. 스터디장 본인 신청 여부 확인
         if (study.getLeader().equals(user)) {
             throw new AlreadyMemberException("스터디장은 자신의 스터디에 참여 신청할 수 없습니다.");
         }
-
-        // 2. 스터디 모집 상태 확인
         if (study.getStatus() != StudyStatus.RECRUITING) {
             throw new StudyNotRecruitingException();
         }
-
-        // 3. 이미 확정된 멤버인지 확인
         if (studyMemberRepository.existsByStudyAndUser(study, user)) {
             throw new AlreadyMemberException();
         }
-
-        // 4. 이미 신청 후 대기중인 상태인지 확인
         if (studyApplicationRepository.existsByStudyAndUserAndStatus(study, user,
             StudyApplicationStatus.PENDING)) {
             throw new AlreadyAppliedException();
         }
-
-        // 5. 스터디 인원 확인 (현재 멤버 수 >= 최대 멤버 수)
         long currentMembers = studyMemberRepository.countByStudy(study);
         if (currentMembers >= study.getMaxMembers()) {
             throw new StudyFullException();

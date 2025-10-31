@@ -1,6 +1,5 @@
 package com.pado.domain.study.service;
 
-import com.pado.domain.chat.entity.ChatMessage;
 import com.pado.domain.chat.entity.LastReadMessage;
 import com.pado.domain.chat.repository.ChatMessageRepository;
 import com.pado.domain.chat.repository.LastReadMessageRepository;
@@ -25,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
