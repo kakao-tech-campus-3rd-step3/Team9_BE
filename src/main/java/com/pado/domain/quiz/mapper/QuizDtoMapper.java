@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +84,7 @@ public class QuizDtoMapper {
         );
     }
 
-    private Long calculateRemainingSeconds(Integer timeLimitSeconds, LocalDateTime startTime) {
+    private Long calculateRemainingSeconds(Integer timeLimitSeconds, Instant startTime) {
         if (timeLimitSeconds == null || timeLimitSeconds <= 0) {
             return null;
         }
@@ -93,7 +93,7 @@ public class QuizDtoMapper {
             return timeLimitSeconds.longValue();
         }
 
-        long secondsElapsed = Duration.between(startTime, LocalDateTime.now(clock)).getSeconds();
+        long secondsElapsed = Duration.between(startTime, Instant.now(clock)).getSeconds();
         long secondsRemaining = timeLimitSeconds - secondsElapsed;
 
         return Math.max(0, secondsRemaining);

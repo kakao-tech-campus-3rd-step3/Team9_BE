@@ -9,7 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,16 +48,16 @@ public class QuizSubmission {
     private Long version;
 
     @Column(name = "started_at", nullable = false, updatable = false)
-    private LocalDateTime startedAt;
+    private Instant startedAt;
 
     @Column(name = "submitted_at")
-    private LocalDateTime submittedAt;
+    private Instant submittedAt;
 
     @OneToOne(mappedBy = "quizSubmission", cascade = CascadeType.ALL, orphanRemoval = true)
     private QuizPointLog pointLog;
 
     @Builder
-    public QuizSubmission(User user, LocalDateTime startedAt) {
+    public QuizSubmission(User user, Instant startedAt) {
         this.quiz = null;
         this.user = user;
         this.status = SubmissionStatus.IN_PROGRESS;
@@ -65,7 +65,7 @@ public class QuizSubmission {
         this.totalQuestions = 0;
         this.startedAt = (startedAt != null)
                 ? startedAt
-                : LocalDateTime.now();
+                : Instant.now();
     }
 
     protected void setQuiz(Quiz quiz) {
@@ -80,7 +80,7 @@ public class QuizSubmission {
 
         this.score = finalScore;
         this.status = SubmissionStatus.COMPLETED;
-        this.submittedAt = LocalDateTime.now();
+        this.submittedAt = Instant.now();
     }
 
     public void addAnswerSubmission(AnswerSubmission answer) {
