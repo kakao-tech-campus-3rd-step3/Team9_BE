@@ -100,7 +100,7 @@ public class ScheduleTuneController {
             name = "list_tunes",
             value = """
                 [
-                  { "title":"주간 정기 회의","start":"2025-09-21T10:00:00","end":"2025-09-21T12:00:00" }
+                  { "tune_id": 101, "title":"주간 정기 회의","start":"2025-09-21T10:00:00","end":"2025-09-21T12:00:00" }
                 ]
                 """
         )
