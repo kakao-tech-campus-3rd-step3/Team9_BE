@@ -96,8 +96,6 @@ public class ProgressServiceImpl implements ProgressService {
         Map<Long, Long> quizCountMap = quizSubmissionRepository.countMapByStudy(studyId);
         Map<Long, Long> reflectionCountMap = reflectionRepository.countMapByStudy(studyId);
 
-        List<Reflection> reflections = reflectionRepository.findByStudyId(studyId);
-
         List<ProgressMemberStatusDto> progressMemberStatusDtos = studyMembers.stream().map(
                 studyMember -> new ProgressMemberStatusDto(
                         studyMember.getUser().getNickname(),
@@ -107,6 +105,31 @@ public class ProgressServiceImpl implements ProgressService {
                         Math.toIntExact(reflectionCountMap.getOrDefault(studyMember.getUser().getId(), 0L))
                         )
         ).toList();
+        return new ProgressStatusResponseDto(progressMemberStatusDtos);
+    }
+
+    @Override
+    public ProgressStatusResponseDto getmyStudyStatus(Long studyId, User user) {
+        checkException(studyId, user, StudyMemberRole.MEMBER);
+        Long userId = user.getId();
+
+        List<StudyMember> studyMembers = studyMemberRepository.findByStudyIdFetchUser(studyId);
+        Map<Long, Long> attendanceCountMap = attendanceRepository.countMapByStudy(studyId);
+        Map<Long, Long> quizCountMap = quizSubmissionRepository.countMapByStudy(studyId);
+        Map<Long, Long> reflectionCountMap = reflectionRepository.countMapByStudy(studyId);
+
+        List<ProgressMemberStatusDto> progressMemberStatusDtos = studyMembers.stream()
+                .filter(studyMember -> studyMember.getUser().getId().equals(userId))
+                .map(
+                        studyMember -> new ProgressMemberStatusDto(
+                        studyMember.getUser().getNickname(),
+                        studyMember.getRole(),
+                        Math.toIntExact(attendanceCountMap.getOrDefault(studyMember.getUser().getId(), 0L)),
+                        Math.toIntExact(quizCountMap.getOrDefault(studyMember.getUser().getId(), 0L)),
+                        Math.toIntExact(reflectionCountMap.getOrDefault(studyMember.getUser().getId(), 0L))
+                        )
+                ).toList();
+
         return new ProgressStatusResponseDto(progressMemberStatusDtos);
     }
 

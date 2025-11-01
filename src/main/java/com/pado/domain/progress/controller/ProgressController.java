@@ -157,4 +157,25 @@ public class ProgressController {
     ) {
         return ResponseEntity.ok(progressService.getStudyStatus(studyId, user));
     }
+
+    @Api403ForbiddenStudyMemberOnlyError
+    @Api404StudyNotFoundError
+    @Operation(
+            summary = "스터디 본인 현황판 조회",
+            description = "특정 스터디의 전체 개인 진척도를 조회합니다. (스터디 멤버만 가능)"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "현황판 조회 성공",
+                    content = @Content(schema = @Schema(implementation = ProgressStatusResponseDto.class))),
+    })
+    @Parameters({
+            @Parameter(name = "study_id", description = "현황판을 조회할 스터디의 ID", required = true, example = "1")
+    })
+    @GetMapping("/{study_id}/status/me")
+    public ResponseEntity<ProgressStatusResponseDto> getMyStudyStatus(
+            @PathVariable("study_id") Long studyId,
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        return ResponseEntity.ok(progressService.getmyStudyStatus(studyId, user));
+    }
 }

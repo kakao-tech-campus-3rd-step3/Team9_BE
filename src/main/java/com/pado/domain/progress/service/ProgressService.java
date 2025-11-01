@@ -19,4 +19,6 @@ public interface ProgressService {
     void completeChapter(Long chapterId, User user);
 
     ProgressStatusResponseDto getStudyStatus(Long studyId, User user);
+
+    ProgressStatusResponseDto getmyStudyStatus(Long studyId, User user);
 }
