@@ -162,7 +162,7 @@ public class ProgressController {
     @Api404StudyNotFoundError
     @Operation(
             summary = "스터디 본인 현황판 조회",
-            description = "특정 스터디의 전체 개인 진척도를 조회합니다. (스터디 멤버만 가능)"
+            description = "특정 스터디의 본인 진척도를 조회합니다. (스터디 멤버만 가능)"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "현황판 조회 성공",
