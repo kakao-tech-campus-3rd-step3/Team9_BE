@@ -176,6 +176,6 @@ public class ProgressController {
             @PathVariable("study_id") Long studyId,
             @Parameter(hidden = true) @CurrentUser User user
     ) {
-        return ResponseEntity.ok(progressService.getmyStudyStatus(studyId, user));
+        return ResponseEntity.ok(progressService.getMyStudyStatus(studyId, user));
     }
 }

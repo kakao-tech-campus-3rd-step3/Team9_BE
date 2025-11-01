@@ -109,7 +109,7 @@ public class ProgressServiceImpl implements ProgressService {
     }
 
     @Override
-    public ProgressStatusResponseDto getmyStudyStatus(Long studyId, User user) {
+    public ProgressStatusResponseDto getMyStudyStatus(Long studyId, User user) {
         checkException(studyId, user, StudyMemberRole.MEMBER);
         Long userId = user.getId();
 

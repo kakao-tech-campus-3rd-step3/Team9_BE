@@ -20,5 +20,5 @@ public interface ProgressService {
 
     ProgressStatusResponseDto getStudyStatus(Long studyId, User user);
 
-    ProgressStatusResponseDto getmyStudyStatus(Long studyId, User user);
+    ProgressStatusResponseDto getMyStudyStatus(Long studyId, User user);
 }
