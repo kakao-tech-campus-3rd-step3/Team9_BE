@@ -362,7 +362,7 @@ class ProgressServiceImplTest {
     }
 
     @Test
-    void getmyStudyStatus_멤버권한일때_본인만반환_모든지표검증() {
+    void getMyStudyStatus_멤버권한일때_본인만반환_모든지표검증() {
         // --- checkException() 통과에 필요한 "정확히 2개"의 스텁 ---
         given(studyRepository.existsById(studyId)).willReturn(true);
         given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(
@@ -390,7 +390,7 @@ class ProgressServiceImplTest {
                 .willReturn(Collections.emptyMap());
 
         // when
-        ProgressStatusResponseDto dto = service.getmyStudyStatus(studyId, userMember);
+        ProgressStatusResponseDto dto = service.getMyStudyStatus(studyId, userMember);
 
         // then
         assertNotNull(dto);
