@@ -120,7 +120,7 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         for (ScheduleTune t : list) {
             LocalDateTime start = LocalDateTime.of(t.getStartDate(), t.getAvailableStartTime());
             LocalDateTime end = LocalDateTime.of(t.getEndDate(), t.getAvailableEndTime());
-            result.add(new ScheduleTuneResponseDto(t.getTitle(), start, end));
+            result.add(new ScheduleTuneResponseDto(t.getId(), t.getTitle(), start, end));
         }
         return result;
     }

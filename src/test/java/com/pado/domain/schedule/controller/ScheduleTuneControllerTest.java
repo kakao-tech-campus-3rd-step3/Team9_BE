@@ -76,6 +76,7 @@ class ScheduleTuneControllerTest {
         void create_success() throws Exception {
             ScheduleTuneCreateRequestDto req = new ScheduleTuneCreateRequestDto(
                 "정기회의", "안건",
+
                 LocalDate.now().plusDays(1),
                 LocalDate.now().plusDays(1),
                 LocalTime.of(10, 0),
@@ -84,10 +85,12 @@ class ScheduleTuneControllerTest {
             given(scheduleTuneService.createScheduleTune(anyLong(), any())).willReturn(100L);
 
             mockMvc.perform(post("/api/studies/{study_id}/schedule-tunes", 1L)
+
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
                 .andDo(print())
+
                 .andExpect(status().isCreated());
         }
     }
@@ -103,6 +106,7 @@ class ScheduleTuneControllerTest {
             given(scheduleTuneService.findAllScheduleTunes(1L))
                 .willReturn(List.of(
                     new ScheduleTuneResponseDto(
+                        101L, // tune_id 추가
                         "정기회의",
                         LocalDateTime.now().plusDays(1).withHour(10).withMinute(0),
                         LocalDateTime.now().plusDays(1).withHour(12).withMinute(0)
@@ -112,6 +116,7 @@ class ScheduleTuneControllerTest {
             mockMvc.perform(get("/api/studies/{study_id}/schedule-tunes", 1L))
                 .andDo(print())
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tune_id").value(101L))
                 .andExpect(jsonPath("$[0].title").value("정기회의"));
         }
 
@@ -120,11 +125,13 @@ class ScheduleTuneControllerTest {
         @DisplayName("상세 성공 - 200 OK")
         void detail_success() throws Exception {
             ScheduleTuneDetailResponseDto dto = new ScheduleTuneDetailResponseDto(
+
                 "정기회의", "안건",
                 List.of(3L, 5L, 0L),
                 LocalDateTime.now().plusDays(1).withHour(10),
                 LocalDateTime.now().plusDays(1).withHour(12),
                 List.of(new ScheduleTuneParticipantDto(1L, "Alice", 1L))
+
             );
             given(scheduleTuneService.findScheduleTuneDetail(100L)).willReturn(dto);
 
@@ -136,6 +143,7 @@ class ScheduleTuneControllerTest {
         }
 
         @Test
+
         @WithMockUser
         @DisplayName("상세 실패 - 404 Not Found")
         void detail_not_found() throws Exception {
@@ -144,6 +152,7 @@ class ScheduleTuneControllerTest {
 
             mockMvc.perform(get("/api/schedule-tunes/{tune_id}", 999L))
                 .andDo(print())
+
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("PENDING_SCHEDULE_NOT_FOUND"));
         }
@@ -164,12 +173,14 @@ class ScheduleTuneControllerTest {
 
             mockMvc.perform(post("/api/schedule-tunes/{tune_id}/participants", 100L)
                     .with(csrf())
+
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("updated"));
         }
+
 
         @Test
         @WithMockUser
@@ -178,6 +189,7 @@ class ScheduleTuneControllerTest {
             ScheduleTuneParticipantRequestDto req = new ScheduleTuneParticipantRequestDto(
                 List.of(1L));
             given(scheduleTuneService.participate(anyLong(), any()))
+
                 .willThrow(new BusinessException(ErrorCode.FORBIDDEN_STUDY_MEMBER_ONLY));
 
             mockMvc.perform(post("/api/schedule-tunes/{tune_id}/participants", 100L)
@@ -185,6 +197,7 @@ class ScheduleTuneControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
                 .andDo(print())
+
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN_STUDY_MEMBER_ONLY"));
         }
@@ -202,6 +215,7 @@ class ScheduleTuneControllerTest {
                 "확정 회의", "최종 안건",
                 LocalDateTime.now().plusDays(1).withHour(10),
                 LocalDateTime.now().plusDays(1).withHour(11)
+
             );
             given(scheduleTuneService.complete(anyLong(), any()))
                 .willReturn(new ScheduleCompleteResponseDto(true));
@@ -209,6 +223,7 @@ class ScheduleTuneControllerTest {
             mockMvc.perform(put("/api/schedule-tunes/{tune_id}/complete", 100L)
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
+
                     .content(objectMapper.writeValueAsString(req)))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -223,6 +238,7 @@ class ScheduleTuneControllerTest {
                 "확정 회의", "최종 안건",
                 LocalDateTime.now().plusDays(1).withHour(10),
                 LocalDateTime.now().plusDays(1).withHour(11)
+
             );
             given(scheduleTuneService.complete(anyLong(), any()))
                 .willThrow(
@@ -230,6 +246,7 @@ class ScheduleTuneControllerTest {
 
             mockMvc.perform(put("/api/schedule-tunes/{tune_id}/complete", 100L)
                     .with(csrf())
+
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(req)))
                 .andDo(print())
