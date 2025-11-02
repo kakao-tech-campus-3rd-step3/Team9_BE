@@ -1,9 +1,6 @@
 package com.pado.domain.quiz.repository;
 
-import com.pado.domain.quiz.dto.projection.QQuestionCountDto;
-import com.pado.domain.quiz.dto.projection.QQuizInfoProjection;
-import com.pado.domain.quiz.dto.projection.QuestionCountDto;
-import com.pado.domain.quiz.dto.projection.QuizInfoProjection;
+import com.pado.domain.quiz.dto.projection.*;
 import com.pado.domain.quiz.entity.*;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -90,6 +87,28 @@ public class QuizRepositoryImpl implements QuizRepositoryCustom {
                         .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                         .fetchOne()
         );
+    }
+
+    @Override
+    public List<DashboardQuizProjection> findRecentDashboardQuizzes(Long studyId, Long userId, int size) {
+        return queryFactory
+                .select(new QDashboardQuizProjection(
+                        quiz.id,
+                        quiz.title,
+                        quizSubmission.status.stringValue()
+                ))
+                .from(quiz)
+                .leftJoin(quizSubmission).on(
+                        quizSubmission.quiz.id.eq(quiz.id)
+                        .and(quizSubmission.user.id.eq(userId))
+                )
+                .where(
+                        quiz.study.id.eq(studyId),
+                        quiz.status.eq(QuizStatus.ACTIVE)
+                )
+                .orderBy(quiz.createdAt.desc())
+                .limit(size)
+                .fetch();
     }
 
     private BooleanExpression cursorIdLessThan(Long cursorId) {
