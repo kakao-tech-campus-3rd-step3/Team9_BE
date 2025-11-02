@@ -97,7 +97,7 @@ public class QuizQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<QuizDashboardDto> findRecentQuizzesForDashboard( Long studyId, User user, int size) {
+    public List<QuizDashboardDto> findRecentQuizzesForDashboard(Long studyId, User user, int size) {
 
         // 1. 권한 검증
         validateMember(studyId, user.getId());
