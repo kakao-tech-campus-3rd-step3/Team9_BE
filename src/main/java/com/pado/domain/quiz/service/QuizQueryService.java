@@ -1,8 +1,10 @@
 package com.pado.domain.quiz.service;
 
+import com.pado.domain.quiz.dto.projection.DashboardQuizProjection;
 import com.pado.domain.quiz.dto.projection.QuizInfoProjection;
 import com.pado.domain.quiz.dto.projection.SubmissionStatusDto;
 import com.pado.domain.quiz.dto.response.CursorResponseDto;
+import com.pado.domain.quiz.dto.response.QuizDashboardDto;
 import com.pado.domain.quiz.dto.response.QuizInfoDto;
 import com.pado.domain.quiz.dto.response.QuizResultDto;
 import com.pado.domain.quiz.entity.QuizSubmission;
@@ -16,6 +18,7 @@ import com.pado.domain.user.entity.User;
 import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QuizQueryService {
 
     private final StudyRepository studyRepository;
@@ -35,6 +39,8 @@ public class QuizQueryService {
 
     private static final int MAX_PAGE_SIZE = 50;
     private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MIN_DASHBOARD_SIZE = 1;
+    private static final int MAX_DASHBOARD_SIZE = 20;
 
     @Transactional(readOnly = true)
     public CursorResponseDto<QuizInfoDto> findQuizzesByStudy(Long studyId, User user, Long cursor, int pageSize) {
@@ -90,6 +96,24 @@ public class QuizQueryService {
         return quizDtoMapper.mapToResultDto(submission);
     }
 
+    @Transactional(readOnly = true)
+    public List<QuizDashboardDto> findRecentQuizzesForDashboard( Long studyId, User user, int size) {
+
+        // 1. 권한 검증
+        validateMember(studyId, user.getId());
+
+        // 2. 조회할 퀴즈 개수 조정
+        int adjustedSize = clampDashboardSize(size);
+
+        // 3. 퀴즈 목록 조회
+        List<DashboardQuizProjection> projections = quizRepository.findRecentDashboardQuizzes(studyId, user.getId(), adjustedSize);
+
+        // 4. DTO 변환
+        return projections.stream()
+                .map(proj -> toQuizDashboardDto(proj, user.getId()))
+                .toList();
+    }
+
     private void validateMember(Long studyId, Long userId) {
         if (!studyMemberRepository.existsByStudyIdAndUserId(studyId, userId)) {
             if (!studyRepository.existsById(studyId)) {
@@ -102,6 +126,10 @@ public class QuizQueryService {
     private int clampPageSize(int size) {
         if (size <= 0) return DEFAULT_PAGE_SIZE;
         return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    private int clampDashboardSize(int size) {
+        return Math.max(MIN_DASHBOARD_SIZE, Math.min(size, MAX_DASHBOARD_SIZE));
     }
 
     private Map<Long, SubmissionStatusDto> fetchSubmissionInfo(List<Long> quizIds, Long userId) {
@@ -128,5 +156,21 @@ public class QuizQueryService {
     private Long calculateNextCursor(List<QuizInfoDto> dtos, boolean hasNext) {
         if (!hasNext || dtos.isEmpty()) return null;
         return dtos.get(dtos.size() - 1).getCursorId();
+    }
+
+    private QuizDashboardDto toQuizDashboardDto(DashboardQuizProjection proj, Long userId) {
+        String rawStatus = proj.submissionStatusString();
+        SubmissionStatus status = SubmissionStatus.from(rawStatus);
+
+        if (rawStatus != null && status == SubmissionStatus.NOT_TAKEN && !rawStatus.equals("NOT_TAKEN")) {
+            log.warn("Invalid submission status in DB: '{}' (QuizID: {}, UserID: {}). Defaulting to NOT_TAKEN.",
+                    rawStatus, proj.quizId(), userId);
+        }
+
+        return new QuizDashboardDto(
+                proj.quizId(),
+                proj.title(),
+                status
+        );
     }
 }
