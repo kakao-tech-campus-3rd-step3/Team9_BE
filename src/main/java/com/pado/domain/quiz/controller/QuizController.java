@@ -98,7 +98,7 @@ public class QuizController {
 
     @GetMapping("/quizzes/{quiz_id}")
     @Operation(summary = "퀴즈 풀기 시작", description = "퀴즈 풀기를 시작하고, 진행 중인 답안지가 있으면 그 정보를 반환합니다.")
-    @Parameter(name = "quizId", description = "퀴즈 ID", example = "1")
+    @Parameter(name = "quiz_id", description = "퀴즈 ID", example = "1")
     public ResponseEntity<QuizProgressDto> startQuiz(
             @PathVariable("quiz_id") Long quizId,
             @Parameter(hidden = true) @CurrentUser User user
