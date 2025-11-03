@@ -51,7 +51,7 @@ public class ChatNotificationListener {
     public void handleScheduleCreatedEvent(ScheduleCreatedEvent event) {
 
         String systemMessageContent = "새로운 일정이 등록되었습니다: " + event.title();
-        String link = baseUrl + "/study/" + event.studyId() +"schedule/tune";
+        String link = baseUrl + "/study/" + event.studyId() +"/schedule/tune";
 
         sendSystemMessage(event.studyId(), systemMessageContent, link, MessageType.SCHEDULE);
 
