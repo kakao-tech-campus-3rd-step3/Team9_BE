@@ -38,7 +38,7 @@ public class QuizNotificationListener {
     public void handleQuizCompletedEvent(QuizCompletedEvent event) {
         log.info("Handling quiz completed event for studyId: {}", event.studyId());
         String message = "🎉 새로운 퀴즈 '%s'이(가) 생성되었습니다!".formatted(event.quizTitle());
-        String link = baseUrl + "/study/quiz";
+        String link = baseUrl + "/study/" + event.studyId() + "quiz";
         // 채팅 서비스 호출
         sendSystemMessage(event.studyId(), message, link, MessageType.QUIZ);
     }
