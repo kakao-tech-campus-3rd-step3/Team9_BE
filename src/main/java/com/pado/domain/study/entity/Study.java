@@ -8,7 +8,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Getter
@@ -70,36 +73,57 @@ public class Study extends AuditingEntity {
         this.studyTime = studyTime;
         this.maxMembers = maxMembers;
         this.fileKey = fileKey;
-        addInterests(interests);
-        addConditions(conditions);
+        updateInterests(interests);
+        updateConditions(conditions);
     }
 
-    public void addInterests(List<Category> categories) {
-        this.interests.clear();
-        if (categories != null) {
-            List<StudyCategory> newInterests = categories.stream()
-                .map(category -> StudyCategory
-                    .builder()
+    public void updateInterests(List<Category> newCategories) {
+        if (newCategories == null) {
+            this.interests.clear();
+            return;
+        }
+
+        Set<Category> newCategorySet = new HashSet<>(newCategories);
+        Set<Category> currentCategorySet = this.interests.stream()
+            .map(StudyCategory::getCategory)
+            .collect(Collectors.toSet());
+
+        this.interests.removeIf(
+            studyCategory -> !newCategorySet.contains(studyCategory.getCategory()));
+
+        for (Category newCategory : newCategories) {
+            if (!currentCategorySet.contains(newCategory)) {
+                StudyCategory studyCategory = StudyCategory.builder()
                     .study(this)
-                    .category(category)
-                    .build()
-                )
-                .toList();
-            this.interests.addAll(newInterests);
+                    .category(newCategory)
+                    .build();
+                this.interests.add(studyCategory);
+            }
         }
     }
 
-    public void addConditions(List<String> conditionContents) {
-        this.conditions.clear();
-        if (conditionContents != null) {
-            List<StudyCondition> newConditions = conditionContents.stream()
-                .map(content -> StudyCondition.builder()
+    public void updateConditions(List<String> newConditionContents) {
+        if (newConditionContents == null) {
+            this.conditions.clear();
+            return;
+        }
+
+        Set<String> newContentSet = new HashSet<>(newConditionContents);
+        Set<String> currentContentSet = this.conditions.stream()
+            .map(StudyCondition::getContent)
+            .collect(Collectors.toSet());
+
+        this.conditions.removeIf(
+            studyCondition -> !newContentSet.contains(studyCondition.getContent()));
+
+        for (String newContent : newConditionContents) {
+            if (!currentContentSet.contains(newContent)) {
+                StudyCondition studyCondition = StudyCondition.builder()
                     .study(this)
-                    .content(content)
-                    .build())
-                .toList();
-            this.conditions.addAll(newConditions);
+                    .content(newContent)
+                    .build();
+                this.conditions.add(studyCondition);
+            }
         }
     }
-
 }

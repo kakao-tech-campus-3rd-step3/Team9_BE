@@ -50,19 +50,19 @@ public class StudyServiceImpl implements StudyService {
             .maxMembers(requestDto.max_members())
             .fileKey(requestDto.file_key())
             .build();
-        newStudy.addInterests(requestDto.interests());
-        newStudy.addConditions(requestDto.conditions());
+
+        newStudy.updateInterests(requestDto.interests());
+        newStudy.updateConditions(requestDto.conditions());
 
         StudyMember leaderMember = StudyMember.builder()
-                .study(newStudy)
-                .user(user)
-                .role(StudyMemberRole.LEADER)
-                .build();
+            .study(newStudy)
+            .user(user)
+            .role(StudyMemberRole.LEADER)
+            .build();
 
         Study savedStudy = studyRepository.save(newStudy);
         StudyMember savedLeader = studyMemberRepository.save(leaderMember);
 
-        // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
         LastReadMessage lastReadMessage = new LastReadMessage(savedLeader, 0L);
         lastReadMessageRepository.save(lastReadMessage);
     }
@@ -132,7 +132,7 @@ public class StudyServiceImpl implements StudyService {
     @Override
     @Transactional
     public void updateStudy(User user, Long studyId, StudyCreateRequestDto requestDto) {
-        Study study = studyRepository.findById(studyId)
+        Study study = studyRepository.findByIdWithLeader(studyId)
             .orElseThrow(StudyNotFoundException::new);
 
         if (!study.getLeader().getId().equals(user.getId())) {
