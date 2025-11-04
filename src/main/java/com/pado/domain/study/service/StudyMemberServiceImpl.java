@@ -6,8 +6,8 @@ import com.pado.domain.chat.repository.ChatMessageRepository;
 import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
-import com.pado.domain.study.dto.response.StudyApplicantDetailDto; // 신규 import
-import com.pado.domain.study.dto.response.StudyApplicantListResponseDto; // 신규 import
+import com.pado.domain.study.dto.response.StudyApplicantDetailDto;
+import com.pado.domain.study.dto.response.StudyApplicantListResponseDto;
 import com.pado.domain.study.dto.response.StudyMemberDetailDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.dto.response.UserDetailDto;
@@ -93,13 +93,11 @@ public class StudyMemberServiceImpl implements StudyMemberService {
 
         StudyApplicationStatus newStatus = StudyApplicationStatus.fromString(request.status());
         if (newStatus.equals(StudyApplicationStatus.APPROVED)) {
-            // 스터디 멤버 생성
             StudyMember member = new StudyMember(study, application.getUser(),
                 StudyMemberRole.MEMBER, application.getMessage(), 0);
             studyMemberRepository.save(member);
-            studyApplicationRepository.delete(application); // 신청서 삭제
+            studyApplicationRepository.delete(application);
 
-            // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티 생성
             Optional<ChatMessage> latestMessage = chatMessageRepository.findTopByStudyIdOrderByIdDesc(
                 studyId);
             long latestMessageId = latestMessage.map(ChatMessage::getId).orElse(0L);
@@ -125,6 +123,7 @@ public class StudyMemberServiceImpl implements StudyMemberService {
         List<StudyMember> members = studyMemberRepository.findByStudyWithUser(study);
         List<StudyMemberDetailDto> memberDtos = members.stream()
             .map(member -> new StudyMemberDetailDto(
+                member.getId(),
                 member.getUser().getNickname(),
                 member.getRole().name(),
                 null,
