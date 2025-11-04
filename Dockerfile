@@ -6,7 +6,7 @@ COPY . .
 RUN gradle clean bootJar --no-daemon
 
 # 2) Runtime stage
-FROM openjdk:21-jdk-slim
+FROM openjdk:21-jre-slim
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 ARG JARFILE=/workspace/build/libs/*.jar
 COPY --from=builder ${JARFILE} app.jar
