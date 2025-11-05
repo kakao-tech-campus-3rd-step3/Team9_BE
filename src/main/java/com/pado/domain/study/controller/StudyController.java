@@ -113,7 +113,7 @@ public class StudyController {
     public ResponseEntity<Void> updateStudy(
         @Parameter(hidden = true) @CurrentUser User user,
         @PathVariable("study_id") Long studyId,
-        @RequestBody StudyUpdateRequestDto request
+        @Valid @RequestBody StudyUpdateRequestDto request
     ) {
         studyService.updateStudy(user, studyId, request);
         return ResponseEntity.ok().build();
