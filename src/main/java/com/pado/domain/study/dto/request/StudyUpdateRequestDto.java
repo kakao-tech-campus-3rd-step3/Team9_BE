@@ -23,7 +23,6 @@ public record StudyUpdateRequestDto(
     String detail_description,
 
     @Schema(description = "스터디 관심 분야(카테고리) 목록", example = "[\"프로그래밍\", \"취업\"]")
-    @Size(min = 1, message = "관심 분야는 최소 1개 이상 선택해야 합니다.")
     List<Category> interests,
 
     @Schema(description = "스터디 지역", example = "대구")
