@@ -31,21 +31,28 @@ public class Study extends AuditingEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "leader_id", nullable = false)
     private User leader;
+    @Setter
     @Column(nullable = false, length = 100)
     private String title;
+    @Setter
     @Column(nullable = false, length = 200)
     private String description;
 
+    @Setter
     @Lob
     private String detailDescription;
+    @Setter
     @Column(length = 100)
     private String studyTime;
 
+    @Setter
     @Column(nullable = false)
     private Integer maxMembers;
+    @Setter
     @Column(length = 500)
     private String fileKey;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private Region region;
