@@ -79,7 +79,6 @@ public class Study extends AuditingEntity {
 
     public void updateInterests(List<Category> newCategories) {
         if (newCategories == null) {
-            this.interests.clear();
             return;
         }
 
@@ -104,7 +103,6 @@ public class Study extends AuditingEntity {
 
     public void updateConditions(List<String> newConditionContents) {
         if (newConditionContents == null) {
-            this.conditions.clear();
             return;
         }
 
