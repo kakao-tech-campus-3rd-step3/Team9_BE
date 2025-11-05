@@ -5,6 +5,7 @@ import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.request.StudyUpdateRequestDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
@@ -58,13 +59,11 @@ class StudyServiceImplTest {
 
     private static final int MAX_PAGE_SIZE = 50;
 
-    // updateStudy 테스트를 위한 공용 변수
     private User leaderUser;
     private User nonLeaderUser;
     private Study existingStudy;
     private Long studyId = 1L;
 
-    // 공용 변수 초기화
     @BeforeEach
     void setUp() {
         leaderUser = User.builder().nickname("Leader").email("leader@test.com").gender(Gender.MALE)
@@ -84,15 +83,12 @@ class StudyServiceImplTest {
             .region(Region.SEOUL)
             .build();
 
-        // 테스트를 위해 초기 컬렉션 상태 설정
-        // Study 엔티티의 updateInterests/updateConditions를 직접 사용
         existingStudy.updateInterests(List.of(Category.PROGRAMMING, Category.EMPLOYMENT));
         existingStudy.updateConditions(List.of("Condition 1", "Condition 2"));
     }
 
     @Test
     void 스터디_생성_성공() {
-        // given
         User user = User.builder().build();
         StudyCreateRequestDto dto = new StudyCreateRequestDto(
             "새로운 스터디",
@@ -107,7 +103,7 @@ class StudyServiceImplTest {
         );
 
         Study dummySavedStudy = Study.builder()
-            .id(1L) // ID 설정
+            .id(1L)
             .leader(user)
             .title(dto.title())
             .description(dto.description())
@@ -120,10 +116,8 @@ class StudyServiceImplTest {
 
         when(studyRepository.save(any(Study.class))).thenReturn(dummySavedStudy);
 
-        // when
         studyService.createStudy(user, dto);
 
-        // then
         ArgumentCaptor<Study> captor = ArgumentCaptor.forClass(Study.class);
         verify(studyRepository).save(captor.capture());
         Study savedStudy = captor.getValue();
@@ -162,7 +156,6 @@ class StudyServiceImplTest {
 
     @Test
     void 스터디_목록_조회_성공() {
-        // given
         User user = User.builder().build();
         Study study1 = Study.builder().id(1L).title("스터디1").description("설명1").build();
         Study study2 = Study.builder().id(2L).title("스터디2").description("설명2").build();
@@ -174,11 +167,9 @@ class StudyServiceImplTest {
         when(studyRepository.findStudiesByFilter(any(), any(), any(), any(), any(Pageable.class)))
             .thenReturn(mockSlice);
 
-        // when
         StudyListResponseDto response = studyService.findStudies(user, "키워드", null, null, page,
             size);
 
-        // then
         assertThat(response.studies()).hasSize(2);
         assertThat(response.studies().get(0))
             .extracting(StudySimpleResponseDto::title, StudySimpleResponseDto::description)
@@ -212,7 +203,6 @@ class StudyServiceImplTest {
 
     @Test
     void 상세정보_조회_성공() {
-        // given
         User testUser = User.builder()
             .email("test@test.com")
             .passwordHash("1234")
@@ -239,13 +229,10 @@ class StudyServiceImplTest {
         when(studyRepository.findByIdWithLeader(mockStudy.getId())).thenReturn(
             Optional.of(mockStudy));
 
-        // studyMemberRepository.countByStudy(mockStudy) 호출에 대한 Mocking 추가
         when(studyMemberRepository.countByStudy(mockStudy)).thenReturn(1L);
 
-        // when
         StudyDetailResponseDto result = studyService.getStudyDetail(mockStudy.getId());
 
-        // then
         assertAll(
             () -> assertThat(result.file_key()).isEqualTo(mockStudy.getFileKey()),
             () -> assertThat(result.title()).isEqualTo(mockStudy.getTitle()),
@@ -255,7 +242,7 @@ class StudyServiceImplTest {
             () -> assertThat(result.region()).isEqualTo(mockStudy.getRegion()),
             () -> assertThat(result.study_time()).isEqualTo(mockStudy.getStudyTime()),
             () -> assertThat(result.max_members()).isEqualTo(mockStudy.getMaxMembers()),
-            () -> assertThat(result.current_members()).isEqualTo(1), // Mocking된 값(1) 확인
+            () -> assertThat(result.current_members()).isEqualTo(1),
 
             () -> assertThat(result.interests()).containsExactlyInAnyOrder(Category.PROGRAMMING,
                 Category.EMPLOYMENT),
@@ -263,7 +250,7 @@ class StudyServiceImplTest {
         );
 
         verify(studyRepository, times(1)).findByIdWithLeader(mockStudy.getId());
-        verify(studyMemberRepository, times(1)).countByStudy(mockStudy); // 호출 검증
+        verify(studyMemberRepository, times(1)).countByStudy(mockStudy);
     }
 
     @Test
@@ -276,66 +263,87 @@ class StudyServiceImplTest {
             .hasMessageContaining(ErrorCode.STUDY_NOT_FOUND.message);
     }
 
-    // --- [새로 추가된 테스트 블록] ---
     @Nested
     @DisplayName("updateStudy (스터디 수정) 테스트")
     class UpdateStudyTests {
 
         @Test
-        @DisplayName("성공: 컬렉션 변경 없이 제목만 수정 (500 에러 재현 케이스)")
-        void updateStudy_WithSameCollections_ShouldSucceed() {
-            // given
+        @DisplayName("성공: title만 수정 시 description, conditions는 기존 값 유지")
+        void updateStudy_PartialUpdate_ShouldKeepOtherFields() {
             when(studyRepository.findByIdWithLeader(studyId)).thenReturn(
                 Optional.of(existingStudy));
 
-            StudyCreateRequestDto updateRequest = new StudyCreateRequestDto(
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
+                "New Title Only",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            );
+
+            studyService.updateStudy(leaderUser, studyId, updateRequest);
+
+            assertThat(existingStudy.getTitle()).isEqualTo("New Title Only");
+            assertThat(existingStudy.getDescription()).isEqualTo("Original Desc");
+            assertThat(existingStudy.getMaxMembers()).isEqualTo(10);
+            assertThat(existingStudy.getConditions())
+                .extracting(StudyCondition::getContent)
+                .containsExactlyInAnyOrder("Condition 1", "Condition 2");
+            assertThat(existingStudy.getInterests())
+                .extracting(StudyCategory::getCategory)
+                .containsExactlyInAnyOrder(Category.PROGRAMMING, Category.EMPLOYMENT);
+        }
+
+        @Test
+        @DisplayName("성공: 컬렉션 변경 없이 제목만 수정 (500 에러 재현 케이스)")
+        void updateStudy_WithSameCollections_ShouldSucceed() {
+            when(studyRepository.findByIdWithLeader(studyId)).thenReturn(
+                Optional.of(existingStudy));
+
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
                 "New Title",
                 "New Desc",
                 "New Detail",
-                List.of(Category.PROGRAMMING, Category.EMPLOYMENT), // ★ 동일한 관심사
+                List.of(Category.PROGRAMMING, Category.EMPLOYMENT),
                 Region.ONLINE,
                 "New Time",
                 5,
-                List.of("Condition 1", "Condition 2"), // ★ 동일한 조건
+                List.of("Condition 1", "Condition 2"),
                 "new_key"
             );
 
-            // when
             studyService.updateStudy(leaderUser, studyId, updateRequest);
 
-            // then
             assertThat(existingStudy.getTitle()).isEqualTo("New Title");
             assertThat(existingStudy.getRegion()).isEqualTo(Region.ONLINE);
             assertThat(existingStudy.getMaxMembers()).isEqualTo(5);
-
             assertThat(existingStudy.getInterests())
                 .extracting(StudyCategory::getCategory)
                 .containsExactlyInAnyOrder(Category.PROGRAMMING, Category.EMPLOYMENT);
             assertThat(existingStudy.getConditions())
                 .extracting(StudyCondition::getContent)
                 .containsExactlyInAnyOrder("Condition 1", "Condition 2");
-
             verify(studyRepository, times(1)).findByIdWithLeader(studyId);
         }
 
         @Test
         @DisplayName("성공: 관심사 1개 추가 (2개 -> 3개)")
         void updateStudy_AddInterest() {
-            // given
             when(studyRepository.findByIdWithLeader(studyId)).thenReturn(
                 Optional.of(existingStudy));
 
-            StudyCreateRequestDto updateRequest = new StudyCreateRequestDto(
-                "Title", "Desc", "Detail",
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
+                null, null, null,
                 List.of(Category.PROGRAMMING, Category.EMPLOYMENT, Category.LANGUAGE),
-                // ★ 신규(LANGUAGE) 추가
-                Region.SEOUL, "Time", 5, List.of("Condition 1"), "key"
+                null, null, null, List.of("Condition 1"), null
             );
 
-            // when
             studyService.updateStudy(leaderUser, studyId, updateRequest);
 
-            // then
             assertThat(existingStudy.getInterests())
                 .extracting(StudyCategory::getCategory)
                 .containsExactlyInAnyOrder(Category.PROGRAMMING, Category.EMPLOYMENT,
@@ -348,20 +356,17 @@ class StudyServiceImplTest {
         @Test
         @DisplayName("성공: 관심사 1개 삭제 (2개 -> 1개)")
         void updateStudy_RemoveInterest() {
-            // given
             when(studyRepository.findByIdWithLeader(studyId)).thenReturn(
                 Optional.of(existingStudy));
 
-            StudyCreateRequestDto updateRequest = new StudyCreateRequestDto(
-                "Title", "Desc", "Detail",
-                List.of(Category.PROGRAMMING), // ★ EMPLOYMENT 삭제됨
-                Region.SEOUL, "Time", 5, List.of("Condition 1", "Condition 2"), "key"
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
+                null, null, null,
+                List.of(Category.PROGRAMMING),
+                null, null, null, List.of("Condition 1", "Condition 2"), null
             );
 
-            // when
             studyService.updateStudy(leaderUser, studyId, updateRequest);
 
-            // then
             assertThat(existingStudy.getInterests())
                 .extracting(StudyCategory::getCategory)
                 .containsExactlyInAnyOrder(Category.PROGRAMMING);
@@ -373,20 +378,17 @@ class StudyServiceImplTest {
         @Test
         @DisplayName("성공: 관심사 모두 삭제 (2개 -> 0개)")
         void updateStudy_RemoveAllInterests() {
-            // given
             when(studyRepository.findByIdWithLeader(studyId)).thenReturn(
                 Optional.of(existingStudy));
 
-            StudyCreateRequestDto updateRequest = new StudyCreateRequestDto(
-                "Title", "Desc", "Detail",
-                List.of(), // ★ 빈 리스트
-                Region.SEOUL, "Time", 5, List.of(), "key"
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
+                null, null, null,
+                List.of(),
+                null, null, null, List.of(), null
             );
 
-            // when
             studyService.updateStudy(leaderUser, studyId, updateRequest);
 
-            // then
             assertThat(existingStudy.getInterests()).isEmpty();
             assertThat(existingStudy.getConditions()).isEmpty();
         }
@@ -394,16 +396,14 @@ class StudyServiceImplTest {
         @Test
         @DisplayName("실패: 리더가 아닌 사용자가 수정 시도 시 FORBIDDEN 예외")
         void updateStudy_Fail_NotLeader() {
-            // given
             when(studyRepository.findByIdWithLeader(studyId)).thenReturn(
                 Optional.of(existingStudy));
 
-            StudyCreateRequestDto updateRequest = new StudyCreateRequestDto(
-                "New Title", "Desc", "Detail",
-                List.of(), Region.SEOUL, "Time", 5, List.of(), "key"
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
+                "New Title", null, null,
+                List.of(), null, null, null, List.of(), null
             );
 
-            // when & then
             assertThatThrownBy(
                 () -> studyService.updateStudy(nonLeaderUser, studyId, updateRequest))
                 .isInstanceOf(BusinessException.class)
@@ -413,17 +413,15 @@ class StudyServiceImplTest {
         @Test
         @DisplayName("실패: 존재하지 않는 스터디 수정 시도 시 NOT_FOUND 예외")
         void updateStudy_Fail_StudyNotFound() {
-            // given
             Long nonExistentStudyId = 999L;
             when(studyRepository.findByIdWithLeader(nonExistentStudyId)).thenReturn(
                 Optional.empty());
 
-            StudyCreateRequestDto updateRequest = new StudyCreateRequestDto(
-                "New Title", "Desc", "Detail",
-                List.of(), Region.SEOUL, "Time", 5, List.of(), "key"
+            StudyUpdateRequestDto updateRequest = new StudyUpdateRequestDto(
+                "New Title", null, null,
+                List.of(), null, null, null, List.of(), null
             );
 
-            // when & then
             assertThatThrownBy(
                 () -> studyService.updateStudy(leaderUser, nonExistentStudyId, updateRequest))
                 .isInstanceOf(BusinessException.class)
