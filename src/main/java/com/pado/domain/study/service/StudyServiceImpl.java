@@ -140,6 +140,15 @@ public class StudyServiceImpl implements StudyService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
+        if (requestDto.max_members() != null) {
+            int currentMembers = (int) studyMemberRepository.countByStudy(study);
+            if (requestDto.max_members() < currentMembers) {
+
+                throw new BusinessException(ErrorCode.INVALID_MAX_MEMBERS,
+                    "최대 인원 수는 현재 인원수(" + currentMembers + "명)보다 적을 수 없습니다.");
+            }
+        }
+
         study.update(requestDto);
 
         studyRepository.save(study);
