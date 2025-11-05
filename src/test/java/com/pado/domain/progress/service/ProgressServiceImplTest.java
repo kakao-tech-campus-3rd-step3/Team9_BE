@@ -95,6 +95,8 @@ class ProgressServiceImplTest {
         ProgressChapterRequestDto req = new ProgressChapterRequestDto("1주차 OT");
         Chapter ch1 = Chapter.createChapter(study, "1주차 OT", false);
         Chapter ch2 = Chapter.createChapter(study, "2주차 실습", false);
+        ReflectionTestUtils.setField(ch1, "id", 1L);
+        ReflectionTestUtils.setField(ch2, "id", 2L);
 
         given(studyRepository.existsById(studyId)).willReturn(true);
         given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(eq(studyId), eq(userMember.getId()), anyCollection()))
@@ -106,6 +108,7 @@ class ProgressServiceImplTest {
 
         // then
         assertNotNull(dto);
+        assertEquals(1L, dto.chapters().get(0).id());
         assertEquals(2, dto.chapters().size());
         assertEquals("1주차 OT", dto.chapters().get(0).content());
         then(chapterRepository).should().findByStudyId(studyId);

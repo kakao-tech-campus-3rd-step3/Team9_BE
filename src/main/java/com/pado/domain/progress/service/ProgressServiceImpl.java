@@ -40,7 +40,7 @@ public class ProgressServiceImpl implements ProgressService {
         checkException(studyId, user, StudyMemberRole.MEMBER);
         List<Chapter> chapters = chapterRepository.findByStudyId(studyId);
         List<ProgressChapterDto> progressChapterDtos = chapters.stream().map(
-                chapter -> new ProgressChapterDto(chapter.getContent(), chapter.isCompleted()))
+                chapter -> new ProgressChapterDto(chapter.getId(), chapter.getContent(), chapter.isCompleted()))
                 .toList();
 
         return new ProgressRoadMapResponseDto(progressChapterDtos);
