@@ -140,33 +140,9 @@ public class StudyServiceImpl implements StudyService {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
-        if (requestDto.title() != null) {
-            study.setTitle(requestDto.title());
-        }
-        if (requestDto.description() != null) {
-            study.setDescription(requestDto.description());
-        }
-        if (requestDto.detail_description() != null) {
-            study.setDetailDescription(requestDto.detail_description());
-        }
-        if (requestDto.region() != null) {
-            study.setRegion(requestDto.region());
-        }
-        if (requestDto.study_time() != null) {
-            study.setStudyTime(requestDto.study_time());
-        }
-        if (requestDto.max_members() != null) {
-            study.setMaxMembers(requestDto.max_members());
-        }
-        if (requestDto.file_key() != null) {
-            study.setFileKey(requestDto.file_key());
-        }
-        if (requestDto.interests() != null) {
-            study.updateInterests(requestDto.interests());
-        }
-        if (requestDto.conditions() != null) {
-            study.updateConditions(requestDto.conditions());
-        }
+        study.update(requestDto);
+
+        studyRepository.save(study);
     }
 
     private Pageable createPageable(int page, int size) {
