@@ -238,6 +238,11 @@ public class QuizCommandService {
             }
 
             if (question instanceof MultipleChoiceQuestion mcq) {
+                String userAnswer = answerDto.userAnswer();
+                if (userAnswer == null || userAnswer.trim().isEmpty()) {
+                    continue;
+                }
+
                 Long userAnswerChoiceId;
                 try {
                     userAnswerChoiceId = Long.parseLong(answerDto.userAnswer());
