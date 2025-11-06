@@ -8,6 +8,8 @@
 
 "파도"는 스터디 운영에 필요한 모든 기능을 유기적으로 연동하여 제공합니다.
 
+---
+
 ### 1. 스터디 관리 및 탐색
 
 - 
@@ -166,16 +168,16 @@
 docker run -d -p 6379:6379 --name pado-redis redis:7-alpine
 
 # Spring Boot 애플리케이션 실행
-./gradlew bootRun`
+./gradlew bootRun
 ```
 
 ### 2. Docker Compose (개발용)
 
-`docker-compose.dev.yml` 78 파일을 통해 Spring Boot 앱과 Redis를 동시에 실행할 수 있습니다.
+`docker-compose.dev.yml` 파일을 통해 Spring Boot 앱과 Redis를 동시에 실행할 수 있습니다.
 
 ```
 # Docker 이미지 빌드 및 컨테이너 실행 (dev 프로파일)
-docker-compose -f docker-compose.dev.yml up --build`
+docker-compose -f docker-compose.dev.yml up --build
 ```
 
 ## 📚 API 문서
