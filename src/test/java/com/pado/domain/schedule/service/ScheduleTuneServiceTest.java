@@ -122,7 +122,6 @@ class ScheduleTuneServiceTest {
                 .slotMinutes(30).status(ScheduleTuneStatus.PENDING).build();
             ReflectionTestUtils.setField(saved, "id", 777L);
             given(tuneRepo.save(any(ScheduleTune.class))).willReturn(saved);
-
             ScheduleTuneCreateRequestDto req = new ScheduleTuneCreateRequestDto(
                 "정기회의", "안건",
                 LocalDate.now().plusDays(1), LocalDate.now().plusDays(1),
@@ -244,6 +243,8 @@ class ScheduleTuneServiceTest {
             ScheduleTuneSlot s1 = ScheduleTuneSlot.builder()
                 .scheduleTune(tune).slotIndex(0).startTime(st).endTime(et)
                 .occupancyBits(new byte[1]).build();
+
+            // [수정됨] complete_slot_mismatch 테스트에서 이 로직을 삭제했으므로, 이 테스트에서는 유지합니다.
             given(slotRepo.findByScheduleTuneIdOrderBySlotIndexAsc(777L))
                 .willReturn(List.of(s1));
 
@@ -259,8 +260,8 @@ class ScheduleTuneServiceTest {
         }
 
         @Test
-        @DisplayName("슬롯과 불일치하면 INVALIDINPUT")
-        void complete_slot_mismatch() {
+        @DisplayName("[수정됨] 완료 실패 (400) -> 1시간 단위로 요청해도 성공 (200 OK)")
+        void complete_flexible_time_success() {
             setAuth(leader);
 
             ScheduleTune tune = ScheduleTune.builder()
@@ -275,17 +276,38 @@ class ScheduleTuneServiceTest {
             given(tuneRepo.findById(777L)).willReturn(Optional.of(tune));
             given(studyRepo.findById(10L)).willReturn(Optional.of(study));
             given(studyMemberService.isStudyLeader(leader, study)).willReturn(true);
-            given(slotRepo.findByScheduleTuneIdOrderBySlotIndexAsc(777L)).willReturn(List.of());
 
-            LocalDateTime st = LocalDateTime.now().plusDays(1).withHour(10);
-            LocalDateTime et = st.plusMinutes(30);
+            // [수정됨] 30분짜리 슬롯만 존재한다고 가정
+            LocalDateTime st_slot = LocalDateTime.now().plusDays(1).withHour(10);
+            LocalDateTime et_slot = st_slot.plusMinutes(30);
+            ScheduleTuneSlot s1 = ScheduleTuneSlot.builder()
+                .scheduleTune(tune).slotIndex(0).startTime(st_slot).endTime(et_slot)
+                .occupancyBits(new byte[1]).build();
+
+            given(slotRepo.findByScheduleTuneIdOrderBySlotIndexAsc(777L))
+                .willReturn(List.of(s1));
+
+            // [수정됨] 1시간 단위로 요청 (슬롯과 불일치)
+            LocalDateTime st_req = LocalDateTime.now().plusDays(1).withHour(10);
+            LocalDateTime et_req = st_req.plusHours(1); // 10:00 ~ 11:00
+
             ScheduleCreateRequestDto req = new ScheduleCreateRequestDto(
-                "확정 회의", "최종 안건", st, et
+                "확정 회의 (1시간)", "최종 안건", st_req, et_req
             );
 
-            BusinessException ex = assertThrows(BusinessException.class,
-                () -> service.complete(777L, req));
-            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
+            // [수정됨] BusinessException 예외를 던지는 대신, 성공(true)을 반환해야 함
+            ScheduleCompleteResponseDto resp = service.complete(777L, req);
+
+            assertThat(resp.success()).isTrue();
+            assertThat(tune.getStatus()).isEqualTo(ScheduleTuneStatus.COMPLETED);
+
+            // [수정됨] scheduleRepo.save()가 호출되었는지 검증
+            ArgumentCaptor<Schedule> scheduleCaptor = ArgumentCaptor.forClass(Schedule.class);
+            verify(scheduleRepo).save(scheduleCaptor.capture());
+
+            // 저장된 Schedule이 1시간 단위인지 확인
+            assertThat(scheduleCaptor.getValue().getStartTime()).isEqualTo(st_req);
+            assertThat(scheduleCaptor.getValue().getEndTime()).isEqualTo(et_req);
         }
     }
 }
