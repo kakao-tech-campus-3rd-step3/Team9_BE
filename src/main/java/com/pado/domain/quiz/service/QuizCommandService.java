@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -81,9 +82,30 @@ public class QuizCommandService {
         }
 
         // 3. 기존 제출 기록 조회 또는 새로 생성
-        QuizSubmission submission = quiz.start(user);
-        quizSubmissionRepository.save(submission);
+        Optional<QuizSubmission> existingSubmission = quizSubmissionRepository.findByQuizAndUser(quiz, user);
+        QuizSubmission submission;
+        if (existingSubmission.isPresent()) {
+            submission = existingSubmission.get();
 
+            // 이미 완료했는지 확인
+            submission.validateIsNotCompleted(); // 이 메서드가 SubmissionStatus.COMPLETED를 검사한다고 가정
+
+            log.info("Resuming quiz {} for user {}", quizId, user.getId());
+
+        } else {
+            // 기존 기록이 없는 경우
+            log.info("Starting new quiz {} for user {}", quizId, user.getId());
+
+            submission = QuizSubmission.builder()
+                    .user(user)
+                    .build();
+
+            quiz.addSubmission(submission);
+
+            quizSubmissionRepository.save(submission);
+        }
+
+        // 5. DTO 반환
         return quizDtoMapper.toQuizProgressDto(quiz, submission);
     }
 
