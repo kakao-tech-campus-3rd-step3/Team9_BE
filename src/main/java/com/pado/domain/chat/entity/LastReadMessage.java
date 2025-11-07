@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Getter
@@ -19,6 +21,7 @@ public class LastReadMessage{
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "study_member_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private StudyMember studyMember;
     
     @Column(name = "last_read_message_id", nullable = false)
