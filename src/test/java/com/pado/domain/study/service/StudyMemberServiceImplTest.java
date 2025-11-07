@@ -1,14 +1,14 @@
 package com.pado.domain.study.service;
 
 import com.pado.domain.chat.entity.LastReadMessage;
-import com.pado.domain.chat.repository.ChatMessageRepository; // 추가
-import com.pado.domain.chat.repository.LastReadMessageRepository; // 추가
+import com.pado.domain.chat.repository.ChatMessageRepository;
+import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.shared.entity.Region;
-import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto; // 추가
+import com.pado.domain.study.dto.request.StudyApplicationStatusChangeRequestDto;
 import com.pado.domain.study.dto.request.StudyApplyRequestDto;
-import com.pado.domain.study.dto.response.StudyApplicantDetailDto; // 추가
-import com.pado.domain.study.dto.response.StudyApplicantListResponseDto; // 추가
-import com.pado.domain.study.dto.response.StudyMemberDetailDto; // 추가
+import com.pado.domain.study.dto.response.StudyApplicantDetailDto;
+import com.pado.domain.study.dto.response.StudyApplicantListResponseDto;
+import com.pado.domain.study.dto.response.StudyMemberDetailDto;
 import com.pado.domain.study.dto.response.StudyMemberListResponseDto;
 import com.pado.domain.study.entity.*;
 import com.pado.domain.study.exception.*;
@@ -182,6 +182,12 @@ class StudyMemberServiceImplTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.members()).hasSize(2);
+
+            // [수정] DTO에 memberId가 추가되었는지 검증
+            assertThat(result.members())
+                .extracting(StudyMemberDetailDto::memberId)
+                .containsExactlyInAnyOrder(leaderMember.getId(), normalMember.getId());
+
             assertThat(result.members()).extracting(StudyMemberDetailDto::nickname)
                 .containsExactlyInAnyOrder("리더", "멤버");
             assertThat(result.members()).extracting(StudyMemberDetailDto::role)

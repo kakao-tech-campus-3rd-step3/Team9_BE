@@ -100,7 +100,7 @@ public class ScheduleTuneController {
             name = "list_tunes",
             value = """
                 [
-                  { "title":"주간 정기 회의","start":"2025-09-21T10:00:00","end":"2025-09-21T12:00:00" }
+                  { "tune_id": 101, "title":"주간 정기 회의","start":"2025-09-21T10:00:00","end":"2025-09-21T12:00:00" }
                 ]
                 """
         )
@@ -141,9 +141,9 @@ public class ScheduleTuneController {
     @Parameters({
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
-    @GetMapping("schedule-tunes/{tuneid}")
+    @GetMapping("schedule-tunes/{tune_id}")
     public ResponseEntity<ScheduleTuneDetailResponseDto> getScheduleTuneDetail(
-        @PathVariable("tuneid") Long tuneId
+        @PathVariable("tune_id") Long tuneId
     ) {
         return ResponseEntity.ok(scheduleTuneService.findScheduleTuneDetail(tuneId));
     }
@@ -152,7 +152,7 @@ public class ScheduleTuneController {
     @Api404TuningScheduleNotFoundError
     @Operation(
         summary = "조율 참여/갱신",
-        description = "멤버가 가능한 슬롯을 제출합니다(배열 길이는 슬롯 수와 일치해야 하며, 각 값은 0/1로 해석됩니다).",
+        description = "멤버가 가능한 슬롯을 제출합니다. 배열의 길이는 해당 조율의 전체 슬롯 수와 일치해야 하며, 각 요소는 0(불가능) 또는 1(가능)이어야 합니다.",
         security = @SecurityRequirement(name = "bearerAuth"),
         requestBody = @RequestBody(
             required = true,
@@ -162,7 +162,7 @@ public class ScheduleTuneController {
                 examples = @ExampleObject(
                     name = "participate",
                     value = """
-                        { "candidate_dates": }[1]
+                        { "candidate_dates": [1, 1, 0, 0, 1, 0] }
                         """
                 )
             )
@@ -189,9 +189,9 @@ public class ScheduleTuneController {
     @Parameters({
         @Parameter(name = "tune_id", description = "조율 ID", required = true, example = "1234")
     })
-    @PostMapping("schedule-tunes/{tuneid}/participants")
+    @PostMapping("schedule-tunes/{tune_id}/participants")
     public ResponseEntity<ScheduleTuneParticipantResponseDto> participateInScheduleTune(
-        @PathVariable("tuneid") Long tuneId,
+        @PathVariable("tune_id") Long tuneId,
         @Valid @org.springframework.web.bind.annotation.RequestBody ScheduleTuneParticipantRequestDto request
     ) {
         return ResponseEntity.ok(scheduleTuneService.participate(tuneId, request));

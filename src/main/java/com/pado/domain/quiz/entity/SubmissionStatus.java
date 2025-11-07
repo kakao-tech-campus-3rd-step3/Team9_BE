@@ -15,4 +15,16 @@ public enum SubmissionStatus {
     public String getName() {
         return name();
     }
+
+    public static SubmissionStatus from(String statusString) {
+        if (statusString == null) {
+            return NOT_TAKEN;
+        }
+
+        try {
+            return SubmissionStatus.valueOf(statusString);
+        } catch (IllegalArgumentException e) {
+            return NOT_TAKEN;
+        }
+    }
 }

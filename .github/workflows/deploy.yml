@@ -330,6 +330,7 @@ jobs:
             MAIL_VERIFICATION_EXP_SECONDS=${{ secrets.MAIL_VERIFICATION_EXP_SECONDS || '300' }}
             REDIS_HOST=${{ secrets.REDIS_HOST }}
             REDIS_PORT=${{ secrets.REDIS_PORT || '6379' }}
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             EOF
             
             NEW_CONTAINER_ID=$(sudo docker run -d --name "$NEW_NAME" -p ${TARGET_PORT}:8080 \

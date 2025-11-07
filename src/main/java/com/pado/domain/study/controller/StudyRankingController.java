@@ -42,7 +42,7 @@ public class StudyRankingController {
             @PathVariable("study_id") Long studyId,
             @Parameter(hidden = true) @CurrentUser User user
     ) {
-        MyRankResponseDto myRank = studyRankingService.getMyRank(studyId, user.getId());
+        MyRankResponseDto myRank = studyRankingService.getMyRank(studyId, user);
         return ResponseEntity.ok(myRank);
     }
 
@@ -60,8 +60,11 @@ public class StudyRankingController {
             @Parameter(name = "study_id", description = "랭킹을 조회할 스터디의 ID", required = true, example = "1")
     })
     @GetMapping
-    public ResponseEntity<TotalRankingResponseDto> getTotalRanking(@PathVariable("study_id") Long studyId) {
-        TotalRankingResponseDto totalRanking = studyRankingService.getTotalRanking(studyId);
+    public ResponseEntity<TotalRankingResponseDto> getTotalRanking(
+            @PathVariable("study_id") Long studyId,
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        TotalRankingResponseDto totalRanking = studyRankingService.getTotalRanking(studyId, user);
         return ResponseEntity.ok(totalRanking);
     }
 }

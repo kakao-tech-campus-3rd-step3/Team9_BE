@@ -68,24 +68,7 @@ public class Quiz extends AuditingEntity {
         this.timeLimitSeconds = timeLimitSeconds;
     }
 
-    public QuizSubmission start(User user) {
-        return this.submissions.stream()
-                .filter(submission -> submission.getUser().getId().equals(user.getId()))
-                .findFirst()
-                .map(submission -> {
-                    submission.validateIsNotCompleted();
-                    return submission;
-                })
-                .orElseGet(() -> {
-                    QuizSubmission newSubmission = QuizSubmission.builder()
-                            .user(user)
-                            .build();
-                    this.addSubmission(newSubmission);
-                    return newSubmission;
-                });
-    }
-
-    private void addSubmission(QuizSubmission submission) {
+    public void addSubmission(QuizSubmission submission) {
         this.submissions.add(submission);
         submission.setQuiz(this);
     }

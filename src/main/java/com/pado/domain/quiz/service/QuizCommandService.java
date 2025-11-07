@@ -15,12 +15,14 @@ import com.pado.global.exception.common.BusinessException;
 import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -81,9 +83,40 @@ public class QuizCommandService {
         }
 
         // 3. 기존 제출 기록 조회 또는 새로 생성
-        QuizSubmission submission = quiz.start(user);
-        quizSubmissionRepository.save(submission);
+        Optional<QuizSubmission> existingSubmission = quizSubmissionRepository.findByQuizAndUser(quiz, user);
 
+        QuizSubmission submission;
+        if (existingSubmission.isPresent()) {
+            // 기존 기록이 있는 경우
+            submission = existingSubmission.get();
+
+            // 이미 완료했는지 확인
+            submission.validateIsNotCompleted();
+
+            log.info("Resuming quiz {} for user {}", quizId, user.getId());
+
+        } else {
+            log.info("Starting new quiz {} for user {}", quizId, user.getId());
+            try {
+                submission = QuizSubmission.builder()
+                        .user(user)
+                        .build();
+
+                quiz.addSubmission(submission);
+
+                quizSubmissionRepository.save(submission);
+
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Concurrent creation detected for quiz {} user {}. Refetching.", quizId, user.getId(), e);
+                submission = quizSubmissionRepository.findByQuizAndUser(quiz, user)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.SUBMISSION_NOT_FOUND, "Failed to refetch submission after concurrent creation."));
+
+                submission.validateIsNotCompleted();
+                log.info("Resuming quiz {} for user {} after concurrent creation.", quizId, user.getId());
+            }
+        }
+
+        // 5. DTO 반환
         return quizDtoMapper.toQuizProgressDto(quiz, submission);
     }
 
@@ -238,6 +271,11 @@ public class QuizCommandService {
             }
 
             if (question instanceof MultipleChoiceQuestion mcq) {
+                String userAnswer = answerDto.userAnswer();
+                if (userAnswer == null || userAnswer.trim().isEmpty()) {
+                    continue;
+                }
+
                 Long userAnswerChoiceId;
                 try {
                     userAnswerChoiceId = Long.parseLong(answerDto.userAnswer());

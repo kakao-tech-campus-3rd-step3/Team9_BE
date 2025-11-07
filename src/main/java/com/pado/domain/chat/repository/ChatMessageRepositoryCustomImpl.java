@@ -25,8 +25,8 @@ public class ChatMessageRepositoryCustomImpl implements ChatMessageRepositoryCus
 
         return queryFactory
                 .selectFrom(chatMessage)
-                .join(chatMessage.sender, studyMember).fetchJoin()
-                .join(studyMember.user, user).fetchJoin()
+                .leftJoin(chatMessage.sender, studyMember).fetchJoin()
+                .leftJoin(studyMember.user, user).fetchJoin()
                 .where(
                         chatMessage.study.id.eq(studyId),
                         cursorCondition(cursor)

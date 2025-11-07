@@ -1,5 +1,6 @@
 package com.pado.domain.quiz.repository;
 
+import com.pado.domain.quiz.dto.projection.DashboardQuizProjection;
 import com.pado.domain.quiz.dto.projection.QuizInfoProjection;
 import com.pado.domain.quiz.entity.Quiz;
 
@@ -12,4 +13,5 @@ public interface QuizRepositoryCustom {
     Map<Long, Long> findQuestionCountsByQuizIds(List<Long> quizIds);
     Optional<Quiz> findWithSourceFilesById(Long id);
     Optional<Quiz> findForStartQuizById(Long quizId);
+    List<DashboardQuizProjection> findRecentDashboardQuizzes(Long studyId, Long userId, int size);
 }

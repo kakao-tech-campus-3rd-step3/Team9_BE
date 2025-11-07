@@ -40,7 +40,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // WebSocket 연결 엔드포인트
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // CORS 설정
+                .setAllowedOrigins(
+                        "https://gogumalatte.site",
+                        "http://localhost:3000",
+                        "http://localhost:8080",
+                        "https://pado-study.vercel.app",
+                        "https://pado-dev.vercel.app"
+                )// CORS 설정
                 .withSockJS();
     }
 

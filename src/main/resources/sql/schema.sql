@@ -285,7 +285,8 @@ CREATE TABLE quiz_submission (
                                  status VARCHAR(255) NOT NULL,
                                  started_at TIMESTAMP NOT NULL,
                                  submitted_at TIMESTAMP,
-                                 version BIGINT NOT NULL DEFAULT 0
+                                 version BIGINT NOT NULL DEFAULT 0,
+                                 UNIQUE KEY uk_quiz_submission_quiz_user (quiz_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE answer_submission (
