@@ -2,6 +2,7 @@ package com.pado.domain.study.controller;
 
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.request.StudyUpdateRequestDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.shared.entity.Region;
@@ -112,7 +113,7 @@ public class StudyController {
     public ResponseEntity<Void> updateStudy(
         @Parameter(hidden = true) @CurrentUser User user,
         @PathVariable("study_id") Long studyId,
-        @Valid @RequestBody StudyCreateRequestDto request
+        @Valid @RequestBody StudyUpdateRequestDto request
     ) {
         studyService.updateStudy(user, studyId, request);
         return ResponseEntity.ok().build();

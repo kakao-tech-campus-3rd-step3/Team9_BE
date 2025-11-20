@@ -120,7 +120,7 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
         for (ScheduleTune t : list) {
             LocalDateTime start = LocalDateTime.of(t.getStartDate(), t.getAvailableStartTime());
             LocalDateTime end = LocalDateTime.of(t.getEndDate(), t.getAvailableEndTime());
-            result.add(new ScheduleTuneResponseDto(t.getTitle(), start, end));
+            result.add(new ScheduleTuneResponseDto(t.getId(), t.getTitle(), start, end));
         }
         return result;
     }
@@ -236,30 +236,6 @@ public class ScheduleTuneServiceImpl implements ScheduleTuneService {
 
         if (!request.end_time().isAfter(request.start_time())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "end_time은 start_time 이후여야 합니다.");
-        }
-        if (request.start_time().toLocalDate().isBefore(tune.getStartDate())
-            || request.end_time().toLocalDate().isAfter(tune.getEndDate())) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 조율 날짜 범위를 벗어납니다.");
-        }
-        LocalTime s = request.start_time().toLocalTime();
-        LocalTime e = request.end_time().toLocalTime();
-        if (s.isBefore(tune.getAvailableStartTime()) || e.isAfter(tune.getAvailableEndTime())) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 가용 시간대를 벗어납니다.");
-        }
-
-        boolean matched = false;
-        List<ScheduleTuneSlot> slots =
-            scheduleTuneSlotRepository.findByScheduleTuneIdOrderBySlotIndexAsc(
-                tune.getId()); // [file:21]
-        for (ScheduleTuneSlot slot : slots) {
-            if (slot.getStartTime().equals(request.start_time())
-                && slot.getEndTime().equals(request.end_time())) {
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "선택 시간이 생성된 슬롯과 일치하지 않습니다.");
         }
 
         Schedule schedule = Schedule.builder()

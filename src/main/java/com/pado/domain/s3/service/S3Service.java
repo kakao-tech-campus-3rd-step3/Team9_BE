@@ -6,6 +6,7 @@ import com.pado.global.exception.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ContentDisposition;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -117,10 +118,16 @@ public class S3Service {
     // 파일 다운로드용 Presigned URL 생성
     public String generatePresignedDownloadUrl(String fileName, String fileKey) {
         try {
+            // ContentDisposition 빌더를 사용하여 안전한 헤더 문자열 생성
+            String contentDisposition = ContentDisposition.builder("inline")
+                    .filename(fileName)
+                    .build()
+                    .toString();
+
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(fileKey)
-                    .responseContentDisposition("inline; filename=\"" + fileName + "\"")
+                    .responseContentDisposition(contentDisposition)
                     .build();
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()

@@ -95,6 +95,8 @@ class ProgressServiceImplTest {
         ProgressChapterRequestDto req = new ProgressChapterRequestDto("1주차 OT");
         Chapter ch1 = Chapter.createChapter(study, "1주차 OT", false);
         Chapter ch2 = Chapter.createChapter(study, "2주차 실습", false);
+        ReflectionTestUtils.setField(ch1, "id", 1L);
+        ReflectionTestUtils.setField(ch2, "id", 2L);
 
         given(studyRepository.existsById(studyId)).willReturn(true);
         given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(eq(studyId), eq(userMember.getId()), anyCollection()))
@@ -106,6 +108,7 @@ class ProgressServiceImplTest {
 
         // then
         assertNotNull(dto);
+        assertEquals(1L, dto.chapters().get(0).id());
         assertEquals(2, dto.chapters().size());
         assertEquals("1주차 OT", dto.chapters().get(0).content());
         then(chapterRepository).should().findByStudyId(studyId);
@@ -336,8 +339,6 @@ class ProgressServiceImplTest {
         given(quizSubmissionRepository.countMapByStudy(studyId)).willReturn(Map.of(1L, 2L, 2L, 1L)); // 철수=2, 영희=1
         given(reflectionRepository.countMapByStudy(studyId)).willReturn(Collections.emptyMap()); // 둘 다 0
 
-        // findByStudyId(Reflection) 호출된다면(현재 미사용) 안전하게 빈 컬렉션 리턴
-        given(reflectionRepository.findByStudyId(studyId)).willReturn(Collections.emptyList());
 
         // when
         ProgressStatusResponseDto dto = service.getStudyStatus(studyId, userMember);
@@ -363,6 +364,61 @@ class ProgressServiceImplTest {
         assertEquals(0, byName.get("영희").reflection_count());
     }
 
+    @Test
+    void getMyStudyStatus_멤버권한일때_본인만반환_모든지표검증() {
+        // --- checkException() 통과에 필요한 "정확히 2개"의 스텁 ---
+        given(studyRepository.existsById(studyId)).willReturn(true);
+        given(studyMemberRepository.existsByStudyIdAndUserIdAndRoleIn(
+                eq(studyId), eq(userMember.getId()),
+                eq(List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))
+        )).willReturn(true);
+
+        // --- 실제 집계 대상 데이터: 스터디 멤버 목록은 리더/멤버 모두 반환되지만, 서비스에서 본인만 필터 ---
+        StudyMember smLeader = mock(StudyMember.class);
+        when(smLeader.getUser()).thenReturn(userLeader);
+
+        StudyMember smMember = mock(StudyMember.class);
+        when(smMember.getUser()).thenReturn(userMember);
+        when(smMember.getRole()).thenReturn(StudyMemberRole.MEMBER);
+
+        given(studyMemberRepository.findByStudyIdFetchUser(studyId))
+                .willReturn(List.of(smLeader, smMember));
+
+        // --- 카운트 맵: 본인(200L) 데이터만 있어도 충분. 없으면 0으로 처리됨 ---
+        given(attendanceRepository.countMapByStudy(studyId))
+                .willReturn(Map.of(200L, 3L));
+        given(quizSubmissionRepository.countMapByStudy(studyId))
+                .willReturn(Map.of(200L, 2L));
+        given(reflectionRepository.countMapByStudy(studyId))
+                .willReturn(Collections.emptyMap());
+
+        // when
+        ProgressStatusResponseDto dto = service.getMyStudyStatus(studyId, userMember);
+
+        // then
+        assertNotNull(dto);
+        assertEquals(1, dto.progressMemberStatusDto().size(), "요청자 본인만 포함되어야 함");
+
+        ProgressMemberStatusDto only = dto.progressMemberStatusDto().get(0);
+        assertEquals(userMember.getNickname(), only.nickname());
+        assertEquals(StudyMemberRole.MEMBER, only.role());
+        assertEquals(3, only.attendance_count());
+        assertEquals(2, only.quiz_count());
+        assertEquals(0, only.reflection_count());
+
+        // 핵심 상호작용만 확인 (불필요한 verify/doNothing 등은 추가하지 않음)
+        verify(studyRepository).existsById(studyId);
+        verify(studyMemberRepository).existsByStudyIdAndUserIdAndRoleIn(
+                eq(studyId), eq(userMember.getId()),
+                eq(List.of(StudyMemberRole.LEADER, StudyMemberRole.MEMBER))
+        );
+        verify(studyMemberRepository).findByStudyIdFetchUser(studyId);
+        verify(attendanceRepository).countMapByStudy(studyId);
+        verify(quizSubmissionRepository).countMapByStudy(studyId);
+        verify(reflectionRepository).countMapByStudy(studyId);
+        verifyNoMoreInteractions(studyRepository, studyMemberRepository,
+                attendanceRepository, quizSubmissionRepository, reflectionRepository);
+    }
 
     @Test
     void getStudyStatus_권한없음_예외_FORBIDDEN_STUDY_MEMBER_ONLY() {

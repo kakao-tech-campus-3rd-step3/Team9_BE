@@ -6,6 +6,7 @@ import com.pado.domain.chat.repository.LastReadMessageRepository;
 import com.pado.domain.shared.entity.Category;
 import com.pado.domain.shared.entity.Region;
 import com.pado.domain.study.dto.request.StudyCreateRequestDto;
+import com.pado.domain.study.dto.request.StudyUpdateRequestDto;
 import com.pado.domain.study.dto.response.StudyDetailResponseDto;
 import com.pado.domain.study.dto.response.StudyListResponseDto;
 import com.pado.domain.study.dto.response.StudySimpleResponseDto;
@@ -50,19 +51,19 @@ public class StudyServiceImpl implements StudyService {
             .maxMembers(requestDto.max_members())
             .fileKey(requestDto.file_key())
             .build();
-        newStudy.addInterests(requestDto.interests());
-        newStudy.addConditions(requestDto.conditions());
+
+        newStudy.updateInterests(requestDto.interests());
+        newStudy.updateConditions(requestDto.conditions());
 
         StudyMember leaderMember = StudyMember.builder()
-                .study(newStudy)
-                .user(user)
-                .role(StudyMemberRole.LEADER)
-                .build();
+            .study(newStudy)
+            .user(user)
+            .role(StudyMemberRole.LEADER)
+            .build();
 
         Study savedStudy = studyRepository.save(newStudy);
         StudyMember savedLeader = studyMemberRepository.save(leaderMember);
 
-        // 멤버 새로 생성과 함께 해당 유저가 가장 마지막에 읽은 아이디 엔티티를 만들어 채팅방 기능이 정상적으로 작동하도록 구현
         LastReadMessage lastReadMessage = new LastReadMessage(savedLeader, 0L);
         lastReadMessageRepository.save(lastReadMessage);
     }
@@ -131,25 +132,26 @@ public class StudyServiceImpl implements StudyService {
 
     @Override
     @Transactional
-    public void updateStudy(User user, Long studyId, StudyCreateRequestDto requestDto) {
-        Study study = studyRepository.findById(studyId)
+    public void updateStudy(User user, Long studyId, StudyUpdateRequestDto requestDto) {
+        Study study = studyRepository.findByIdWithLeader(studyId)
             .orElseThrow(StudyNotFoundException::new);
 
         if (!study.getLeader().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN_STUDY_LEADER_ONLY);
         }
 
-        study.update(
-            requestDto.title(),
-            requestDto.description(),
-            requestDto.detail_description(),
-            requestDto.region(),
-            requestDto.study_time(),
-            requestDto.max_members(),
-            requestDto.file_key(),
-            requestDto.interests(),
-            requestDto.conditions()
-        );
+        if (requestDto.max_members() != null) {
+            int currentMembers = (int) studyMemberRepository.countByStudy(study);
+            if (requestDto.max_members() < currentMembers) {
+
+                throw new BusinessException(ErrorCode.INVALID_MAX_MEMBERS,
+                    "최대 인원 수는 현재 인원수(" + currentMembers + "명)보다 적을 수 없습니다.");
+            }
+        }
+
+        study.update(requestDto);
+
+        studyRepository.save(study);
     }
 
     private Pageable createPageable(int page, int size) {
