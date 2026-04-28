@@ -6,7 +6,7 @@
 
 ## 🎬 데모 영상
 
-[![Pado 데모 영상](https://img.youtube.com/vi/9lyNWPdDGZM/hqdefault.jpg)](https://www.youtube.com/watch?v=9lyNWPdDGZM)
+[▶ 프로젝트 실행 영상 보기](https://www.youtube.com/watch?v=9lyNWPdDGZM)
 
 
 ## 💡 주요 기능 (Core Features)
