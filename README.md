@@ -4,6 +4,11 @@
 
 단순한 스터디 관리를 넘어, **랭킹**과 **AI 퀴즈 생성**을 통해 멤버들의 학습 동기를 부여하고, **스마트 일정 조율**과 **진척도 관리** 기능으로 스터디 운영의 효율성을 극대화합니다.
 
+## 🎬 데모 영상
+
+[![Pado 데모 영상](https://img.youtube.com/vi/9lyNWPdDGZM/hqdefault.jpg)](https://www.youtube.com/watch?v=9lyNWPdDGZM)
+
+
 ## 💡 주요 기능 (Core Features)
 
 "파도"는 스터디 운영에 필요한 모든 기능을 유기적으로 연동하여 제공합니다.
